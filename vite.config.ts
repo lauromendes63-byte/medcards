@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.1.0',
+        version: '2.2.0',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: 'MedCards v2.1: UI/UX Clínico Minimalista, Dica de Fixação, Edição Rápida e Auto-Deploy Vercel'
+        releaseNotes: 'MedCards v2.2: Editor WYSIWYG com Active Recall Interativo (todos os tipos), Foco Provas UFPA, Tipografia Suave Semibold 600 e Processamento 100% Offline'
       };
       this.emitFile({
         type: 'asset',
