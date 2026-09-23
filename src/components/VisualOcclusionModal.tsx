@@ -65,11 +65,14 @@ export const VisualOcclusionModal: React.FC<VisualOcclusionModalProps> = ({
   const mascaras = card.mascarasImagem || [];
   
   const blocos = (card.blocosOclusao && card.blocosOclusao.length > 0)
-    ? card.blocosOclusao
+    ? card.blocosOclusao.map(b => ({
+        ...b,
+        textoOculto: (b.textoOculto || '').replace(/^\[.*?\]:\s*/, ''),
+      }))
     : (card.algoritmoDecisao?.blocos?.map((b, idx) => ({
         id: b.id,
         posicao: { x: 10, y: 15 + idx * 25, largura: 80, altura: 20 },
-        textoOculto: `[${b.criterioEntrada ? b.criterioEntrada + ' ➔ ' : ''}${b.titulo}]: ${b.descricao || ''}`,
+        textoOculto: (b.descricao || b.titulo || '').replace(/^\[.*?\]:\s*/, ''),
         dica: b.titulo,
         revelado: false,
       })) || []);
@@ -662,19 +665,21 @@ export const VisualOcclusionModal: React.FC<VisualOcclusionModalProps> = ({
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2 border-b border-black/5 pb-2">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             <span className={`w-5 h-5 rounded-lg text-[10px] font-black flex items-center justify-center shrink-0 ${
                               revelado ? 'bg-blue-600 text-white shadow-3xs' : 'bg-white/20 text-white'
                             }`}>
                               {idx + 1}
                             </span>
-                            <span className={`text-[10.5px] font-bold uppercase tracking-wider ${
+                            <span className={`text-[11px] font-bold uppercase tracking-wider truncate ${
                               revelado ? 'text-blue-700' : 'text-indigo-200'
                             }`}>
-                              Etapa #{idx + 1} {exibirDicas && bloco.dica && `• ${bloco.dica}`}
+                              {bloco.dica
+                                ? bloco.dica.replace(/^(\d+[\.\-\)]\s*|etapa\s*#?\d+[\:\-\.]?\s*)/i, '')
+                                : `Etapa ${idx + 1}`}
                             </span>
                           </div>
-                          <span className={`text-xs font-semibold ${revelado ? 'text-slate-400' : 'text-indigo-200'}`}>
+                          <span className={`text-xs font-semibold shrink-0 ${revelado ? 'text-slate-400' : 'text-indigo-200'}`}>
                             {revelado ? 'Toque p/ ocultar' : 'Toque p/ revelar'}
                           </span>
                         </div>
@@ -682,7 +687,7 @@ export const VisualOcclusionModal: React.FC<VisualOcclusionModalProps> = ({
                         <div className="mt-2.5">
                           {revelado ? (
                             <div className="text-xs sm:text-[13.5px] leading-relaxed text-slate-900 animate-in fade-in duration-150">
-                              <FormattedClinicalText text={bloco.textoOculto} />
+                              <FormattedClinicalText text={(bloco.textoOculto || '').replace(/^\[.*?\]:\s*/, '')} />
                             </div>
                           ) : (
                             <div className="flex items-center gap-2 py-1.5 text-white">

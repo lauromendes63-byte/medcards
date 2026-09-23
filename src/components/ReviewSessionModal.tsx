@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
   RotateCw, 
@@ -100,12 +100,16 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
   const cardAtual = filaCards[indiceAtual];
   const totalCards = filaCards.length;
 
-  // Timers intradiários do card atual
-  const configTimers = StorageService.getConfiguracaoTimers();
-  const eixos = StorageService.getEixos();
-  const eixoDoCard = eixos.find(e => e.id === cardAtual?.eixoId);
-  const topicoDoCard = eixoDoCard?.topicos?.find(t => t.id === cardAtual?.topicoId);
-  const infoRodada = cardAtual ? obterInfoRodadaCard(cardAtual, topicoDoCard, configTimers) : null;
+  // FIX #9: leituras de storage em useMemo ao invés de diretamente no render
+  // Evita JSON.parse + localStorageGet a cada re-render do componente
+  const configTimers = useMemo(() => StorageService.getConfiguracaoTimers(), []);
+  const eixos = useMemo(() => StorageService.getEixos(), [cardAtual?.eixoId]);
+  const eixoDoCard = useMemo(() => eixos.find(e => e.id === cardAtual?.eixoId), [eixos, cardAtual?.eixoId]);
+  const topicoDoCard = useMemo(() => eixoDoCard?.topicos?.find(t => t.id === cardAtual?.topicoId), [eixoDoCard, cardAtual?.topicoId]);
+  const infoRodada = useMemo(() => cardAtual ? obterInfoRodadaCard(cardAtual, topicoDoCard, configTimers) : null, [cardAtual, topicoDoCard, configTimers]);
+
+  // FIX #6: rastreia quantas vezes cada card foi re-enfileirado por erro (máx 2)
+  const reEnqueueCountRef = React.useRef<Record<string, number>>({});
 
   const [isQuickEditOpen, setIsQuickEditOpen] = useState(false);
   const [quickPergunta, setQuickPergunta] = useState('');
@@ -225,9 +229,15 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
   };
 
   const revelarTodosClozes = () => {
+    // FIX #4: usa a contagem real de clozes ao invés do limite fixo de 20
     const all: Record<number, boolean> = {};
-    for (let i = 0; i < 20; i++) {
-      all[i] = true;
+    if (cardAtual?.textoCloze) {
+      const matches = Array.from(cardAtual.textoCloze.matchAll(/\{\{c(\d+)::/g));
+      matches.forEach(m => { all[parseInt(m[1], 10)] = true; });
+    }
+    // fallback: se não houver textoCloze, garante índices 1-20 (compatibilidade)
+    if (Object.keys(all).length === 0) {
+      for (let i = 1; i <= 20; i++) all[i] = true;
     }
     setClozesRevelados(all);
     setMostrarVerso(true);
@@ -302,12 +312,20 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
       totalSegundos: prev.totalSegundos + tempoGasto,
     }));
 
-    // Se errou em uma fila de revisão, re-enfileira no fim para fixação imediata
+    // FIX #6: Re-enfileira o card errado no fim, com limite de 2 vezes por card
+    // Evita loop infinito quando o usuário sempre erra o mesmo card
+    const MAX_REENQUEUE = 2;
+    let reEnqueued = false;
     if (avaliacao === 'errei' && filaCards.length > 1) {
-      setFilaCards(prev => [...prev, cardAtual]);
+      const count = reEnqueueCountRef.current![cardAtual.id] || 0;
+      if (count < MAX_REENQUEUE) {
+        reEnqueueCountRef.current![cardAtual.id] = count + 1;
+        setFilaCards(prev => [...prev, cardAtual]);
+        reEnqueued = true;
+      }
     }
 
-    if (indiceAtual + 1 < filaCards.length + (avaliacao === 'errei' && filaCards.length > 1 ? 1 : 0)) {
+    if (indiceAtual + 1 < filaCards.length + (reEnqueued ? 1 : 0)) {
       setIndiceAtual(prev => prev + 1);
     } else {
       // Concluiu todos os cards
@@ -939,7 +957,7 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                                   </p>
                                   {bloco.descricao && (
                                     <div className="pt-1.5 border-t border-slate-100/90 text-xs sm:text-[13px] text-slate-700 font-normal leading-relaxed">
-                                      <FormattedClinicalText text={bloco.descricao} />
+                                      <FormattedClinicalText text={(bloco.descricao || '').replace(/^\[.*?\]:\s*/, '')} />
                                     </div>
                                   )}
                                 </div>
@@ -1001,7 +1019,7 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                           <div className="mt-1">
                             {revelado ? (
                               <div className="text-xs sm:text-[13px] text-slate-700 font-normal leading-relaxed">
-                                <FormattedClinicalText text={etapa.conteudoOculto || etapa.titulo} />
+                                <FormattedClinicalText text={(etapa.conteudoOculto || etapa.titulo || '').replace(/^\[.*?\]:\s*/, '')} />
                               </div>
                             ) : (
                               <span className="text-xs font-bold text-white tracking-wide">
@@ -1043,7 +1061,7 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                         >
                           <div className="flex items-center justify-between">
                             <span className={`text-[9px] font-bold uppercase ${revelado ? 'text-emerald-700' : 'text-indigo-200'}`}>
-                              Etapa #{idx + 1} {exibirDicas && bloco.dica && `• ${bloco.dica}`}
+                              Etapa #{idx + 1} {exibirDicas && bloco.dica && `• ${bloco.dica.replace(/^(\d+[\.\-\)]\s*|etapa\s*#?\d+[\:\-\.]?\s*)/i, '')}`}
                             </span>
                             <span className="text-[9px] opacity-80">
                               {revelado ? 'Toque p/ ocultar' : 'Toque p/ revelar'}
@@ -1052,7 +1070,7 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                           <div className="mt-1">
                             {revelado ? (
                               <div className="text-xs sm:text-[13px] leading-snug">
-                                <FormattedClinicalText text={bloco.textoOculto} />
+                                <FormattedClinicalText text={(bloco.textoOculto || '').replace(/^\[.*?\]:\s*/, '')} />
                               </div>
                             ) : (
                               <span className="text-xs font-bold text-white tracking-wide">

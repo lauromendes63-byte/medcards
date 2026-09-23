@@ -74,38 +74,44 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
   topico,
   onEditarCard,
 }) => {
-  // Configuração e timers unificados com o app como um todo
-  const configTimers = StorageService.getConfiguracaoTimers();
-  const infoRodada = card
+  // FIX #9: configTimers em useMemo ao invés de leitura direta no render (evita JSON.parse por re-render)
+  const configTimers = useMemo(() => StorageService.getConfiguracaoTimers(), []);
+  const infoRodada = useMemo(() => card
     ? obterInfoRodadaCard(card, topico, configTimers)
     : {
         rodada: 1,
         nomeRodada: 'Rodada 1 (Intensivo)',
         timers: configTimers.rodada1,
         ehCustomizadoTopico: false,
-      };
+      }
+  , [card, topico, configTimers]);
   const nosOriginais = Array.isArray(fluxograma?.nos) ? fluxograma.nos : [];
   const noInicialId = fluxograma?.noInicialId || nosOriginais[0]?.id || '';
 
   // Alternância de layout hierárquico estruturado (Dagre/Sugiyama anti-colisão)
   const [usarLayoutAuto, setUsarLayoutAuto] = useState(false);
 
-  // Computa os blocos garantindo que nunca existam sobreposições ou cards sem coordenadas
+  // FIX #15: Collision detection O(n) com Set de chaves de coordenadas (antes era O(n²) com .slice().some())
   const nos = useMemo(() => {
     if (!nosOriginais || nosOriginais.length === 0) return [];
 
-    // Detecta se há blocos com coordenadas indefinidas ou colisão direta entre cards
-    const temColisaoOuIncompleto =
-      nosOriginais.some(n => n.posicaoX === undefined || n.posicaoY === undefined) ||
-      nosOriginais.some((n1, idx) =>
-        nosOriginais.slice(idx + 1).some(n2 => {
-          const dx = Math.abs((n1.posicaoX ?? 0) - (n2.posicaoX ?? 0));
-          const dy = Math.abs((n1.posicaoY ?? 0) - (n2.posicaoY ?? 0));
-          return dx < 230 && dy < 110;
-        })
-      );
+    // Detecta nós sem coordenadas definidas
+    const temCoordenadaFaltando = nosOriginais.some(n => n.posicaoX === undefined || n.posicaoY === undefined);
 
-    if (usarLayoutAuto || temColisaoOuIncompleto) {
+    // Detecta colisões com Set de células de grade (O(n) ao invés de O(n²))
+    const gridKeys = new Set<string>();
+    const CELL_W = 230;
+    const CELL_H = 110;
+    const temColisao = !temCoordenadaFaltando && nosOriginais.some(n => {
+      const cellX = Math.floor((n.posicaoX ?? 0) / CELL_W);
+      const cellY = Math.floor((n.posicaoY ?? 0) / CELL_H);
+      const key = `${cellX},${cellY}`;
+      if (gridKeys.has(key)) return true;
+      gridKeys.add(key);
+      return false;
+    });
+
+    if (usarLayoutAuto || temCoordenadaFaltando || temColisao) {
       return calcularLayoutHierarquicoFluxograma(nosOriginais, noInicialId, {
         cardWidth: 240,
         cardHeight: 130,

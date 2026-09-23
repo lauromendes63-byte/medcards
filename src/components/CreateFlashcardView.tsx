@@ -173,14 +173,14 @@ export const CreateFlashcardView: React.FC<CreateFlashcardViewProps> = ({
           id: b.id,
           titulo: b.titulo || '',
           criterioSeta: b.criterioEntrada || '',
-          condutaOuAcao: b.descricao || ''
+          condutaOuAcao: (b.descricao || '').replace(/^\[.*?\]:\s*/, '')
         })));
       } else if (cardEmEdicao.blocosOclusao && cardEmEdicao.blocosOclusao.length > 0) {
         setBlocosDecisao(cardEmEdicao.blocosOclusao.map((b, idx) => ({
           id: b.id || `bo-${idx + 1}`,
           titulo: b.dica || `Passo ${idx + 1}`,
           criterioSeta: b.dica || '',
-          condutaOuAcao: b.textoOculto || ''
+          condutaOuAcao: (b.textoOculto || '').replace(/^\[.*?\]:\s*/, '')
         })));
       }
       if (cardEmEdicao.casoClinicoDados) {
@@ -253,14 +253,14 @@ export const CreateFlashcardView: React.FC<CreateFlashcardViewProps> = ({
         id: b.id,
         titulo: b.titulo || '',
         criterioSeta: b.criterioEntrada || '',
-        condutaOuAcao: b.descricao || ''
+        condutaOuAcao: (b.descricao || '').replace(/^\[.*?\]:\s*/, '')
       }));
     } else if (cardEmEdicao?.blocosOclusao && cardEmEdicao.blocosOclusao.length > 0) {
       return cardEmEdicao.blocosOclusao.map((b, idx) => ({
         id: b.id || `bo-${idx + 1}`,
         titulo: b.dica || `Passo ${idx + 1}`,
         criterioSeta: b.dica || '',
-        condutaOuAcao: b.textoOculto || ''
+        condutaOuAcao: (b.textoOculto || '').replace(/^\[.*?\]:\s*/, '')
       }));
     }
     return [

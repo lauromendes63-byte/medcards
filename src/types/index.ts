@@ -267,6 +267,8 @@ export interface ProgressoDiario {
   taxaRetencaoMedia: number; // %
   tempoEstudadoMinutos: number;
   ultimoSalvamentoDispositivo?: string;
+  /** ISO timestamp do último salvamento — usado para comparação confiável com IndexedDB (FIX #1) */
+  ultimoSalvamentoIso?: string;
 }
 
 export type TabNavegacao = 'eixos' | 'revisoes' | 'criar_card' | 'provas' | 'metricas';

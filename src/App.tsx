@@ -124,7 +124,17 @@ export default function App() {
       setProgresso(StorageService.getProgresso());
     };
     window.addEventListener('medcards_storage_synced', handleIdbAtualizado);
-    return () => window.removeEventListener('medcards_storage_synced', handleIdbAtualizado);
+
+    // FIX #3: exibe aviso visível ao atingir a cota do localStorage (antes era silencioso)
+    const handleQuotaExceeded = () => {
+      mostrarFeedback('⚠️ Armazenamento local cheio! Dados seguros via IndexedDB. Exporte um backup para liberar espaço.');
+    };
+    window.addEventListener('medcards_storage_quota_exceeded', handleQuotaExceeded);
+
+    return () => {
+      window.removeEventListener('medcards_storage_synced', handleIdbAtualizado);
+      window.removeEventListener('medcards_storage_quota_exceeded', handleQuotaExceeded);
+    };
   }, []);
 
   // Suporte a Botão Voltar do Android (popstate) e Tecla Escape
@@ -294,15 +304,10 @@ export default function App() {
     }
   };
 
-  // Abrir card com a visualização interativa
+  // Abrir card com a visualização interativa e oficial de revisão/estudo
   const handleAbrirCard = (card: CardClinico) => {
-    if (card.tipoCard === 'image_occlusion' || card.tipoCard === 'fluxograma_complexo' || card.tipoCard === 'fluxograma_oclusao') {
-      setOcclusionCard(card);
-    } else if (card.tipoCard === 'caso_clinico') {
-      setCaseCard(card);
-    } else {
-      setReviewCards([card]);
-    }
+    setReviewInitialIndex(0);
+    setReviewCards([card]);
   };
 
   // Abrir editor para alterar um card existente dentro da Revisão Espaçada

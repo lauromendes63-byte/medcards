@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.3.2',
+        version: '2.3.3',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: 'MedCards v2.3.2: Otimização de performance com code-splitting, correção crítica de rolagem mobile e refinamento de ergonomia nos visualizadores'
+        releaseNotes: 'MedCards v2.3.3: Abertura direta no modo de estudo oficial SRS, limpeza visual de etapas em fluxogramas e remoção de colchetes'
       };
       this.emitFile({
         type: 'asset',

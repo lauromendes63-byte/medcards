@@ -109,7 +109,7 @@ export const AnkiService = {
       blocosOclusao = algoritmoDecisao.blocos.map((b, idx) => ({
         id: b.id,
         posicao: { x: 10, y: 15 + idx * 25, largura: 80, altura: 20 },
-        textoOculto: `[${b.criterioEntrada ? b.criterioEntrada + ' ➔ ' : ''}${b.titulo}]: ${b.descricao || ''}`,
+        textoOculto: (b.descricao || b.titulo || '').replace(/^\[.*?\]:\s*/, ''),
         dica: b.titulo,
         revelado: false,
       }));

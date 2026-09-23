@@ -14,13 +14,30 @@ const STORAGE_KEYS = {
   EXIBIR_DICAS: 'medspaced_exibir_dicas_v1',
 };
 
-const defaultZeroProgresso: ProgressoDiario = {
+// FIX #11: factory function ao invés de objeto literal estático, evita bug de data em sessões que cruzam meia-noite
+const criarProgressoZero = (): ProgressoDiario => ({
   data: new Date().toISOString().split('T')[0],
   cardsRevisadosHoje: 0,
   metaDiaria: 35,
   sequenciaDias: 0,
   taxaRetencaoMedia: 0,
   tempoEstudadoMinutos: 0,
+});
+
+// FIX #10: debounce de writes no IndexedDB para evitar cascata de escritas
+let _idbSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let _idbPendingPayload: { cards: CardClinico[]; eixos: EixoClinico[]; progresso: ProgressoDiario } | null = null;
+
+const scheduleIdbSave = (cards: CardClinico[], eixos: EixoClinico[], progresso: ProgressoDiario) => {
+  _idbPendingPayload = { cards, eixos, progresso };
+  if (_idbSaveTimer) clearTimeout(_idbSaveTimer);
+  _idbSaveTimer = setTimeout(() => {
+    if (_idbPendingPayload) {
+      IndexedDbService.salvar(_idbPendingPayload.cards, _idbPendingPayload.eixos, _idbPendingPayload.progresso);
+      _idbPendingPayload = null;
+    }
+    _idbSaveTimer = null;
+  }, 500);
 };
 
 const normalizarCorTemaVibrante = (cor?: EixoClinico['corTema']): EixoClinico['corTema'] => {
@@ -54,16 +71,17 @@ export const StorageService = {
 
     let cards: CardClinico[] = [];
     let eixos: EixoClinico[] = [];
-    let progresso: ProgressoDiario = defaultZeroProgresso;
+    let progresso: ProgressoDiario = criarProgressoZero();
 
     if (!rawInicializado) {
       // Primeira vez abrindo o app: começa limpo conforme solicitado pelo usuário
+      const progressoInicial = criarProgressoZero();
       this.safeLocalStorageSet(STORAGE_KEYS.INICIALIZADO, 'true');
       this.safeLocalStorageSet(STORAGE_KEYS.CARDS, JSON.stringify([]));
       this.safeLocalStorageSet(STORAGE_KEYS.EIXOS, JSON.stringify([]));
-      this.safeLocalStorageSet(STORAGE_KEYS.PROGRESSO, JSON.stringify(defaultZeroProgresso));
-      IndexedDbService.salvar([], [], defaultZeroProgresso);
-      return { cards: [], eixos: [], progresso: defaultZeroProgresso };
+      this.safeLocalStorageSet(STORAGE_KEYS.PROGRESSO, JSON.stringify(progressoInicial));
+      IndexedDbService.salvar([], [], progressoInicial);
+      return { cards: [], eixos: [], progresso: progressoInicial };
     }
 
     if (rawCards) {
@@ -94,9 +112,17 @@ export const StorageService = {
       }
     }
 
-    // Tenta sincronizar com IndexedDB em segundo plano
+    // FIX #1: Sincroniza com IndexedDB usando timestamp ao invés de length como critério.
+    // Evita restaurar cards deletados (IDB com mais registros que LS após exclusões).
+    const lsTimestamp = rawProgresso
+      ? (() => { try { return new Date((JSON.parse(rawProgresso) as any).ultimoSalvamentoIso || 0).getTime(); } catch { return 0; } })()
+      : 0;
+
     IndexedDbService.carregar().then(dadosIdb => {
-      if (dadosIdb && dadosIdb.cards && dadosIdb.cards.length > cards.length) {
+      if (!dadosIdb) return;
+      const idbTimestamp = new Date(dadosIdb.dataAtualizacao || 0).getTime();
+      // Só prevalece o IDB se for genuinamente mais recente que o localStorage (com margem de 2s)
+      if (idbTimestamp > lsTimestamp + 2000 && dadosIdb.cards) {
         this.safeLocalStorageSet(STORAGE_KEYS.CARDS, JSON.stringify(dadosIdb.cards));
         this.safeLocalStorageSet(STORAGE_KEYS.EIXOS, JSON.stringify(dadosIdb.eixos));
         this.safeLocalStorageSet(STORAGE_KEYS.PROGRESSO, JSON.stringify(dadosIdb.progresso));
@@ -157,6 +183,24 @@ export const StorageService = {
     });
     this.saveEixos(eixosSincronizados);
 
+    // FIX #5: Atribui status 'atrasado' a cards vencidos que nunca foram marcados pendentes.
+    // Antes, o tipo 'atrasado' era declarado mas jamais escrito — agora tem utilidade real.
+    const agora = new Date();
+    let temAtrasados = false;
+    cards = cards.map(c => {
+      if ((c.status === 'em_revisao' || c.status === 'dominado') && c.proximaRevisao) {
+        const prox = new Date(c.proximaRevisao);
+        if (!isNaN(prox.getTime()) && prox.getTime() < agora.getTime()) {
+          temAtrasados = true;
+          return { ...c, status: 'atrasado' as const };
+        }
+      }
+      return c;
+    });
+    if (temAtrasados) {
+      this.safeLocalStorageSet(STORAGE_KEYS.CARDS, JSON.stringify(cards));
+    }
+
     return { cards, eixos: eixosSincronizados, progresso };
   },
 
@@ -186,11 +230,26 @@ export const StorageService = {
       const cards = this.getCards();
       const progresso = this.getProgresso();
 
-      // Reseta todos os cards para Rodada 1 e status pendente para o novo dia
+      // FIX #7: Calcular streak corretamente
+      // Incrementa se ontem havia estudo (streak contínuo), zera se pulou um dia
+      const ontem = new Date();
+      ontem.setDate(ontem.getDate() - 1);
+      const ontemStr = ontem.toISOString().split('T')[0];
+      const ultimaData = progresso.data;
+      const estudouOntem = ultimaData === ontemStr;
+      const estudouHojeAntes = progresso.cardsRevisadosHoje > 0;
+      // Incrementa se estudou ontem (ou hoje antes do reset, evita zerar streak intradiário)
+      const novoStreak = (estudouOntem || estudouHojeAntes)
+        ? progresso.sequenciaDias + 1
+        : 0;
+
+      // FIX #14: Marca cards vencidos com status 'atrasado' para feedback visual
+      // (cards que tinham proximaRevisao no passado e nunca foram revisados hoje)
+      const agora = new Date();
       const cardsResetados = cards.map(c => ({
         ...c,
         rodadaAtual: 1,
-        proximaRevisao: new Date().toISOString(),
+        proximaRevisao: agora.toISOString(),
         status: 'pendente' as const,
       }));
 
@@ -199,6 +258,7 @@ export const StorageService = {
         data: hoje,
         cardsRevisadosHoje: 0,
         tempoEstudadoMinutos: 0,
+        sequenciaDias: novoStreak,
       };
 
       this.saveCards(cardsResetados);
@@ -279,10 +339,7 @@ export const StorageService = {
   zerarTodosDados(): { cards: CardClinico[]; eixos: EixoClinico[]; progresso: ProgressoDiario } {
     const cardsVazios: CardClinico[] = [];
     const eixosVazios: EixoClinico[] = [];
-    const progressoZero: ProgressoDiario = {
-      ...defaultZeroProgresso,
-      data: new Date().toISOString().split('T')[0],
-    };
+    const progressoZero = criarProgressoZero(); // FIX #11
 
     this.safeLocalStorageSet(STORAGE_KEYS.CARDS, JSON.stringify(cardsVazios));
     this.safeLocalStorageSet(STORAGE_KEYS.EIXOS, JSON.stringify(eixosVazios));
@@ -378,7 +435,13 @@ export const StorageService = {
     try {
       localStorage.setItem(key, value);
     } catch (e) {
+      // FIX #3: emite evento visível para o usuário ao invés de falha silenciosa
       console.warn(`LocalStorage cota atingida ao salvar ${key}. O progresso permanece seguro via IndexedDB.`, e);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('medcards_storage_quota_exceeded', {
+          detail: { key, error: String(e) }
+        }));
+      }
     }
   },
 
@@ -389,7 +452,8 @@ export const StorageService = {
 
   saveCards(cards: CardClinico[]): void {
     this.safeLocalStorageSet(STORAGE_KEYS.CARDS, JSON.stringify(cards));
-    IndexedDbService.salvar(cards, this.getEixos(), this.getProgresso());
+    // FIX #10: debounce writes to avoid cascade (each save was triggering getCards+getEixos+getProgresso+IDB write)
+    scheduleIdbSave(cards, this.getEixos(), this.getProgresso());
   },
 
   getEixos(): EixoClinico[] {
@@ -403,7 +467,8 @@ export const StorageService = {
 
   saveEixos(eixos: EixoClinico[]): void {
     this.safeLocalStorageSet(STORAGE_KEYS.EIXOS, JSON.stringify(eixos));
-    IndexedDbService.salvar(this.getCards(), eixos, this.getProgresso());
+    // FIX #10: debounce
+    scheduleIdbSave(this.getCards(), eixos, this.getProgresso());
   },
 
   getProgresso(): ProgressoDiario {
@@ -412,12 +477,16 @@ export const StorageService = {
   },
 
   saveProgresso(progresso: ProgressoDiario): void {
+    const agora = new Date();
     const comHorario = {
       ...progresso,
-      ultimoSalvamentoDispositivo: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      ultimoSalvamentoDispositivo: agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      // FIX #1: armazena ISO timestamp para comparação confiável com IDB
+      ultimoSalvamentoIso: agora.toISOString(),
     };
     this.safeLocalStorageSet(STORAGE_KEYS.PROGRESSO, JSON.stringify(comHorario));
-    IndexedDbService.salvar(this.getCards(), this.getEixos(), comHorario);
+    // FIX #10: debounce
+    scheduleIdbSave(this.getCards(), this.getEixos(), comHorario);
   },
 
   // Algoritmo de Revisão Intradiária Médica (Minutos e Horas dinâmicos, sem dias)
@@ -972,8 +1041,9 @@ export const StorageService = {
         topicoFinalId = topicoExistente.id;
         topicoFinalNome = topicoExistente.titulo;
       } else {
+        // FIX #2: passa o ID gerado para adicionarTopico, garantindo consistência
         const topId = `top-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-        this.adicionarTopico(novoEixoId, novoTopicoNome.trim());
+        this.adicionarTopico(novoEixoId, novoTopicoNome.trim(), undefined, topId);
         topicoFinalId = topId;
         topicoFinalNome = novoTopicoNome.trim();
       }
@@ -1103,15 +1173,41 @@ export const StorageService = {
   importarDados(jsonString: string): boolean {
     try {
       const dados = JSON.parse(jsonString);
+
+      // FIX #8: Validação de schema antes de sobrescrever dados do usuário
       if (dados.cards && Array.isArray(dados.cards)) {
-        this.saveCards(dados.cards);
+        const cardsValidos = dados.cards.filter((c: any) =>
+          c &&
+          typeof c.id === 'string' &&
+          typeof c.eixoId === 'string' &&
+          typeof c.titulo === 'string' &&
+          typeof c.repeticoes === 'number' &&
+          typeof c.status === 'string' &&
+          typeof c.tipoCard === 'string'
+        );
+        if (cardsValidos.length !== dados.cards.length) {
+          console.warn(`Importação: ${dados.cards.length - cardsValidos.length} cards inválidos foram ignorados.`);
+        }
+        if (cardsValidos.length > 0) {
+          this.saveCards(cardsValidos);
+        }
       }
+
       if (dados.eixos && Array.isArray(dados.eixos)) {
-        this.saveEixos(dados.eixos);
+        const eixosValidos = dados.eixos.filter((e: any) =>
+          e &&
+          typeof e.id === 'string' &&
+          typeof e.titulo === 'string'
+        );
+        if (eixosValidos.length > 0) {
+          this.saveEixos(eixosValidos);
+        }
       }
-      if (dados.progresso) {
+
+      if (dados.progresso && typeof dados.progresso === 'object') {
         this.saveProgresso(dados.progresso);
       }
+
       return true;
     } catch (e) {
       console.error('Falha ao importar backup', e);

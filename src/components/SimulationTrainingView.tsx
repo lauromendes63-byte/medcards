@@ -1530,7 +1530,7 @@ export const SimulationTrainingView: React.FC<SimulationTrainingViewProps> = ({
                                   </p>
                                   {bloco.descricao && (
                                     <div className="pt-1.5 border-t border-slate-100/90 text-xs sm:text-[13px] text-slate-700 font-normal leading-relaxed">
-                                      <FormattedClinicalText text={bloco.descricao} />
+                                      <FormattedClinicalText text={(bloco.descricao || '').replace(/^\[.*?\]:\s*/, '')} />
                                     </div>
                                   )}
                                 </div>
@@ -1592,7 +1592,7 @@ export const SimulationTrainingView: React.FC<SimulationTrainingViewProps> = ({
                           <div className="mt-1">
                             {revelado ? (
                               <div className="text-xs sm:text-[13px] text-slate-700 font-normal leading-relaxed">
-                                <FormattedClinicalText text={etapa.conteudoOculto || etapa.titulo} />
+                                <FormattedClinicalText text={(etapa.conteudoOculto || etapa.titulo || '').replace(/^\[.*?\]:\s*/, '')} />
                               </div>
                             ) : (
                               <span className="text-xs font-bold text-white tracking-wide">
@@ -1635,7 +1635,7 @@ export const SimulationTrainingView: React.FC<SimulationTrainingViewProps> = ({
                         >
                           <div className="flex items-center justify-between">
                             <span className={`text-[9px] font-bold uppercase ${revelado ? 'text-emerald-700' : 'text-indigo-200'}`}>
-                              Etapa #{idx + 1} {exibirDicas && bloco.dica && `• ${bloco.dica}`}
+                              Etapa #{idx + 1} {exibirDicas && bloco.dica && `• ${bloco.dica.replace(/^(\d+[\.\-\)]\s*|etapa\s*#?\d+[\:\-\.]?\s*)/i, '')}`}
                             </span>
                             <span className="text-[9px] opacity-80">
                               {revelado ? 'Toque p/ ocultar' : 'Toque p/ revelar'}
@@ -1644,7 +1644,7 @@ export const SimulationTrainingView: React.FC<SimulationTrainingViewProps> = ({
                           <div className="mt-1">
                             {revelado ? (
                               <div className="text-xs sm:text-[13px] leading-snug">
-                                <FormattedClinicalText text={bloco.textoOculto} />
+                                <FormattedClinicalText text={(bloco.textoOculto || '').replace(/^\[.*?\]:\s*/, '')} />
                               </div>
                             ) : (
                               <span className="text-xs font-bold text-white tracking-wide">
