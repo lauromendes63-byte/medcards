@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.3.1',
+        version: '2.3.2',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: 'MedCards v2.3.1: Formatação médica viva (negrito, destaques coloridos, setas) renderizada em todos os visualizadores de flashcards e passo a passo'
+        releaseNotes: 'MedCards v2.3.2: Otimização de performance com code-splitting, correção crítica de rolagem mobile e refinamento de ergonomia nos visualizadores'
       };
       this.emitFile({
         type: 'asset',
@@ -41,6 +41,33 @@ export default defineConfig(() => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+              return 'vendor-react';
+            }
+            if (id.includes('node_modules/lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('node_modules/jszip')) {
+              return 'vendor-jszip';
+            }
+            if (id.includes('src/components/ComplexFlowchart') || id.includes('src/components/FlowchartBuilder')) {
+              return 'chunk-flowcharts';
+            }
+            if (id.includes('src/components/ImportExportModal')) {
+              return 'chunk-import-export';
+            }
+            if (id.includes('src/components/SimulationTrainingView')) {
+              return 'chunk-simulation';
+            }
+          },
+        },
+      },
+      chunkSizeWarningLimit: 600,
     },
     server: {
       port: 5173,

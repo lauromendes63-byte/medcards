@@ -575,7 +575,7 @@ export const CreateFlashcardView: React.FC<CreateFlashcardViewProps> = ({
   };
 
   return (
-    <div className="space-y-3.5 max-w-4xl mx-auto pb-28 animate-in fade-in touch-manipulation">
+    <div className="space-y-3.5 max-w-4xl mx-auto pb-32 animate-in fade-in touch-pan-y">
       {/* =================================================================== */}
       {/* 1. CABEÇALHO ERGONÔMICO (VOLTAR, TÍTULO E INDICADOR DE EDIÇÃO)       */}
       {/* =================================================================== */}

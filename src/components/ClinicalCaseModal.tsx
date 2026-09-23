@@ -66,8 +66,8 @@ export const ClinicalCaseModal: React.FC<ClinicalCaseModalProps> = ({
   const perguntaLimpa = extrairPerguntaObjetiva(card.perguntaGatilho, caso.historiaClinica);
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-100/95 backdrop-blur-xs overflow-y-auto min-h-screen text-left flex flex-col justify-start">
-      <div className="w-full max-w-2xl mx-auto px-2 sm:px-4 py-2.5 sm:py-3.5 space-y-2.5 flex-1 flex flex-col pb-12 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 bg-slate-100/95 backdrop-blur-xs overflow-y-auto min-h-screen text-left flex flex-col justify-start touch-pan-y overscroll-y-contain">
+      <div className="w-full max-w-2xl mx-auto px-2 sm:px-4 py-2.5 sm:py-3.5 space-y-2.5 flex-1 flex flex-col pb-[max(2.5rem,env(safe-area-inset-bottom))] animate-in fade-in duration-150">
         
         {/* ================================================================= */}
         {/* BARRA SUPERIOR DEDICADA: 1 LINHA, ALINHADA, SEM SOBREPOSIÇÃO      */}

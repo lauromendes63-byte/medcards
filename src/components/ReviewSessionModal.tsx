@@ -451,8 +451,8 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
   // TELA DEDICADA PADRÃO UNIFICADA (VISUALIZAÇÃO DE PROVAS & QUESTÕES MÉDICAS)
   // =========================================================================
   return (
-    <div className="fixed inset-0 z-50 bg-slate-100/90 backdrop-blur-xs overflow-y-auto min-h-screen text-left flex flex-col justify-start">
-      <div className="w-full max-w-2xl mx-auto px-1.5 sm:px-4 py-2 sm:py-3 space-y-2 flex-1 flex flex-col pb-8 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 bg-slate-100/90 backdrop-blur-xs overflow-y-auto min-h-screen text-left flex flex-col justify-start touch-pan-y overscroll-y-contain">
+      <div className="w-full max-w-2xl mx-auto px-1.5 sm:px-4 py-2 sm:py-3 space-y-2 flex-1 flex flex-col pb-[max(2.5rem,env(safe-area-inset-bottom))] animate-in fade-in duration-150">
         
         {/* Barra Superior da Questão / Flashcard (Compacta, elegante e centralizada) */}
         <div className="bg-white rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 border border-slate-200/90 shadow-2xs flex items-center justify-between gap-2 shrink-0">

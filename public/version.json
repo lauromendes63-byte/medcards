@@ -1,6 +1,6 @@
 {
-  "version": "2.3.1",
-  "buildTime": "2026-09-23T19:18:36.621Z",
-  "buildDateFormatted": "23/09/2026, 16:18:36",
-  "releaseNotes": "MedCards v2.3.1: Formatação médica viva (negrito, destaques coloridos, setas) renderizada em todos os visualizadores de flashcards e passo a passo"
+  "version": "2.3.2",
+  "buildTime": "2026-09-23T21:15:36.466Z",
+  "buildDateFormatted": "23/09/2026, 18:15:36",
+  "releaseNotes": "MedCards v2.3.2: Otimização de performance com code-splitting, correção crítica de rolagem mobile e refinamento de ergonomia nos visualizadores"
 }
