@@ -471,6 +471,110 @@ export const AnkiService = {
   },
 
   /**
+   * Processa texto de forma 100% local e assíncrona (fatiada no tempo)
+   * Garante que mesmo payloads gigantes de 100+ cards não congelem a thread principal da UI.
+   * Funciona 100% offline, sem nenhuma dependência de rede ou API externa.
+   */
+  async processarTextoAssincrono(
+    texto: string,
+    eixoPadraoId: string,
+    nomeOrigem: string = 'Gemini / Backup',
+    topicoDestinoId?: string,
+    topicoDestinoNome?: string,
+    especialidadePadrao?: string
+  ): Promise<ResultadoImportacao> {
+    // 1. Cede tempo para a thread do navegador atualizar a interface
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const textoLimpo = texto.trim();
+    if (!textoLimpo) {
+      throw new Error('O texto fornecido está vazio.');
+    }
+
+    // 2. Extração rápida de candidato JSON
+    let jsonCandidate = '';
+    const markdownBlockMatch = textoLimpo.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (markdownBlockMatch && markdownBlockMatch[1]) {
+      jsonCandidate = markdownBlockMatch[1].trim();
+    } else {
+      const firstSquare = textoLimpo.indexOf('[');
+      const lastSquare = textoLimpo.lastIndexOf(']');
+      const firstCurly = textoLimpo.indexOf('{');
+      const lastCurly = textoLimpo.lastIndexOf('}');
+
+      if (firstSquare !== -1 && lastSquare > firstSquare) {
+        jsonCandidate = textoLimpo.substring(firstSquare, lastSquare + 1).trim();
+      } else if (firstCurly !== -1 && lastCurly > firstCurly) {
+        jsonCandidate = textoLimpo.substring(firstCurly, lastCurly + 1).trim();
+      } else {
+        jsonCandidate = textoLimpo;
+      }
+    }
+
+    if (jsonCandidate.startsWith('[') || jsonCandidate.startsWith('{')) {
+      try {
+        const dados = JSON.parse(jsonCandidate);
+        let listaBruta: any[] = [];
+        let eixos: EixoClinico[] = [];
+
+        if (Array.isArray(dados)) {
+          listaBruta = dados;
+        } else if (dados && typeof dados === 'object') {
+          if (Array.isArray(dados.cards)) listaBruta = dados.cards;
+          else if (Array.isArray(dados.flashcards)) listaBruta = dados.flashcards;
+          else if (Array.isArray(dados.questoes)) listaBruta = dados.questoes;
+          else if (dados.perguntaGatilho || dados.frente || dados.pergunta || dados.titulo || dados.tipoCard) {
+            listaBruta = [dados];
+          }
+
+          if (Array.isArray(dados.eixos)) eixos = dados.eixos;
+          else if (dados.eixo) eixos = [dados.eixo];
+        }
+
+        if (listaBruta.length === 0) {
+          throw new Error('Nenhum cartão válido foi encontrado na estrutura JSON.');
+        }
+
+        // Processamento fatiado em lotes de 15 cards para manter 60fps na tela
+        const cards: CardClinico[] = [];
+        const BATCH_SIZE = 15;
+        for (let i = 0; i < listaBruta.length; i += BATCH_SIZE) {
+          const batch = listaBruta.slice(i, i + BATCH_SIZE);
+          const normalizedBatch = batch.map((c: any, subIdx: number) =>
+            this.normalizarCardImportado(
+              c,
+              eixoPadraoId,
+              i + subIdx,
+              topicoDestinoId,
+              topicoDestinoNome,
+              especialidadePadrao
+            )
+          );
+          cards.push(...normalizedBatch);
+          if (i + BATCH_SIZE < listaBruta.length) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+          }
+        }
+
+        return {
+          cardsImportados: cards,
+          eixosCriados: eixos,
+          totalCards: cards.length,
+          nomeDeck: nomeOrigem,
+          mensagem: `${cards.length} flashcards processados localmente com sucesso!`,
+        };
+      } catch (err: any) {
+        if (jsonCandidate.startsWith('[') || jsonCandidate.startsWith('{')) {
+          throw new Error(`Erro ao interpretar JSON: ${err?.message || 'Verifique se copiou a resposta completa do Gemini.'}`);
+        }
+      }
+    }
+
+    // Fallback síncrono para texto tabulado
+    return this.processarTextoDireto(texto, eixoPadraoId, nomeOrigem, topicoDestinoId, topicoDestinoNome, especialidadePadrao);
+  },
+
+  /**
    * Exporta cards para o formato Anki TSV/TXT tab-delimited
    * Compatível diretamente com o Anki desktop e AnkiDroid
    */

@@ -23,7 +23,12 @@ import {
   Stethoscope,
   XCircle,
   Wand2,
-  Undo2
+  Undo2,
+  Eye,
+  EyeOff,
+  RotateCw,
+  Play,
+  RefreshCw
 } from 'lucide-react';
 import { CardClinico, EixoClinico, MascaraImagem, TipoCard, EtapaFluxograma, AlgoritmoDecisao, BlocoFluxogramaDecisao, RamificacaoFluxo, FluxogramaComplexoDados, BlocoOclusao } from '../types';
 import { ImageOcclusionEditor } from './ImageOcclusionEditor';
@@ -270,6 +275,60 @@ export const CreateFlashcardView: React.FC<CreateFlashcardViewProps> = ({
   const [opcoes, setOpcoes] = useState<string[]>(() => cardEmEdicao?.casoClinicoDados?.opcoes || ['', '', '', '']);
   const [indiceCorreto, setIndiceCorreto] = useState<number>(() => cardEmEdicao?.casoClinicoDados?.indiceCorreto || 0);
   const [justificativaDetalhada, setJustificativaDetalhada] = useState(() => cardEmEdicao?.casoClinicoDados?.justificativaDetalhada || '');
+
+  // Estados para modo de edição inline vs teste de Active Recall em tempo real (para todos os formatos)
+  const [modoVisualizacao, setModoVisualizacao] = useState<'editar' | 'testar'>('editar');
+  const [ladoCardConceito, setLadoCardConceito] = useState<'frente' | 'verso'>('frente');
+  const [opcaoSimulada, setOpcaoSimulada] = useState<number | null>(null);
+  const [clozesRevelados, setClozesRevelados] = useState<Set<number>>(new Set());
+  const [passosRevelados, setPassosRevelados] = useState<Set<number>>(new Set());
+
+  // Helper para renderizar cloze com oclusões interativas clicáveis
+  const renderClozeInterativo = (texto: string) => {
+    if (!texto) return <span className="text-slate-400 italic">Nenhum texto de oclusão configurado ainda.</span>;
+    const clozeRegex = /\{\{c(\d+)::([\s\S]+?)(?:::([\s\S]+?))?\}\}/g;
+    const partes: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = clozeRegex.exec(texto)) !== null) {
+      const matchIndex = match.index;
+      if (matchIndex > lastIndex) {
+        partes.push(<span key={`txt-${lastIndex}`}>{texto.substring(lastIndex, matchIndex)}</span>);
+      }
+      const clozeNum = parseInt(match[1], 10);
+      const clozeContent = match[2];
+      const isRevelado = clozesRevelados.has(clozeNum);
+
+      partes.push(
+        <button
+          key={`cloze-${clozeNum}-${matchIndex}`}
+          type="button"
+          onClick={() => {
+            const novo = new Set(clozesRevelados);
+            if (novo.has(clozeNum)) novo.delete(clozeNum);
+            else novo.add(clozeNum);
+            setClozesRevelados(novo);
+          }}
+          className={`inline-block mx-1 px-2.5 py-0.5 rounded-lg text-xs font-semibold cursor-pointer transition-all active:scale-95 ${
+            isRevelado
+              ? 'bg-amber-100 text-amber-950 border border-amber-300 shadow-3xs'
+              : 'bg-blue-600 text-white shadow-3xs hover:bg-blue-700 animate-pulse'
+          }`}
+          title={isRevelado ? 'Clique para ocultar lacuna' : 'Clique para revelar termo'}
+        >
+          {isRevelado ? clozeContent : `[ ... c${clozeNum} ]`}
+        </button>
+      );
+      lastIndex = matchIndex + match[0].length;
+    }
+
+    if (lastIndex < texto.length) {
+      partes.push(<span key={`txt-${lastIndex}`}>{texto.substring(lastIndex)}</span>);
+    }
+
+    return <div className="leading-relaxed text-xs sm:text-sm text-slate-800">{partes}</div>;
+  };
 
   // Modal para preenchimento de exemplo por demanda
   const [modalConfirmarExemplo, setModalConfirmarExemplo] = useState(false);
@@ -695,352 +754,789 @@ export const CreateFlashcardView: React.FC<CreateFlashcardViewProps> = ({
         </div>
 
         {/* =================================================================== */}
-        {/* 4. CONTEÚDO ESPECÍFICO DE ACORDO COM O FORMATO SELECIONADO         */}
+        {/* 4. CANVAS DO CARTÃO DE ESTUDO (WYSIWYG & ACTIVE RECALL TESTER)      */}
         {/* =================================================================== */}
-        <div className="bg-white rounded-2xl p-3.5 sm:p-5 border border-slate-200/90 shadow-2xs space-y-3.5">
+        <div className="bg-white rounded-2xl p-3.5 sm:p-5 border border-slate-200/90 shadow-2xs space-y-4">
+          
+          {/* BARRA SUPERIOR DO CANVAS: FORMATO + ALTERNADOR EDITAR VS TESTAR RECALL */}
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className={`text-[10.5px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                TIPOS_CARD_CONFIG.find(t => t.id === tipoCard)?.corBadge || 'bg-blue-50 text-blue-800 border-blue-200'
+              }`}>
+                {TIPOS_CARD_CONFIG.find(t => t.id === tipoCard)?.rotuloCurto}
+              </span>
+              <span className="text-xs font-semibold text-slate-800 truncate max-w-[180px] sm:max-w-sm">
+                {titulo.trim() || 'Cartão sem título'}
+              </span>
+            </div>
 
-          {/* FORMATO 1: CONCEITO BÁSICO (FRENTE E VERSO) */}
-          {tipoCard === 'conceito' && (
-            <div className="space-y-3.5">
-              {/* Título do Conceito */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-700 block">
-                  Título / Conceito Central:
-                </label>
-                <input
-                  type="text"
-                  value={titulo}
-                  onChange={(e) => setTitulo(e.target.value)}
-                  placeholder="Ex: Tríade de Virchow, Critérios de Jones, Cefaleia em Salvas"
-                  className="w-full p-2.5 sm:p-3 rounded-xl border border-slate-200 text-xs sm:text-[13px] font-bold text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-3xs"
-                />
-              </div>
+            {/* Alternador de Modo: [✏️ Editar] vs [👁️ Testar Active Recall] */}
+            <div className="flex items-center p-0.5 rounded-xl bg-slate-100 border border-slate-200/80 shrink-0">
+              <button
+                type="button"
+                onClick={() => setModoVisualizacao('editar')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  modoVisualizacao === 'editar'
+                    ? 'bg-white text-slate-900 shadow-3xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>✏️ Editar</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setModoVisualizacao('testar');
+                  setOpcaoSimulada(null);
+                  setClozesRevelados(new Set());
+                  setPassosRevelados(new Set());
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  modoVisualizacao === 'testar'
+                    ? 'bg-blue-600 text-white shadow-3xs'
+                    : 'text-slate-600 hover:text-blue-700'
+                }`}
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Testar Active Recall</span>
+              </button>
+            </div>
+          </div>
 
-              {/* 1-Tap Prompt Starters Médicos */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Atalhos Médicos de Pergunta:
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-                  {PROMPT_STARTERS_MEDICOS.map((starter, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => aplicarPromptStarter(starter.prefixo)}
-                      className="text-[10.5px] font-bold px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 whitespace-nowrap transition-colors shrink-0 active:scale-95 cursor-pointer"
-                    >
-                      + {starter.rotulo}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          {/* =================================================================== */}
+          {/* MODO TESTAR ACTIVE RECALL (SIMULAÇÃO REAL PARA TODOS OS FORMATOS)    */}
+          {/* =================================================================== */}
+          {modoVisualizacao === 'testar' && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-200/90 space-y-3.5 shadow-3xs">
+                
+                {/* 1. TESTE CONCEITO (FRENTE E VERSO COM 1-TAP FLIP) */}
+                {tipoCard === 'conceito' && (
+                  <div className="space-y-3.5 text-left">
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 pb-2">
+                      <span className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider bg-blue-100/70 px-2 py-0.5 rounded-md">
+                        {ladoCardConceito === 'frente' ? '👁️ Anverso (Frente do Cartão)' : '🔄 Reverso (Verso do Cartão)'}
+                      </span>
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        Toque no botão para alternar a resposta
+                      </span>
+                    </div>
 
-              {/* Pergunta Gatilho (Frente) */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-bold text-slate-700 block">
-                    Pergunta Gatilho (Frente do Card):
-                  </label>
-                  <ClinicalFormatToolbar
-                    targetInputId="textarea-pergunta-conceito"
-                    valorAtual={pergunta}
-                    onValorChange={setPergunta}
-                    mostrarTopico={false}
-                    compacto={true}
-                  />
-                </div>
-                <textarea
-                  id="textarea-pergunta-conceito"
-                  value={pergunta}
-                  onChange={(e) => setPergunta(e.target.value)}
-                  placeholder="Ex: Quais os 3 fatores fisiopatológicos da Tríade de Virchow e qual sua relevância clínica?"
-                  rows={2}
-                  className="w-full p-2.5 sm:p-3 rounded-xl border border-slate-200 text-xs sm:text-[13px] text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-3xs leading-relaxed"
-                />
-              </div>
+                    {ladoCardConceito === 'frente' ? (
+                      <div className="py-3 px-2 space-y-2">
+                        <span className="text-xs font-semibold text-slate-500 block uppercase tracking-wider">
+                          Pergunta Clínica:
+                        </span>
+                        <div className="text-sm sm:text-base font-normal text-slate-900 leading-relaxed">
+                          {pergunta.trim() ? (
+                            <FormattedClinicalText text={pergunta} />
+                          ) : (
+                            <span className="italic text-slate-400">Nenhuma pergunta preenchida ainda. Digite no modo "Editar".</span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="py-3 px-2 space-y-3">
+                        <span className="text-xs font-semibold text-emerald-800 block uppercase tracking-wider">
+                          Resposta & Conduta Esperada:
+                        </span>
+                        <div className="text-xs sm:text-sm text-slate-800 leading-relaxed bg-white p-3.5 rounded-xl border border-slate-200 shadow-3xs font-normal">
+                          {resposta.trim() ? (
+                            <FormattedClinicalText text={resposta} />
+                          ) : (
+                            <span className="italic text-slate-400">Nenhuma resposta preenchida ainda.</span>
+                          )}
+                        </div>
 
-              {/* Resposta Completa (Verso) */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-bold text-slate-700 block">
-                    Resposta Esperada (Verso do Card):
-                  </label>
-                  <ClinicalFormatToolbar
-                    targetInputId="textarea-resposta-conceito"
-                    valorAtual={resposta}
-                    onValorChange={setResposta}
-                    mostrarTopico={true}
-                    compacto={true}
-                  />
-                </div>
-                <textarea
-                  id="textarea-resposta-conceito"
-                  value={resposta}
-                  onChange={(e) => setResposta(e.target.value)}
-                  placeholder="Ex: 1. [azul]Lesão Endotelial[/azul]&#10;2. [azul]Estase Sanguínea[/azul]&#10;3. [azul]Hipercoagulabilidade[/azul]&#10;Principal fator de risco para trombose venosa profunda (TVP)."
-                  rows={4}
-                  className="w-full p-2.5 sm:p-3 rounded-xl border border-slate-200 text-xs sm:text-[13px] text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-3xs leading-relaxed"
-                />
+                        {(dica.trim() || notaExplicativa.trim()) && (
+                          <div className="p-3 bg-amber-50/90 rounded-xl border border-amber-200 text-amber-900 text-xs space-y-1">
+                            {dica.trim() && (
+                              <div className="flex items-start gap-1.5 font-normal">
+                                <span className="font-semibold shrink-0">💡 Mnemônico:</span>
+                                <span>{dica}</span>
+                              </div>
+                            )}
+                            {notaExplicativa.trim() && (
+                              <div className="flex items-start gap-1.5 font-normal">
+                                <span className="font-semibold shrink-0">⭐ Ponto-Chave / UFPA:</span>
+                                <span>{notaExplicativa}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-                {resposta && (
-                  <div className="p-2.5 bg-blue-50/30 rounded-xl border border-blue-100 text-left space-y-0.5">
-                    <span className="text-[9.5px] font-bold text-blue-700 uppercase tracking-wider block">
-                      Prévia do Verso:
-                    </span>
-                    <div className="text-xs sm:text-[12.5px] text-slate-800 leading-relaxed">
-                      <FormattedClinicalText text={resposta} />
+                    {/* Botão de Virada de 1 Toque */}
+                    <div className="pt-2 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setLadoCardConceito(ladoCardConceito === 'frente' ? 'verso' : 'frente')}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm shadow-md transition-all active:scale-95 cursor-pointer"
+                      >
+                        <RotateCw className="w-4 h-4" />
+                        <span>{ladoCardConceito === 'frente' ? 'Virar Cartão (Ver Resposta)' : 'Desvirar Cartão (Ver Pergunta)'}</span>
+                      </button>
                     </div>
                   </div>
                 )}
-              </div>
-            </div>
-          )}
 
-          {/* FORMATO 2: OCLUSÃO DE TEXTO (CLOZE) */}
-          {tipoCard === 'cloze' && (
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-700 block">
-                  Título do Flashcard Cloze:
-                </label>
-                <input
-                  type="text"
-                  value={titulo}
-                  onChange={(e) => setTitulo(e.target.value)}
-                  placeholder="Ex: Dose da Adrenalina na PCR ou Critérios de Jones"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-3xs"
-                />
-              </div>
-
-              <VisualClozeEditor
-                texto={textoCloze}
-                onChange={setTextoCloze}
-                placeholder="Digite o texto clínico e selecione as palavras que deseja ocultar..."
-              />
-            </div>
-          )}
-
-          {/* FORMATO 3: OCLUSÃO DE IMAGEM */}
-          {tipoCard === 'image_occlusion' && (
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-700 block">
-                  Título da Imagem / Estrutura:
-                </label>
-                <input
-                  type="text"
-                  value={titulo}
-                  onChange={(e) => setTitulo(e.target.value)}
-                  placeholder="Ex: Polígono de Willis, Artérias Coronárias, ECG com Supra de ST"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-3xs"
-                />
-              </div>
-
-              <ImageOcclusionEditor
-                imagemUrl={imagemUrl}
-                mascaras={mascarasImagem}
-                onImagemUrlChange={setImagemUrl}
-                onImagemChange={setImagemUrl}
-                onMascarasChange={setMascarasImagem}
-              />
-            </div>
-          )}
-
-          {/* FORMATO 4: CASO CLÍNICO (MÚLTIPLA ESCOLHA) */}
-          {tipoCard === 'caso_clinico' && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-1.5 pb-1 border-b border-slate-100">
-                <Stethoscope className="w-4 h-4 text-teal-600" />
-                <span className="text-xs font-bold text-teal-900">
-                  Estrutura da Questão Clínica
-                </span>
-              </div>
-
-              {/* Título da Questão */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-700 block">
-                  Título do Caso:
-                </label>
-                <input
-                  type="text"
-                  value={titulo}
-                  onChange={(e) => setTitulo(e.target.value)}
-                  placeholder="Ex: Manejo do Choque Anafilático Refratário"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-3xs"
-                />
-              </div>
-
-              {/* Vinheta Clínica */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-700 block">
-                  História Clínica (Idade, queixa e tempo de evolução):
-                </label>
-                <textarea
-                  value={historiaClinica}
-                  onChange={(e) => setHistoriaClinica(e.target.value)}
-                  placeholder="Ex: Mulher de 32 anos dá entrada com prurido difuso, edema labial e estridor laríngeo 10 minutos após uso de amoxicilina..."
-                  rows={3}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-3xs leading-relaxed"
-                />
-              </div>
-
-              {/* Sinais Vitais & Exame Físico (Opcional) */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-700 block">
-                  Exame Físico & Sinais Vitais (Opcional):
-                </label>
-                <input
-                  type="text"
-                  value={exameFisicoSinais}
-                  onChange={(e) => setExameFisicoSinais(e.target.value)}
-                  placeholder="Ex: PA 80/40 mmHg, FC 135 bpm, SatO2 88%, estridor respiratório"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-3xs"
-                />
-              </div>
-
-              {/* Pergunta de Decisão */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-700 block">
-                  Pergunta da Banca / Conduta Imediata:
-                </label>
-                <input
-                  type="text"
-                  value={pergunta}
-                  onChange={(e) => setPergunta(e.target.value)}
-                  placeholder="Ex: Qual a conduta farmacológica imediata mais adequada?"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-3xs"
-                />
-              </div>
-
-              {/* Alternativas de Múltipla Escolha */}
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-700">
-                    Alternativas (Toque na letra para definir o gabarito correto):
-                  </span>
-                  {opcoes.length < 5 && (
-                    <button
-                      type="button"
-                      onClick={() => setOpcoes([...opcoes, ''])}
-                      className="text-[10px] font-bold text-teal-700 hover:underline cursor-pointer"
-                    >
-                      + Opção E
-                    </button>
-                  )}
-                </div>
-
-                {opcoes.map((opcao, idx) => {
-                  const letras = ['A', 'B', 'C', 'D', 'E'];
-                  const isCorreta = idx === indiceCorreto;
-
-                  return (
-                    <div key={idx} className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setIndiceCorreto(idx)}
-                        className={`w-7 h-7 rounded-xl font-black text-xs flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-3xs active:scale-95 ${
-                          isCorreta
-                            ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
-                        }`}
-                        title={isCorreta ? 'Alternativa Correta (Gabarito)' : 'Clique para marcar como correta'}
-                      >
-                        {letras[idx]}
-                      </button>
-                      <input
-                        type="text"
-                        value={opcao}
-                        onChange={(e) => {
-                          const nov = [...opcoes];
-                          nov[idx] = e.target.value;
-                          setOpcoes(nov);
-                        }}
-                        placeholder={`Alternativa ${letras[idx]}...`}
-                        className={`w-full p-2 rounded-xl border text-xs text-slate-900 shadow-3xs ${
-                          isCorreta ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-200 bg-slate-50/40'
-                        }`}
-                      />
-                      {opcoes.length > 2 && (
+                {/* 2. TESTE CASO CLÍNICO (MÚLTIPLA ESCOLHA INTERATIVA COM GABARITO) */}
+                {tipoCard === 'caso_clinico' && (
+                  <div className="space-y-3.5 text-left">
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 pb-2">
+                      <span className="text-[10px] font-semibold text-teal-800 uppercase tracking-wider bg-teal-100/70 px-2 py-0.5 rounded-md">
+                        Simulação de Prova • Questão Clínica
+                      </span>
+                      {opcaoSimulada !== null && (
                         <button
                           type="button"
-                          onClick={() => {
-                            const nov = opcoes.filter((_, i) => i !== idx);
-                            setOpcoes(nov);
-                            if (indiceCorreto >= nov.length) setIndiceCorreto(0);
-                          }}
-                          className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors cursor-pointer"
+                          onClick={() => setOpcaoSimulada(null)}
+                          className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <RefreshCw className="w-3 h-3" />
+                          <span>Reiniciar Teste</span>
                         </button>
                       )}
                     </div>
-                  );
-                })}
+
+                    {/* Vinheta Clínica e Exame Físico */}
+                    <div className="space-y-2">
+                      <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs sm:text-[13px] text-slate-800 leading-relaxed shadow-3xs font-normal">
+                        {historiaClinica.trim() || <span className="italic text-slate-400">Preencha a história clínica no modo de edição...</span>}
+                      </div>
+
+                      {exameFisicoSinais.trim() && (
+                        <div className="p-2.5 bg-slate-100/80 rounded-xl border border-slate-200/90 text-xs text-slate-700 font-normal">
+                          <strong className="font-semibold text-slate-900">Exame Físico / Sinais Vitais:</strong> {exameFisicoSinais}
+                        </div>
+                      )}
+
+                      <h4 className="text-xs sm:text-sm font-semibold text-slate-900 pt-1">
+                        {pergunta.trim() || 'Qual a conduta mais adequada para o caso acima?'}
+                      </h4>
+                    </div>
+
+                    {/* Alternativas Clicáveis */}
+                    <div className="space-y-2 pt-1">
+                      {opcoes.map((opcao, idx) => {
+                        const letras = ['A', 'B', 'C', 'D', 'E'];
+                        const isCorreta = idx === indiceCorreto;
+                        const isSelecionada = opcaoSimulada === idx;
+                        const jaRespondeu = opcaoSimulada !== null;
+
+                        let estilo = 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800';
+                        if (jaRespondeu) {
+                          if (isCorreta) {
+                            estilo = 'bg-emerald-50 border-emerald-500 text-emerald-950 ring-2 ring-emerald-300';
+                          } else if (isSelecionada) {
+                            estilo = 'bg-rose-50 border-rose-500 text-rose-950 ring-2 ring-rose-300';
+                          } else {
+                            estilo = 'bg-slate-50 border-slate-200 text-slate-400 opacity-60';
+                          }
+                        }
+
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            disabled={jaRespondeu}
+                            onClick={() => setOpcaoSimulada(idx)}
+                            className={`w-full p-2.5 sm:p-3 rounded-xl border text-xs sm:text-[13px] flex items-start gap-2.5 transition-all text-left shadow-3xs cursor-pointer ${estilo}`}
+                          >
+                            <span className={`w-6 h-6 rounded-lg text-xs font-semibold flex items-center justify-center shrink-0 mt-0.5 ${
+                              jaRespondeu && isCorreta
+                                ? 'bg-emerald-600 text-white'
+                                : jaRespondeu && isSelecionada
+                                ? 'bg-rose-600 text-white'
+                                : 'bg-slate-100 text-slate-700'
+                            }`}>
+                              {letras[idx]}
+                            </span>
+                            <span className="flex-1 leading-snug font-normal">
+                              {opcao.trim() || `Alternativa ${letras[idx]}`}
+                            </span>
+                            {jaRespondeu && isCorreta && (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 self-center" />
+                            )}
+                            {jaRespondeu && isSelecionada && !isCorreta && (
+                              <XCircle className="w-4 h-4 text-rose-600 shrink-0 self-center" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Feedback e Justificativa */}
+                    {opcaoSimulada !== null && (
+                      <div className="p-3.5 bg-white rounded-xl border border-slate-200 text-xs space-y-2 shadow-3xs animate-in fade-in">
+                        <div className="flex items-center gap-1.5 font-semibold">
+                          {opcaoSimulada === indiceCorreto ? (
+                            <span className="text-emerald-700 flex items-center gap-1">
+                              <CheckCircle2 className="w-4 h-4" />
+                              Parabéns! Você acertou a conduta.
+                            </span>
+                          ) : (
+                            <span className="text-rose-700 flex items-center gap-1">
+                              <XCircle className="w-4 h-4" />
+                              Resposta incorreta. O gabarito é a alternativa {['A', 'B', 'C', 'D', 'E'][indiceCorreto]}.
+                            </span>
+                          )}
+                        </div>
+
+                        {justificativaDetalhada.trim() && (
+                          <div className="text-slate-700 leading-relaxed pt-1 border-t border-slate-100 font-normal">
+                            <strong className="font-semibold text-slate-900">Comentário da Banca / Justificativa:</strong>
+                            <div className="mt-1">
+                              <FormattedClinicalText text={justificativaDetalhada} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 3. TESTE CLOZE (OCLUSÃO DE TEXTO INTERATIVA) */}
+                {tipoCard === 'cloze' && (
+                  <div className="space-y-3.5 text-left">
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 pb-2">
+                      <span className="text-[10px] font-semibold text-amber-800 uppercase tracking-wider bg-amber-100/70 px-2 py-0.5 rounded-md">
+                        Oclusão Ativa de Texto • Toque nas lacunas
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const matches = Array.from(textoCloze.matchAll(/\{\{c(\d+)::/g));
+                            const all = new Set(matches.map(m => parseInt(m[1], 10)));
+                            setClozesRevelados(all);
+                          }}
+                          className="text-[10.5px] font-semibold text-blue-600 hover:text-blue-800 cursor-pointer"
+                        >
+                          Revelar Todos
+                        </button>
+                        <span className="text-slate-300">|</span>
+                        <button
+                          type="button"
+                          onClick={() => setClozesRevelados(new Set())}
+                          className="text-[10.5px] font-semibold text-slate-500 hover:text-slate-700 cursor-pointer"
+                        >
+                          Ocultar Todos
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-3xs leading-relaxed font-normal">
+                      {renderClozeInterativo(textoCloze)}
+                    </div>
+
+                    {(dica.trim() || notaExplicativa.trim()) && (
+                      <div className="p-2.5 bg-amber-50/80 rounded-xl border border-amber-200/80 text-amber-900 text-xs font-normal">
+                        {dica.trim() && <div><strong className="font-semibold">💡 Mnemônico:</strong> {dica}</div>}
+                        {notaExplicativa.trim() && <div><strong className="font-semibold">⭐ Ponto-Chave:</strong> {notaExplicativa}</div>}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 4. TESTE FLUXOGRAMA PASSO A PASSO (OCLUSÃO SEQUENCIAL) */}
+                {tipoCard === 'fluxograma_oclusao' && (
+                  <div className="space-y-3.5 text-left">
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 pb-2">
+                      <span className="text-[10px] font-semibold text-indigo-800 uppercase tracking-wider bg-indigo-100/70 px-2 py-0.5 rounded-md">
+                        Protocolo Linear • Toque para revelar o passo seguinte
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPassosRevelados(new Set())}
+                        className="text-[10.5px] font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                      >
+                        Reiniciar Passos
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {blocosDecisao.map((bloco, idx) => {
+                        const isInicio = idx === 0;
+                        const revelado = isInicio || passosRevelados.has(idx);
+
+                        return (
+                          <div key={bloco.id || idx} className="p-3 bg-white rounded-xl border border-slate-200 shadow-3xs space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold text-indigo-900">
+                                {bloco.titulo || `Etapa ${idx + 1}`}
+                              </span>
+                              {bloco.criterioSeta && (
+                                <span className="text-[10.5px] font-medium bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
+                                  Critério: {bloco.criterioSeta}
+                                </span>
+                              )}
+                            </div>
+
+                            {revelado ? (
+                              <div className="text-xs text-slate-800 font-normal leading-relaxed pt-1 border-t border-slate-100">
+                                {bloco.condutaOuAcao}
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nov = new Set(passosRevelados);
+                                  nov.add(idx);
+                                  setPassosRevelados(nov);
+                                }}
+                                className="w-full py-2 px-3 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Revelar Conduta Deste Passo</span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. TESTE FLUXOGRAMA COMPLEXO */}
+                {tipoCard === 'fluxograma_complexo' && (
+                  <div className="space-y-2 text-left">
+                    <span className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider bg-emerald-100/70 px-2 py-0.5 rounded-md">
+                      Árvore de Decisão Interativa
+                    </span>
+                    <ComplexFlowchartBuilder dados={fluxogramaComplexo} onChange={setFluxogramaComplexo} />
+                  </div>
+                )}
+
+                {/* 6. TESTE OCLUSÃO DE IMAGEM */}
+                {tipoCard === 'image_occlusion' && (
+                  <div className="space-y-2 text-left">
+                    <span className="text-[10px] font-semibold text-purple-800 uppercase tracking-wider bg-purple-100/70 px-2 py-0.5 rounded-md">
+                      Oclusão de Imagem
+                    </span>
+                    <ImageOcclusionEditor
+                      imagemUrl={imagemUrl}
+                      mascaras={mascarasImagem}
+                      onImagemUrlChange={setImagemUrl}
+                      onImagemChange={setImagemUrl}
+                      onMascarasChange={setMascarasImagem}
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Justificativa / Comentário */}
-              <div className="space-y-1 pt-1">
-                <label className="text-[11px] font-bold text-slate-700 block">
-                  Justificativa / Comentário da Banca:
-                </label>
-                <textarea
-                  value={justificativaDetalhada}
-                  onChange={(e) => setJustificativaDetalhada(e.target.value)}
-                  placeholder="Ex: A adrenalina IM no vasto lateral é o único fármaco que reduz a mortalidade no choque anafilático..."
-                  rows={2}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-3xs"
-                />
+              <div className="flex justify-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => setModoVisualizacao('editar')}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer transition-colors"
+                >
+                  <span>Voltar para Modo de Edição</span>
+                </button>
               </div>
             </div>
           )}
 
-          {/* FORMATO 5: FLUXOGRAMA LINEAR (PASSO A PASSO) */}
-          {tipoCard === 'fluxograma_oclusao' && (
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-700 block">
-                  Título do Fluxograma:
-                </label>
-                <input
-                  type="text"
-                  value={titulo}
-                  onChange={(e) => setTitulo(e.target.value)}
-                  placeholder="Ex: Sequência Rápida de Intubação (7 Ps) ou Manejo da PCR"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-3xs"
-                />
-              </div>
+          {/* =================================================================== */}
+          {/* MODO EDIÇÃO INLINE (COM ABAS FRENTE/VERSO E FERRAMENTAS CLÍNICAS)   */}
+          {/* =================================================================== */}
+          {modoVisualizacao === 'editar' && (
+            <div className="space-y-3.5">
+              {/* FORMATO 1: CONCEITO BÁSICO (FRENTE E VERSO COM ABAS INLINE) */}
+              {tipoCard === 'conceito' && (
+                <div className="space-y-3.5">
+                  {/* Título do Conceito */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-700 block">
+                      Título / Conceito Central:
+                    </label>
+                    <input
+                      type="text"
+                      value={titulo}
+                      onChange={(e) => setTitulo(e.target.value)}
+                      placeholder="Ex: Tríade de Virchow, Critérios de Jones, Cefaleia em Salvas"
+                      className="w-full p-2.5 sm:p-3 rounded-xl border border-slate-200 text-xs sm:text-[13px] font-semibold text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-3xs"
+                    />
+                  </div>
 
-              <FlowchartBuilder
-                blocos={blocosDecisao}
-                onChange={setBlocosDecisao}
-              />
-            </div>
-          )}
+                  {/* Alternador Frente / Verso da Edição */}
+                  <div className="flex items-center p-1 rounded-xl bg-slate-100 border border-slate-200/80 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setLadoCardConceito('frente')}
+                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        ladoCardConceito === 'frente'
+                          ? 'bg-white text-blue-700 shadow-3xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>👁️ Frente (Pergunta)</span>
+                      {pergunta.trim() && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLadoCardConceito('verso')}
+                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        ladoCardConceito === 'verso'
+                          ? 'bg-white text-blue-700 shadow-3xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>🔄 Verso (Resposta & Conduta)</span>
+                      {resposta.trim() && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                    </button>
+                  </div>
 
-          {/* FORMATO 6: FLUXOGRAMA COMPLEXO (ÁRVORE DE DECISÃO) */}
-          {tipoCard === 'fluxograma_complexo' && (
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-700 block">
-                  Título do Algoritmo Clínico:
-                </label>
-                <input
-                  type="text"
-                  value={titulo}
-                  onChange={(e) => setTitulo(e.target.value)}
-                  placeholder="Ex: Abordagem da Dor Torácica Aguda no Pronto-Socorro"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-3xs"
-                />
-              </div>
+                  {/* LADO FRENTE */}
+                  {ladoCardConceito === 'frente' && (
+                    <div className="space-y-3 animate-in fade-in">
+                      {/* 1-Tap Prompt Starters Médicos */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                            Atalhos Rápidos de Pergunta:
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                          {PROMPT_STARTERS_MEDICOS.map((starter, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => aplicarPromptStarter(starter.prefixo)}
+                              className="text-[10.5px] font-semibold px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 whitespace-nowrap transition-colors shrink-0 active:scale-95 cursor-pointer"
+                            >
+                              + {starter.rotulo}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-              <div className="pt-1">
-                <ComplexFlowchartBuilder
-                  dados={fluxogramaComplexo}
-                  onChange={setFluxogramaComplexo}
-                />
-              </div>
+                      {/* Pergunta Gatilho */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-semibold text-slate-700 block">
+                            Pergunta Clínica (Frente):
+                          </label>
+                          <ClinicalFormatToolbar
+                            targetInputId="textarea-pergunta-conceito"
+                            valorAtual={pergunta}
+                            onValorChange={setPergunta}
+                            mostrarTopico={false}
+                            compacto={true}
+                          />
+                        </div>
+                        <textarea
+                          id="textarea-pergunta-conceito"
+                          value={pergunta}
+                          onChange={(e) => setPergunta(e.target.value)}
+                          placeholder="Ex: Quais os 3 fatores fisiopatológicos da Tríade de Virchow e qual sua relevância clínica?"
+                          rows={3}
+                          className="w-full p-2.5 sm:p-3 rounded-xl border border-slate-200 text-xs sm:text-[13px] text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-3xs leading-relaxed"
+                        />
+                      </div>
+
+                      {pergunta.trim() && (
+                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-left space-y-1">
+                          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
+                            Prévia da Frente do Cartão:
+                          </span>
+                          <div className="text-xs sm:text-[13px] text-slate-800 leading-relaxed font-normal">
+                            <FormattedClinicalText text={pergunta} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* LADO VERSO */}
+                  {ladoCardConceito === 'verso' && (
+                    <div className="space-y-3 animate-in fade-in">
+                      {/* Resposta Completa */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-semibold text-slate-700 block">
+                            Resposta Esperada (Verso):
+                          </label>
+                          <ClinicalFormatToolbar
+                            targetInputId="textarea-resposta-conceito"
+                            valorAtual={resposta}
+                            onValorChange={setResposta}
+                            mostrarTopico={true}
+                            compacto={true}
+                          />
+                        </div>
+                        <textarea
+                          id="textarea-resposta-conceito"
+                          value={resposta}
+                          onChange={(e) => setResposta(e.target.value)}
+                          placeholder="Ex: 1. [azul]Lesão Endotelial[/azul]&#10;2. [azul]Estase Sanguínea[/azul]&#10;3. [azul]Hipercoagulabilidade[/azul]&#10;Principal fator de risco para trombose venosa profunda (TVP)."
+                          rows={4}
+                          className="w-full p-2.5 sm:p-3 rounded-xl border border-slate-200 text-xs sm:text-[13px] text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-3xs leading-relaxed"
+                        />
+                      </div>
+
+                      {resposta.trim() && (
+                        <div className="p-3 bg-blue-50/40 rounded-xl border border-blue-100 text-left space-y-1">
+                          <span className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider block">
+                            Prévia da Tipografia Clínica do Verso:
+                          </span>
+                          <div className="text-xs sm:text-[13px] text-slate-800 leading-relaxed font-normal">
+                            <FormattedClinicalText text={resposta} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* FORMATO 2: OCLUSÃO DE TEXTO (CLOZE) */}
+              {tipoCard === 'cloze' && (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-700 block">
+                      Título do Flashcard Cloze:
+                    </label>
+                    <input
+                      type="text"
+                      value={titulo}
+                      onChange={(e) => setTitulo(e.target.value)}
+                      placeholder="Ex: Dose da Adrenalina na PCR ou Critérios de Jones"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-3xs"
+                    />
+                  </div>
+
+                  <VisualClozeEditor
+                    texto={textoCloze}
+                    onChange={setTextoCloze}
+                    placeholder="Digite o texto clínico e selecione as palavras que deseja ocultar..."
+                  />
+                </div>
+              )}
+
+              {/* FORMATO 3: OCLUSÃO DE IMAGEM */}
+              {tipoCard === 'image_occlusion' && (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-700 block">
+                      Título da Imagem / Estrutura:
+                    </label>
+                    <input
+                      type="text"
+                      value={titulo}
+                      onChange={(e) => setTitulo(e.target.value)}
+                      placeholder="Ex: Polígono de Willis, Artérias Coronárias, ECG com Supra de ST"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-3xs"
+                    />
+                  </div>
+
+                  <ImageOcclusionEditor
+                    imagemUrl={imagemUrl}
+                    mascaras={mascarasImagem}
+                    onImagemUrlChange={setImagemUrl}
+                    onImagemChange={setImagemUrl}
+                    onMascarasChange={setMascarasImagem}
+                  />
+                </div>
+              )}
+
+              {/* FORMATO 4: CASO CLÍNICO (MÚLTIPLA ESCOLHA) */}
+              {tipoCard === 'caso_clinico' && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1.5 pb-1 border-b border-slate-100">
+                    <Stethoscope className="w-4 h-4 text-teal-600" />
+                    <span className="text-xs font-semibold text-teal-900">
+                      Estrutura da Questão Clínica
+                    </span>
+                  </div>
+
+                  {/* Título da Questão */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-700 block">
+                      Título do Caso:
+                    </label>
+                    <input
+                      type="text"
+                      value={titulo}
+                      onChange={(e) => setTitulo(e.target.value)}
+                      placeholder="Ex: Manejo do Choque Anafilático Refratário"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-3xs"
+                    />
+                  </div>
+
+                  {/* Vinheta Clínica */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-700 block">
+                      História Clínica (Idade, queixa e evolução):
+                    </label>
+                    <textarea
+                      value={historiaClinica}
+                      onChange={(e) => setHistoriaClinica(e.target.value)}
+                      placeholder="Ex: Mulher de 32 anos dá entrada com prurido difuso, edema labial e estridor laríngeo 10 minutos após uso de amoxicilina..."
+                      rows={3}
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-3xs leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Sinais Vitais & Exame Físico (Opcional) */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-700 block">
+                      Exame Físico & Sinais Vitais (Opcional):
+                    </label>
+                    <input
+                      type="text"
+                      value={exameFisicoSinais}
+                      onChange={(e) => setExameFisicoSinais(e.target.value)}
+                      placeholder="Ex: PA 80/40 mmHg, FC 135 bpm, SatO2 88%, estridor respiratório"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-3xs"
+                    />
+                  </div>
+
+                  {/* Pergunta de Decisão */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-700 block">
+                      Pergunta da Banca / Conduta Imediata:
+                    </label>
+                    <input
+                      type="text"
+                      value={pergunta}
+                      onChange={(e) => setPergunta(e.target.value)}
+                      placeholder="Ex: Qual a conduta farmacológica imediata mais adequada?"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-3xs"
+                    />
+                  </div>
+
+                  {/* Alternativas de Múltipla Escolha */}
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-slate-700">
+                        Alternativas (Toque na letra para definir o gabarito correto):
+                      </span>
+                      {opcoes.length < 5 && (
+                        <button
+                          type="button"
+                          onClick={() => setOpcoes([...opcoes, ''])}
+                          className="text-[10px] font-semibold text-teal-700 hover:underline cursor-pointer"
+                        >
+                          + Opção E
+                        </button>
+                      )}
+                    </div>
+
+                    {opcoes.map((opcao, idx) => {
+                      const letras = ['A', 'B', 'C', 'D', 'E'];
+                      const isCorreta = idx === indiceCorreto;
+
+                      return (
+                        <div key={idx} className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setIndiceCorreto(idx)}
+                            className={`w-7 h-7 rounded-xl font-semibold text-xs flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-3xs active:scale-95 ${
+                              isCorreta
+                                ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
+                            }`}
+                            title={isCorreta ? 'Alternativa Correta (Gabarito)' : 'Clique para marcar como correta'}
+                          >
+                            {letras[idx]}
+                          </button>
+                          <input
+                            type="text"
+                            value={opcao}
+                            onChange={(e) => {
+                              const nov = [...opcoes];
+                              nov[idx] = e.target.value;
+                              setOpcoes(nov);
+                            }}
+                            placeholder={`Alternativa ${letras[idx]}...`}
+                            className={`w-full p-2 rounded-xl border text-xs text-slate-900 shadow-3xs ${
+                              isCorreta ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-200 bg-slate-50/40'
+                            }`}
+                          />
+                          {opcoes.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nov = opcoes.filter((_, i) => i !== idx);
+                                setOpcoes(nov);
+                                if (indiceCorreto >= nov.length) setIndiceCorreto(0);
+                              }}
+                              className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Justificativa / Comentário */}
+                  <div className="space-y-1 pt-1">
+                    <label className="text-[11px] font-semibold text-slate-700 block">
+                      Justificativa / Comentário da Banca:
+                    </label>
+                    <textarea
+                      value={justificativaDetalhada}
+                      onChange={(e) => setJustificativaDetalhada(e.target.value)}
+                      placeholder="Ex: A adrenalina IM no vasto lateral é o único fármaco que reduz a mortalidade no choque anafilático..."
+                      rows={2}
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-3xs"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* FORMATO 5: FLUXOGRAMA LINEAR (PASSO A PASSO) */}
+              {tipoCard === 'fluxograma_oclusao' && (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-700 block">
+                      Título do Fluxograma:
+                    </label>
+                    <input
+                      type="text"
+                      value={titulo}
+                      onChange={(e) => setTitulo(e.target.value)}
+                      placeholder="Ex: Sequência Rápida de Intubação (7 Ps) ou Manejo da PCR"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-3xs"
+                    />
+                  </div>
+
+                  <FlowchartBuilder
+                    blocos={blocosDecisao}
+                    onChange={setBlocosDecisao}
+                  />
+                </div>
+              )}
+
+              {/* FORMATO 6: FLUXOGRAMA COMPLEXO (ÁRVORE DE DECISÃO) */}
+              {tipoCard === 'fluxograma_complexo' && (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-700 block">
+                      Título do Algoritmo Clínico:
+                    </label>
+                    <input
+                      type="text"
+                      value={titulo}
+                      onChange={(e) => setTitulo(e.target.value)}
+                      placeholder="Ex: Abordagem da Dor Torácica Aguda no Pronto-Socorro"
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-3xs"
+                    />
+                  </div>
+
+                  <div className="pt-1">
+                    <ComplexFlowchartBuilder
+                      dados={fluxogramaComplexo}
+                      onChange={setFluxogramaComplexo}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

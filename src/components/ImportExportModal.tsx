@@ -90,6 +90,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
       : (cards[0]?.id || '')
   );
   const [filtroBuscaCard, setFiltroBuscaCard] = useState('');
+  const [verPromptDetalhado, setVerPromptDetalhado] = useState(false);
 
   const [processando, setProcessando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -113,14 +114,17 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // =========================================================================
-  // PROMPT MODELO GEMINI REFINADO COM TODAS AS DIRETRIZES
+  // PROMPT MODELO GEMINI REFINADO COM DIRETRIZES E FOCO NAS PROVAS DA UFPA
   // =========================================================================
-  const promptModeloGemini = `Você é um preceptor médico especialista em elaboração de flashcards de alto rendimento para residência médica e faculdade de medicina (MedCards).
-Com base no material médico, diretrizes, apostilas, transcrições, PDFs, imagens ou prints fornecidos, elabore flashcards rigorosamente estruturados no formato JSON para o aplicativo MedCards.
+  const promptModeloGemini = `Você é um preceptor médico especialista em elaboração de flashcards de alto rendimento para o MedCards, com FOCO PRINCIPAL NAS PROVAS DA FACULDADE DE MEDICINA DA UFPA (Universidade Federal do Pará), módulos acadêmicos, internato e residência médica.
+Com base no material médico, transcrições de aulas, slides de professores da UFPA, casos clínicos, apostilas, PDFs ou fotos fornecidos, elabore flashcards rigorosamente estruturados no formato JSON para o aplicativo MedCards.
 
-REGRA CRÍTICA DE FIDELIDADE (NUNCA OMITIR NENHUMA INFORMAÇÃO ENVIADA):
-- NUNCA omita, resuma superficialmente, corte ou descarte informações presentes nos materiais enviados pelo usuário.
-- Todos os dados, dosagens exatas de medicamentos, valores de corte laboratoriais, achados de imagem, sinais clínicos, condutas e contraindicações fornecidos são essenciais e devem ser integralmente aproveitados e distribuídos nos flashcards gerados.
+REGRA DE OURO CRÍTICA — FIDELIDADE ESTRITA AO CONTEÚDO FORNECIDO (FOCO PROVAS UFPA):
+1. ESTRITA ADERÊNCIA AO CONTEÚDO ENVIADO:
+   - Seu foco primário e mandatório são as cobranças das provas e módulos da Faculdade de Medicina da UFPA.
+   - Os flashcards devem se ater ESTRITAMENTE e EXCLUSIVAMENTE ao conteúdo que o aluno passar junto ao prompt (transcrições de aulas, slides de professores da UFPA, discussões clínicas de enfermaria/ambulatório, apostilas e resumos enviados).
+   - NUNCA invente condutas, parâmetros ou diretrizes conflitantes com os slides ou materiais fornecidos pelo aluno. Se o professor da UFPA destacou uma conduta, dosagem, classificação ou pegadinha específica no material, essa informação TEM PRIORIDADE ABSOLUTA nos cartões.
+   - NUNCA omita, resuma superficialmente, corte ou descarte informações presentes nos materiais enviados. Todos os dados, dosagens exatas de medicamentos, valores de corte laboratoriais, achados de imagem, sinais clínicos, condutas e contraindicações fornecidos são essenciais e devem ser integralmente aproveitados e distribuídos nos flashcards gerados.
 
 REGRAS DE FORMATAÇÃO E TIPOGRAFIA MÉDICA:
 1. PROIBIÇÃO ABSOLUTA DE COLCHETES PARA SEPARAR ITENS:
@@ -133,7 +137,7 @@ REGRAS DE FORMATAÇÃO E TIPOGRAFIA MÉDICA:
    - Use parênteses APENAS quando a situação for estritamente necessária (exemplo: indicar que uma conduta ou droga é opcional, como "(opcional)", ou para unidades de dosagem e siglas médicas indispensáveis). No restante, integre o texto de forma fluida e direta sem poluição de parênteses desnecessários.
 
 3. PREENCHIMENTO OBRIGATÓRIO DO CAMPO "topico":
-   - Em cada flashcard gerado, SEMPRE preencha o campo "topico" com o nome específico do assunto/aula (ex: "topico": "Manejo da Sepse no Idoso" ou "topico": "Síndrome Coronariana Aguda").
+   - Em cada flashcard gerado, SEMPRE preencha o campo "topico" com o nome específico do assunto/aula da faculdade (ex: "topico": "Manejo da Sepse no Idoso" ou "topico": "Semiologia Respiratória UFPA").
    - Isso permite que o MedCards identifique e crie automaticamente os tópicos correspondentes e organize tudo por Eixos e Tópicos no celular e no computador de forma sincronizada.
 
 4. ARQUITETURA VISUAL E PALETA DE DESTAQUES MÉDICOS DE ALTO CONTRASTE (CRÍTICO):
@@ -143,7 +147,7 @@ REGRAS DE FORMATAÇÃO E TIPOGRAFIA MÉDICA:
      • Quando houver etapas ou categorias na conduta, inicie a seção com um subtítulo em maiúsculas terminado em dois-pontos (ex: "ANTIBIOTICOTERAPIA IMEDIATA (1ª HORA):" ou "CRITÉRIOS DE INDICAÇÃO CIRÚRGICA:").
    - PALETA DE CORES E DESTAQUES DE FIXAÇÃO:
      • [azul]termo[/azul]: Use para FÁRMACOS DE 1ª ESCOLHA, CONDUTAS IMEDIATAS e EXAMES PADRÃO-OURO (ex: [azul]Noradrenalina IV[/azul], [azul]Angioplastia Primária[/azul]). Fica num azul vívido de alto contraste visual.
-     • [vermelho]termo[/vermelho]: Use para RED FLAGS, CONTRAINDICAÇÕES FORMAIS, RISCO DE MORTE e PEGADINHAS CLÁSSICAS DE PROVA (ex: [vermelho]Beta-bloqueador contraindicado se congestão ou choque[/vermelho]). Fica num vermelho marcante.
+     • [vermelho]termo[/vermelho]: Use para RED FLAGS, CONTRAINDICAÇÕES FORMAIS, RISCO DE MORTE e PEGADINHAS CLÁSSICAS DE PROVA DA UFPA (ex: [vermelho]Beta-bloqueador contraindicado se congestão ou choque[/vermelho]). Fica num vermelho marcante.
      • ==termo==: Marca-texto AMARELO VIVO para metas de tempo e valores de corte definitivos (ex: ==Porta-Balão < 90 min==, ==Lactato sérico > 2 mmol/L==).
      • **termo**: Negrito refinado para títulos de tópicos, dosagens e parâmetros clínicos.
      • <u>termo</u>: Sublinhado para faixas etárias ou subgrupos de risco.
@@ -152,9 +156,9 @@ REGRAS DE FORMATAÇÃO E TIPOGRAFIA MÉDICA:
    - EMOJIS ESTRATÉGICOS DE FIXAÇÃO:
      • ⚠️ no início de linhas com Red Flags ou alertas graves.
      • ⭐ no início de linhas com Regra de Ouro da conduta.
-     • 💡 para mnemônicos e dicas de prova.
+     • 💡 para mnemônicos e dicas de prova da UFPA.
    - DICA PRÁTICA / PONTO-CHAVE ("dica" ou "perolaClinica"):
-     • Deve ser curta, direta e objetiva (1 a 2 frases no máximo) com o ponto de virada da conduta médica ou da questão de prova de residência (ENARE/Revalida/USP).
+     • Deve ser curta, direta e objetiva (1 a 2 frases no máximo) com o ponto de virada da conduta médica ou da questão de prova da faculdade (UFPA) / residência médica.
 
 GRANDE TUTORIAL DOS FORMATOS DO MEDCARDS (COMO O ESTUDANTE VISUALIZA E RESOLVE):
 
@@ -389,10 +393,15 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
     }
 
     setAnalisandoTexto(true);
-    const timer = setTimeout(() => {
+    let isCancelled = false;
+
+    const timer = setTimeout(async () => {
       try {
         const targetEixo = eixoDestinoId && eixoDestinoId !== '__novo_eixo__' ? eixoDestinoId : (eixos[0]?.id || 'eixo-1');
-        const res = AnkiService.processarTextoDireto(raw, targetEixo, 'Gemini / MedCards');
+        // Processamento 100% local e assíncrono (fatiado em lotes de 15 cards, mantendo 60fps)
+        const res = await AnkiService.processarTextoAssincrono(raw, targetEixo, 'Gemini / MedCards');
+
+        if (isCancelled) return;
 
         if (res.cardsImportados.length > 0) {
           const tiposContagem: Record<string, number> = {
@@ -414,7 +423,7 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
 
           setAnaliseTextoColado({
             valido: true,
-            formato: res.eixosCriados.length > 0 ? 'Pacote MedCards (Eixos + Tópicos)' : (raw.startsWith('[') || raw.startsWith('{') || raw.includes('```') ? 'JSON Estruturado (Gemini)' : 'Texto Tabulado / Anki'),
+            formato: res.eixosCriados.length > 0 ? 'Pacote MedCards (Eixos + Tópicos)' : (raw.startsWith('[') || raw.startsWith('{') || raw.includes('```') ? 'JSON Estruturado (Gemini / UFPA)' : 'Texto Tabulado / Anki'),
             totalCards: res.cardsImportados.length,
             tiposContagem,
             topicos: Array.from(topicosDetectados),
@@ -426,27 +435,36 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
           return;
         }
 
-        setAnaliseTextoColado({
-          valido: false,
-          erroJson: true,
-          mensagem: 'Aguardando formato JSON válido ou texto tabulado...',
-        });
-        setCardsPrevia([]);
-        setIdsSelecionados(new Set());
+        if (!isCancelled) {
+          setAnaliseTextoColado({
+            valido: false,
+            erroJson: true,
+            mensagem: 'Aguardando formato JSON válido ou texto tabulado...',
+          });
+          setCardsPrevia([]);
+          setIdsSelecionados(new Set());
+        }
       } catch (err: any) {
-        setAnaliseTextoColado({
-          valido: false,
-          erroJson: true,
-          mensagem: err?.message || 'Aguardando fechamento do JSON ou texto tabulado...',
-        });
-        setCardsPrevia([]);
-        setIdsSelecionados(new Set());
+        if (!isCancelled) {
+          setAnaliseTextoColado({
+            valido: false,
+            erroJson: true,
+            mensagem: err?.message || 'Aguardando fechamento do JSON ou texto tabulado...',
+          });
+          setCardsPrevia([]);
+          setIdsSelecionados(new Set());
+        }
       } finally {
-        setAnalisandoTexto(false);
+        if (!isCancelled) {
+          setAnalisandoTexto(false);
+        }
       }
-    }, 150);
+    }, 180);
 
-    return () => clearTimeout(timer);
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
   }, [textoColado, eixoDestinoId, eixos]);
 
   // =========================================================================
@@ -487,7 +505,7 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
     setProcessando(true);
     setErro(null);
 
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         const raw = textoColado.trim();
 
@@ -622,8 +640,8 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
           }
         }
 
-        // 3. Processar texto e normalizar cards
-        const res = AnkiService.processarTextoDireto(
+        // 3. Processar texto e normalizar cards (100% offline, local e assíncrono)
+        const res = await AnkiService.processarTextoAssincrono(
           textoColado, 
           finalEixoId, 
           'Gemini / MedCards', 
@@ -1053,24 +1071,29 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
                   />
                 </>
               ) : (
-                <div className="space-y-2.5">
-                  {/* Prompt Box Otimizado para Gemini */}
-                  <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50/60 border border-blue-200/80 rounded-2xl space-y-2">
+                <div className="space-y-3">
+                  {/* Card Minimalista do Prompt Mestre UFPA */}
+                  <div className="p-3.5 bg-slate-50/90 border border-slate-200/90 rounded-2xl space-y-2.5 shadow-3xs">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-lg bg-blue-600 text-white flex items-center justify-center text-[10px] font-extrabold">
-                          AI
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold shadow-3xs">
+                          UFPA
                         </span>
-                        <span className="text-xs font-bold text-slate-900">
-                          Prompt Otimizado para Gemini
-                        </span>
+                        <div>
+                          <h4 className="text-xs font-semibold text-slate-900 leading-tight">
+                            Prompt Mestre • Foco Provas UFPA
+                          </h4>
+                          <p className="text-[10px] text-slate-500">
+                            Fidelidade estrita aos slides e materiais de aula
+                          </p>
+                        </div>
                       </div>
 
                       <button
                         type="button"
                         onClick={handleCopiarPrompt}
-                        className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer transition-all active:scale-95"
-                        title="Copiar prompt completo para enviar ao Gemini"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-3xs cursor-pointer transition-all active:scale-95 shrink-0"
+                        title="Copiar prompt completo para enviar ao Gemini ou ChatGPT"
                       >
                         {promptCopiado ? (
                           <>
@@ -1086,49 +1109,75 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
                       </button>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-1 text-[10px]">
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold flex items-center gap-1">
-                        <Stethoscope className="w-3 h-3 text-emerald-600" />
-                        Casos Clínicos
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 font-bold flex items-center gap-1">
-                        <GitFork className="w-3 h-3 text-indigo-600" />
-                        Fluxogramas (Max 2-3)
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-bold">
-                        Mínimo 10 Cards
-                      </span>
+                    {/* Fluxo em 3 etapas sem fricção */}
+                    <div className="grid grid-cols-3 gap-1.5 pt-1 text-[10.5px]">
+                      <div className="p-1.5 rounded-lg bg-white border border-slate-200/80 text-slate-700 flex items-center gap-1.5">
+                        <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center justify-center shrink-0">1</span>
+                        <span className="truncate">Copie o Prompt</span>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-white border border-slate-200/80 text-slate-700 flex items-center gap-1.5">
+                        <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center justify-center shrink-0">2</span>
+                        <span className="truncate">Envie c/ Aula UFPA</span>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-white border border-slate-200/80 text-slate-700 flex items-center gap-1.5">
+                        <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center justify-center shrink-0">3</span>
+                        <span className="truncate">Cole o JSON Aqui</span>
+                      </div>
                     </div>
 
-                    <p className="text-[11px] text-slate-600 leading-snug">
-                      Copie o prompt, envie junto com seus PDFs, imagens ou resumos médicos, e cole o JSON gerado abaixo.
-                    </p>
+                    {/* Botão de Expansão Sutil do Prompt */}
+                    <div className="pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setVerPromptDetalhado(!verPromptDetalhado)}
+                        className="text-[10.5px] font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <span>{verPromptDetalhado ? 'Ocultar texto completo do prompt' : 'Ver diretrizes completas do prompt'}</span>
+                        <span className="text-[9px]">{verPromptDetalhado ? '▲' : '▼'}</span>
+                      </button>
+
+                      {verPromptDetalhado && (
+                        <div className="mt-2 p-2.5 bg-white rounded-xl border border-slate-200 text-[10.5px] font-mono text-slate-600 max-h-48 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                          {promptModeloGemini}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Textarea do JSON */}
+                  {/* Textarea do JSON com Indicação Offline */}
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-bold text-slate-800 block">
-                        Cole o JSON gerado pelo Gemini:
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                        <span>Cole o JSON gerado:</span>
+                        <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded-md">
+                          ⚡ 100% Offline (Local)
+                        </span>
                       </label>
                       {textoColado.trim() && (
                         <button
                           type="button"
                           onClick={() => setTextoColado('')}
-                          className="text-[10px] text-slate-400 hover:text-slate-600 font-medium"
+                          className="text-[10.5px] text-slate-400 hover:text-rose-600 font-semibold transition-colors cursor-pointer"
                         >
                           Limpar
                         </button>
                       )}
                     </div>
 
-                    <textarea
-                      rows={5}
-                      value={textoColado}
-                      onChange={e => setTextoColado(e.target.value)}
-                      placeholder='Cole o JSON gerado pelo Gemini (ex: [{"tipoCard": "caso_clinico", "titulo": "...", ...}])'
-                      className="w-full p-3 rounded-2xl border border-slate-200 text-xs font-mono bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all resize-y"
-                    />
+                    <div className="relative">
+                      <textarea
+                        rows={5}
+                        value={textoColado}
+                        onChange={e => setTextoColado(e.target.value)}
+                        placeholder='Cole o JSON aqui... (ex: [{"tipoCard": "conceito", "titulo": "...", "topico": "..."}, ...])'
+                        className="w-full p-3 rounded-2xl border border-slate-200 text-xs font-mono bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all resize-y shadow-3xs"
+                      />
+                      {analisandoTexto && (
+                        <div className="absolute top-2 right-2.5 px-2 py-0.5 rounded-md bg-blue-50/90 border border-blue-200 text-blue-700 text-[10px] font-semibold flex items-center gap-1 animate-pulse">
+                          <span>Analisando localmente...</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* PRÉ-VISUALIZAÇÃO EM TEMPO REAL ANTES DE CLICAR NO OK */}

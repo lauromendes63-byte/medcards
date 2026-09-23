@@ -78,3 +78,33 @@ body {
   background-color: rgba(248, 250, 252, 0.8);
   border: 1px solid rgba(241, 245, 249, 1);
 }
+
+/* Calibração de tipografia clínica: negrito nítido e elegante (semibold 600) sem aspecto pesado ou "gordo" */
+strong, b {
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+}
+
+/* Grifo clínico suave */
+mark, .clinical-highlight {
+  background-color: #FEF08A;
+  color: #713F12;
+  font-weight: 600;
+  padding: 0.1em 0.35em;
+  border-radius: 0.35rem;
+}
+
+/* Texto de flashcards nítido, arejado e de leitura descansada */
+.card-clinical-text {
+  font-size: 0.9375rem;
+  line-height: 1.62;
+  letter-spacing: -0.012em;
+  color: #1E293B;
+}
+
+.card-clinical-text strong, 
+.card-clinical-text b {
+  font-weight: 600 !important;
+  color: #090D16;
+}
+
