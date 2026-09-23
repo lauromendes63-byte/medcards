@@ -1012,7 +1012,7 @@ export const SimulationTrainingView: React.FC<SimulationTrainingViewProps> = ({
                             </span>
                             <div className="flex-1 min-w-0">
                               <span className="font-black text-amber-900 uppercase tracking-wider text-[10px] sm:text-[10.5px] block mb-0.5">
-                                Nota de Fixação:
+                                Dica:
                               </span>
                               <p className="font-semibold text-slate-950 text-xs sm:text-[12.5px] leading-relaxed">
                                 {q.perolaClinica}
@@ -1748,7 +1748,7 @@ export const SimulationTrainingView: React.FC<SimulationTrainingViewProps> = ({
                         <span className="text-amber-700 font-bold shrink-0 select-none text-sm mt-0.5">💡</span>
                         <div className="flex-1 min-w-0 text-left">
                           <span className="font-black text-amber-900 uppercase tracking-wider text-[10px] sm:text-[10.5px] mr-1.5 inline-block">
-                            Nota:
+                            Dica:
                           </span>
                           <span className="font-semibold text-slate-900 text-xs sm:text-[12.5px] leading-relaxed">
                             {questaoAtual.perolaClinica}

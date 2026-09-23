@@ -95,6 +95,10 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
   const [erro, setErro] = useState<string | null>(null);
   const [arrastando, setArrastando] = useState(false);
 
+  // Pré-visualização interativa com seleção antes de salvar
+  const [cardsPrevia, setCardsPrevia] = useState<CardClinico[]>([]);
+  const [idsSelecionados, setIdsSelecionados] = useState<Set<string>>(new Set());
+
   // Pop-up detalhado pós-importação
   const [sucessoPopUp, setSucessoPopUp] = useState<{
     totalCards: number;
@@ -149,15 +153,15 @@ REGRAS DE FORMATAÇÃO E TIPOGRAFIA MÉDICA:
      • ⚠️ no início de linhas com Red Flags ou alertas graves.
      • ⭐ no início de linhas com Regra de Ouro da conduta.
      • 💡 para mnemônicos e dicas de prova.
-   - PÉROLA DE FIXAÇÃO ("perolaClinica") HORIZONTAL E OBJETIVA:
-     • Deve ser curta, direta e horizontal (1 a 2 frases no máximo) com o ponto de virada da questão de prova ou prática médica.
+   - DICA PRÁTICA / PONTO-CHAVE ("dica" ou "perolaClinica"):
+     • Deve ser curta, direta e objetiva (1 a 2 frases no máximo) com o ponto de virada da conduta médica ou da questão de prova de residência (ENARE/Revalida/USP).
 
 GRANDE TUTORIAL DOS FORMATOS DO MEDCARDS (COMO O ESTUDANTE VISUALIZA E RESOLVE):
 
 1. CONCEITO DIRETO (tipoCard: "conceito"):
-   - Como o estudante vê: O estudante visualiza a "perguntaGatilho" na frente do cartão. Ao clicar, o cartão gira e exibe a "resposta" detalhada e a "perolaClinica".
+   - Como o estudante vê: O estudante visualiza a "perguntaGatilho" na frente do cartão. Ao clicar, o cartão gira e exibe a "resposta" detalhada e a "dica".
    - Como resolver: Evocação ativa rápida (Active Recall) de critérios diagnósticos, valores de corte e indicações terapêuticas.
-   - Estrutura: "tipoCard": "conceito", "titulo", "topico", "especialidade", "perguntaGatilho", "resposta", "perolaClinica".
+   - Estrutura: "tipoCard": "conceito", "titulo", "topico", "especialidade", "perguntaGatilho", "resposta", "dica" (ou "perolaClinica").
 
 2. FLUXOGRAMA COMPLEXO / ÁRVORE DE DECISÃO RAMIFICADA (tipoCard: "fluxograma_complexo"):
    - Como o estudante vê: Uma árvore de decisão com nós e ramificações conectadas por setas. O primeiro nó ("inicio") é visível com a condição clínica. Os nós seguintes ("decisao", "alerta", "conduta", "diagnostico") começam OCLUÍDOS ("oculto": true). As setas entre os nós contêm os critérios de decisão (ex: "rotulo": "Supra de ST presente" ou "rotulo": "Tempo para hemodinâmica < 120 min").
@@ -378,6 +382,8 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
     const raw = textoColado.trim();
     if (!raw) {
       setAnaliseTextoColado(null);
+      setCardsPrevia([]);
+      setIdsSelecionados(new Set());
       setAnalisandoTexto(false);
       return;
     }
@@ -385,111 +391,63 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
     setAnalisandoTexto(true);
     const timer = setTimeout(() => {
       try {
-        if (raw.startsWith('[') || raw.startsWith('{')) {
-          const dados = JSON.parse(raw);
-          let cardsLista: any[] = [];
-          let eixosDetectados: any[] = [];
+        const targetEixo = eixoDestinoId && eixoDestinoId !== '__novo_eixo__' ? eixoDestinoId : (eixos[0]?.id || 'eixo-1');
+        const res = AnkiService.processarTextoDireto(raw, targetEixo, 'Gemini / MedCards');
 
-          if (Array.isArray(dados)) {
-            cardsLista = dados;
-          } else if (dados && typeof dados === 'object') {
-            if (dados.perguntaGatilho || dados.titulo || dados.tipoCard) {
-              cardsLista = [dados];
-            } else if (Array.isArray(dados.cards)) {
-              cardsLista = dados.cards;
-              if (dados.eixo) eixosDetectados = [dados.eixo];
-              if (Array.isArray(dados.eixos)) eixosDetectados = dados.eixos;
+        if (res.cardsImportados.length > 0) {
+          const tiposContagem: Record<string, number> = {
+            caso_clinico: 0,
+            fluxograma_complexo: 0,
+            fluxograma_oclusao: 0,
+            cloze: 0,
+            conceito: 0,
+          };
+          const topicosDetectados = new Set<string>();
+
+          res.cardsImportados.forEach(c => {
+            tiposContagem[c.tipoCard] = (tiposContagem[c.tipoCard] || 0) + 1;
+            const top = c.topicoNome || (c as any).topico;
+            if (top && typeof top === 'string' && top.trim()) {
+              topicosDetectados.add(top.trim());
             }
-          }
+          });
 
-          if (cardsLista.length > 0) {
-            const tiposContagem: Record<string, number> = {
-              caso_clinico: 0,
-              fluxograma_complexo: 0,
-              fluxograma_oclusao: 0,
-              cloze: 0,
-              conceito: 0,
-            };
-            const topicosDetectados = new Set<string>();
-
-            cardsLista.forEach(c => {
-              const isCaso = c.tipoCard === 'caso_clinico' || !!c.casoClinicoDados || Array.isArray(c.opcoes) || Array.isArray(c.alternativas);
-              const isFluxoComp = c.tipoCard === 'fluxograma_complexo' || !!c.fluxogramaComplexo || !!c.arvoreDecisao || (c.tipoCard === 'fluxograma' && Array.isArray(c.nos));
-              const isFluxoOclusao = !isFluxoComp && (c.tipoCard === 'fluxograma_oclusao' || (c.tipoCard === 'fluxograma' && !Array.isArray(c.nos)) || !!c.algoritmoDecisao || Array.isArray(c.etapas) || Array.isArray(c.passos));
-              const isCloze = c.tipoCard === 'cloze' || (typeof c.textoCloze === 'string') || (typeof c.perguntaGatilho === 'string' && c.perguntaGatilho.includes('{{c'));
-              
-              let tipo = 'conceito';
-              if (isCaso) tipo = 'caso_clinico';
-              else if (isFluxoComp) tipo = 'fluxograma_complexo';
-              else if (isFluxoOclusao) tipo = 'fluxograma_oclusao';
-              else if (isCloze) tipo = 'cloze';
-              else if (c.tipoCard) tipo = c.tipoCard;
-
-              tiposContagem[tipo] = (tiposContagem[tipo] || 0) + 1;
-
-              const top = c.topicoNome || c.topico || c.aula || c.assunto || c.tema;
-              if (top && typeof top === 'string' && top.trim()) {
-                topicosDetectados.add(top.trim());
-              }
-            });
-
-            eixosDetectados.forEach(e => {
-              (e.topicos || []).forEach((t: any) => {
-                if (t.titulo && typeof t.titulo === 'string') topicosDetectados.add(t.titulo.trim());
-              });
-            });
-
-            setAnaliseTextoColado({
-              valido: true,
-              formato: eixosDetectados.length > 0 ? 'Pacote MedCards (Eixos + Tópicos + Cards)' : 'JSON Estruturado (Gemini / MedCards)',
-              totalCards: cardsLista.length,
-              tiposContagem,
-              topicos: Array.from(topicosDetectados),
-              eixosCount: eixosDetectados.length,
-            });
-            setAnalisandoTexto(false);
-            return;
-          }
-        } else {
-          // Testar se é texto tabulado/Anki TSV
-          const linhas = raw.split(/\r?\n/).filter(l => l.trim() && !l.trim().startsWith('#'));
-          let validos = 0;
-          for (const linha of linhas) {
-            if (linha.includes('\t') || linha.includes(';') || linha.includes(',')) {
-              validos++;
-            }
-          }
-          if (validos > 0) {
-            setAnaliseTextoColado({
-              valido: true,
-              formato: 'Texto Tabulado (Anki)',
-              totalCards: validos,
-              tiposContagem: { conceito: validos },
-              topicos: [],
-              eixosCount: 0,
-            });
-            setAnalisandoTexto(false);
-            return;
-          }
+          setAnaliseTextoColado({
+            valido: true,
+            formato: res.eixosCriados.length > 0 ? 'Pacote MedCards (Eixos + Tópicos)' : (raw.startsWith('[') || raw.startsWith('{') || raw.includes('```') ? 'JSON Estruturado (Gemini)' : 'Texto Tabulado / Anki'),
+            totalCards: res.cardsImportados.length,
+            tiposContagem,
+            topicos: Array.from(topicosDetectados),
+            eixosCount: res.eixosCriados.length,
+          });
+          setCardsPrevia(res.cardsImportados);
+          setIdsSelecionados(new Set(res.cardsImportados.map(c => c.id)));
+          setAnalisandoTexto(false);
+          return;
         }
+
         setAnaliseTextoColado({
           valido: false,
           erroJson: true,
-          mensagem: 'Aguardando formato JSON ou texto tabulado...',
+          mensagem: 'Aguardando formato JSON válido ou texto tabulado...',
         });
-      } catch {
+        setCardsPrevia([]);
+        setIdsSelecionados(new Set());
+      } catch (err: any) {
         setAnaliseTextoColado({
           valido: false,
           erroJson: true,
-          mensagem: 'Aguardando fechamento do JSON...',
+          mensagem: err?.message || 'Aguardando fechamento do JSON ou texto tabulado...',
         });
+        setCardsPrevia([]);
+        setIdsSelecionados(new Set());
       } finally {
         setAnalisandoTexto(false);
       }
     }, 150);
 
     return () => clearTimeout(timer);
-  }, [textoColado]);
+  }, [textoColado, eixoDestinoId, eixos]);
 
   // =========================================================================
   // PROCESSAMENTO DE IMPORTAÇÃO COM DESTINO ROBUSTO E POP-UP DE SUCESSO
@@ -673,6 +631,24 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
           finalTopicoNome, 
           finalEixoEspecialidade
         );
+
+        // Filtrar de acordo com a seleção na prévia interativa
+        if (idsSelecionados.size > 0 && cardsPrevia.length > 0) {
+          const indicesSelecionados = new Set<number>();
+          cardsPrevia.forEach((cp, idx) => {
+            if (idsSelecionados.has(cp.id)) {
+              indicesSelecionados.add(idx);
+            }
+          });
+          res.cardsImportados = res.cardsImportados.filter((_, idx) => indicesSelecionados.has(idx));
+          res.totalCards = res.cardsImportados.length;
+        }
+
+        if (res.cardsImportados.length === 0) {
+          setErro('Nenhum flashcard selecionado para adicionar. Marque ao menos um cartão na prévia.');
+          setProcessando(false);
+          return;
+        }
 
         // 4. Se modo for __auto__ e o card trouxer seu próprio tópico no JSON, garantir no Storage
         if (topicoSelecionadoModo === '__auto__') {
@@ -1209,6 +1185,98 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
                     </div>
                   )}
 
+                  {/* PRÉ-VISUALIZAÇÃO INTERATIVA COM SELEÇÃO INDIVIDUAL */}
+                  {cardsPrevia.length > 0 && (
+                    <div className="surface-clean rounded-2xl p-3 space-y-2 border border-slate-200">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                          Prévia dos Cartões ({idsSelecionados.size} de {cardsPrevia.length} selecionados)
+                        </span>
+                        <div className="flex items-center gap-2 text-[11px]">
+                          <button
+                            type="button"
+                            onClick={() => setIdsSelecionados(new Set(cardsPrevia.map(c => c.id)))}
+                            className="text-blue-600 hover:text-blue-800 font-bold cursor-pointer"
+                          >
+                            Marcar todos
+                          </button>
+                          <span className="text-slate-300">|</span>
+                          <button
+                            type="button"
+                            onClick={() => setIdsSelecionados(new Set())}
+                            className="text-slate-500 hover:text-slate-700 font-semibold cursor-pointer"
+                          >
+                            Desmarcar
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
+                        {cardsPrevia.map((c, idx) => {
+                          const selecionado = idsSelecionados.has(c.id);
+                          const tipoLabel = 
+                            c.tipoCard === 'caso_clinico' ? 'Caso Clínico' :
+                            c.tipoCard === 'fluxograma_complexo' ? 'Árvore Decisão' :
+                            c.tipoCard === 'fluxograma_oclusao' ? 'Fluxograma' :
+                            c.tipoCard === 'cloze' ? 'Cloze' : 'Conceito';
+                          
+                          const tipoCor = 
+                            c.tipoCard === 'caso_clinico' ? 'bg-purple-100 text-purple-700' :
+                            c.tipoCard === 'fluxograma_complexo' ? 'bg-emerald-100 text-emerald-700' :
+                            c.tipoCard === 'fluxograma_oclusao' ? 'bg-indigo-100 text-indigo-700' :
+                            c.tipoCard === 'cloze' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700';
+
+                          return (
+                            <div
+                              key={c.id || idx}
+                              onClick={() => {
+                                const novo = new Set(idsSelecionados);
+                                if (novo.has(c.id)) novo.delete(c.id);
+                                else novo.add(c.id);
+                                setIdsSelecionados(novo);
+                              }}
+                              className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex items-start gap-2.5 ${
+                                selecionado 
+                                  ? 'bg-blue-50/40 border-blue-200 text-slate-900' 
+                                  : 'bg-slate-50/60 border-slate-200/60 opacity-60 text-slate-500'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selecionado}
+                                onChange={() => {}}
+                                className="mt-0.5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer pointer-events-none"
+                              />
+                              <div className="flex-1 min-w-0 space-y-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${tipoCor}`}>
+                                    {tipoLabel}
+                                  </span>
+                                  {c.topicoNome && (
+                                    <span className="text-[10px] text-slate-500 truncate max-w-[160px]">
+                                      • {c.topicoNome}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="font-semibold text-xs leading-snug line-clamp-2">
+                                  {c.perguntaGatilho || c.titulo}
+                                </p>
+                                {c.perolaClinica && c.perolaClinica !== 'Fixação clínica de alto rendimento.' && (
+                                  <p className="text-[11px] text-amber-800 line-clamp-1 flex items-center gap-1">
+                                    <span>💡</span>
+                                    <span className="font-medium">Dica:</span>
+                                    <span>{c.perolaClinica}</span>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {analisandoTexto && (
                     <div className="p-2.5 bg-blue-50 rounded-xl border border-blue-200 text-[11px] text-blue-800 flex items-center gap-1.5">
                       <RefreshCw className="w-3.5 h-3.5 text-blue-600 animate-spin" />
@@ -1227,11 +1295,15 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
                   <button
                     type="button"
                     onClick={handleProcessarTextoColado}
-                    disabled={processando || !textoColado.trim()}
-                    className="w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 disabled:opacity-50 text-white font-extrabold text-xs shadow-md shadow-blue-600/25 transition-all cursor-pointer flex items-center justify-center gap-2"
+                    disabled={processando || !textoColado.trim() || (cardsPrevia.length > 0 && idsSelecionados.size === 0)}
+                    className="w-full py-2.5 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:opacity-50 text-white font-extrabold text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
                     <Sparkles className="w-4 h-4" />
-                    <span>Adicionar Flashcards ao MedCards</span>
+                    <span>
+                      {cardsPrevia.length > 0 && idsSelecionados.size > 0
+                        ? `Adicionar ${idsSelecionados.size} Flashcard${idsSelecionados.size > 1 ? 's' : ''} ao MedCards`
+                        : 'Adicionar Flashcards ao MedCards'}
+                    </span>
                   </button>
                 </div>
               )}

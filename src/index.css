@@ -15,7 +15,7 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* Hide scrollbar for horizontal chip lists */
+/* Ocultar barra de rolagem em carrosséis e pílulas */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -24,43 +24,53 @@ body {
   scrollbar-width: none;
 }
 
-/* GPU hardware acceleration for smooth canvas and modal transitions */
+/* Aceleração por GPU para transições fluidas em 60fps */
 .gpu-layer {
   transform: translateZ(0);
   backface-visibility: hidden;
   perspective: 1000px;
 }
 
-/* Smooth custom scrollbars for desktop panels */
+/* Barra de rolagem customizada sutil */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.4);
+  background: rgba(203, 213, 225, 0.6);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.6);
+  background: rgba(148, 163, 184, 0.8);
 }
 
-/* Regra global: Nunca quebrar palavras com hífen ou travessão em nenhum lugar do app */
+/* Regra global: Nunca quebrar palavras com hífen ou travessão */
 *, *::before, *::after {
   hyphens: none !important;
   -webkit-hyphens: none !important;
   -ms-hyphens: none !important;
 }
 
-/* Tipografia clínica uniforme: preenche até a margem sem espaços medonhos e NUNCA quebra palavras ao meio */
+/* Tipografia clínica uniforme */
 .clinical-prose, 
 .clinical-text-block {
-  text-align: justify;
-  text-justify: inter-word;
+  text-align: left;
   text-wrap: pretty;
   word-break: normal;
   overflow-wrap: normal;
 }
 
+/* Superfícies minimalistas despoluídas */
+.surface-clean {
+  background-color: #FFFFFF;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+}
+
+.surface-subtle {
+  background-color: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(241, 245, 249, 1);
+}

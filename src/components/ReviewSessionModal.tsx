@@ -107,6 +107,45 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
   const topicoDoCard = eixoDoCard?.topicos?.find(t => t.id === cardAtual?.topicoId);
   const infoRodada = cardAtual ? obterInfoRodadaCard(cardAtual, topicoDoCard, configTimers) : null;
 
+  const [isQuickEditOpen, setIsQuickEditOpen] = useState(false);
+  const [quickPergunta, setQuickPergunta] = useState('');
+  const [quickResposta, setQuickResposta] = useState('');
+  const [quickDica, setQuickDica] = useState('');
+  const [quickToast, setQuickToast] = useState<string | null>(null);
+
+  const handleOpenQuickEdit = () => {
+    if (!cardAtual) return;
+    setQuickPergunta(cardAtual.perguntaGatilho || cardAtual.titulo || '');
+    setQuickResposta(cardAtual.resposta || (cardAtual.casoClinicoDados ? cardAtual.casoClinicoDados.opcoes[cardAtual.casoClinicoDados.indiceCorreto] : ''));
+    setQuickDica(cardAtual.perolaClinica || '');
+    setIsQuickEditOpen(true);
+  };
+
+  const handleSaveQuickEdit = () => {
+    if (!cardAtual) return;
+    const cardAtualizado: CardClinico = {
+      ...cardAtual,
+      perguntaGatilho: quickPergunta.trim() || cardAtual.perguntaGatilho,
+      titulo: quickPergunta.trim().length > 50 ? quickPergunta.trim().substring(0, 47) + '...' : (quickPergunta.trim() || cardAtual.titulo),
+      resposta: quickResposta.trim(),
+      perolaClinica: quickDica.trim() || 'Ponto essencial para fixação e retenção.',
+    };
+
+    if (cardAtualizado.casoClinicoDados) {
+      cardAtualizado.casoClinicoDados = {
+        ...cardAtualizado.casoClinicoDados,
+        historiaClinica: quickPergunta.trim() || cardAtualizado.casoClinicoDados.historiaClinica,
+        justificativaDetalhada: quickDica.trim() || cardAtualizado.casoClinicoDados.justificativaDetalhada,
+      };
+    }
+
+    StorageService.atualizarCard(cardAtualizado);
+    setFilaCards(prev => prev.map((c, i) => i === indiceAtual ? cardAtualizado : c));
+    setQuickToast('Card atualizado com sucesso!');
+    setTimeout(() => setQuickToast(null), 2200);
+    setIsQuickEditOpen(false);
+  };
+
   // Resetar estados interativos e cronômetro a cada novo card
   useEffect(() => {
     setTempoInicioCard(Date.now());
@@ -130,7 +169,7 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
   // Teclas de atalho para estudo veloz (Espaço = Virar/Revelar, 1-4 = SRS)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (sessaoFinalizada) return;
+      if (sessaoFinalizada || isQuickEditOpen) return;
 
       if (e.code === 'Space') {
         e.preventDefault();
@@ -423,17 +462,15 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
               <span>{formatarTempo(tempoDecorridoSegundos)}</span>
             </div>
 
-            {onEditarCard && (
-              <button
-                type="button"
-                onClick={() => onEditarCard(cardAtual, indiceAtual)}
-                title="Editar este flashcard"
-                className="flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg border border-emerald-300 hover:border-emerald-400 bg-emerald-50 text-emerald-800 transition-all cursor-pointer shadow-3xs active:scale-95"
-              >
-                <FilePenLine className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Editar</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleOpenQuickEdit}
+              title="Edição rápida deste flashcard"
+              className="flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg border border-slate-200 hover:border-blue-400 bg-white hover:bg-blue-50/50 text-slate-700 hover:text-blue-700 transition-all cursor-pointer shadow-3xs active:scale-95"
+            >
+              <FilePenLine className="w-3.5 h-3.5 text-blue-600" />
+              <span>Editar</span>
+            </button>
 
             <button
               type="button"
@@ -1101,7 +1138,7 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                     <span className="text-amber-700 font-bold shrink-0 select-none text-sm mt-0.5">💡</span>
                     <div className="flex-1 min-w-0 text-left">
                       <span className="font-black text-amber-900 uppercase tracking-wider text-[10px] sm:text-[10.5px] mr-1.5 inline-block">
-                        Nota:
+                        Dica:
                       </span>
                       <span className="font-semibold text-slate-900 text-xs sm:text-[12.5px] leading-relaxed">
                         {cardAtual.perolaClinica}
@@ -1191,6 +1228,117 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Toast de Atualização Rápida */}
+      {quickToast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-70 bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{quickToast}</span>
+        </div>
+      )}
+
+      {/* Modal de Edição Rápida Embutida na Sessão */}
+      {isQuickEditOpen && cardAtual && (
+        <div className="fixed inset-0 z-60 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-4 sm:p-5 border border-slate-200 shadow-2xl space-y-3.5 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                  <FilePenLine className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">
+                    Edição Rápida
+                  </h3>
+                  <p className="text-[10.5px] text-slate-500">
+                    Questão {indiceAtual + 1} de {totalCards} • Sem sair da revisão
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsQuickEditOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2.5 max-h-[65vh] overflow-y-auto pr-1">
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                  Pergunta / Enunciado (Frente):
+                </label>
+                <textarea
+                  rows={3}
+                  value={quickPergunta}
+                  onChange={e => setQuickPergunta(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all resize-y"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                  Resposta Esperada (Verso):
+                </label>
+                <textarea
+                  rows={4}
+                  value={quickResposta}
+                  onChange={e => setQuickResposta(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all resize-y"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1 flex items-center gap-1">
+                  <span>💡</span>
+                  <span>Dica (Ponto-Chave):</span>
+                </label>
+                <input
+                  type="text"
+                  value={quickDica}
+                  onChange={e => setQuickDica(e.target.value)}
+                  placeholder="Ponto de virada da conduta ou pegadinha..."
+                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+              {onEditarCard ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsQuickEditOpen(false);
+                    onEditarCard(cardAtual, indiceAtual);
+                  }}
+                  className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                >
+                  Editor completo ↗
+                </button>
+              ) : <span />}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsQuickEditOpen(false)}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveQuickEdit}
+                  className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Salvar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

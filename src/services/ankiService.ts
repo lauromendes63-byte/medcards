@@ -22,10 +22,10 @@ export const AnkiService = {
     topicoPadraoNome?: string,
     especialidadePadrao?: string
   ): CardClinico {
-    const frente = c.perguntaGatilho || c.frente || c.pergunta || c.titulo || 'Pergunta';
-    const verso = c.resposta || c.verso || '';
+    const frente = c.perguntaGatilho || c.frente || c.pergunta || c.questao || c.enunciado || c.titulo || 'Pergunta';
+    const verso = c.resposta || c.verso || c.gabarito || c.conteudo || '';
     const isCloze = c.tipoCard === 'cloze' || (typeof c.textoCloze === 'string') || (typeof frente === 'string' && frente.includes('{{c'));
-    const isCasoClinico = c.tipoCard === 'caso_clinico' || !!c.casoClinicoDados || Array.isArray(c.opcoes) || Array.isArray(c.alternativas);
+    const isCasoClinico = c.tipoCard === 'caso_clinico' || !!c.casoClinicoDados || Array.isArray(c.opcoes) || Array.isArray(c.alternativas) || Array.isArray(c.itens);
     const isFluxogramaComplexo = c.tipoCard === 'fluxograma_complexo' || !!c.fluxogramaComplexo || !!c.arvoreDecisao || (c.tipoCard === 'fluxograma' && Array.isArray(c.nos));
     const isFluxograma = !isFluxogramaComplexo && (c.tipoCard === 'fluxograma_oclusao' || (c.tipoCard === 'fluxograma' && !Array.isArray(c.nos)) || !!c.algoritmoDecisao || Array.isArray(c.etapas) || Array.isArray(c.passos));
 
@@ -38,10 +38,25 @@ export const AnkiService = {
     // Normalização de Caso Clínico (Múltipla Escolha)
     let casoClinicoDados = c.casoClinicoDados;
     if (isCasoClinico && !casoClinicoDados) {
-      const opcoes = c.opcoes || c.alternativas || [];
-      const indiceCorreto = typeof c.indiceCorreto === 'number' ? c.indiceCorreto : 0;
-      const justificativaDetalhada = c.justificativaDetalhada || c.justificativa || c.explicacao || c.perolaClinica || 'Resposta correta baseada nas diretrizes clínicas.';
-      const historiaClinica = c.historiaClinica || frente;
+      const opcoes = c.opcoes || c.alternativas || c.itens || [];
+      let indiceCorreto = 0;
+      if (typeof c.indiceCorreto === 'number') {
+        indiceCorreto = c.indiceCorreto;
+      } else if (typeof c.correta === 'number') {
+        indiceCorreto = c.correta;
+      } else if (typeof c.indiceCorreto === 'string' || typeof c.correta === 'string') {
+        const rawStr = String(c.indiceCorreto || c.correta).trim().toLowerCase();
+        const letterMap: Record<string, number> = { a: 0, b: 1, c: 2, d: 3, e: 4 };
+        if (letterMap[rawStr] !== undefined) {
+          indiceCorreto = letterMap[rawStr];
+        } else {
+          const parsed = parseInt(rawStr, 10);
+          if (!isNaN(parsed)) indiceCorreto = parsed;
+        }
+      }
+
+      const dicaTexto = c.dica || c.dicaPratica || c.pontoChave || c.perolaClinica || c.perola || c.justificativaDetalhada || c.justificativa || c.explicacao || 'Resposta correta baseada nas diretrizes clínicas.';
+      const historiaClinica = c.historiaClinica || c.enunciado || frente;
       const exameFisicoSinais = c.exameFisicoSinais || '';
 
       casoClinicoDados = {
@@ -49,7 +64,7 @@ export const AnkiService = {
         exameFisicoSinais,
         opcoes: Array.isArray(opcoes) ? opcoes : [],
         indiceCorreto,
-        justificativaDetalhada,
+        justificativaDetalhada: dicaTexto,
       };
     }
 
@@ -125,7 +140,7 @@ export const AnkiService = {
       titulo: c.titulo || (frente.length > 50 ? frente.substring(0, 47) + '...' : frente),
       perguntaGatilho: frente,
       resposta: verso || (casoClinicoDados ? casoClinicoDados.opcoes[casoClinicoDados.indiceCorreto] : ''),
-      perolaClinica: c.perolaClinica || c.perola || c.dica || 'Fixação clínica de alto rendimento.',
+      perolaClinica: c.dica || c.dicaPratica || c.pontoChave || c.perolaClinica || c.perola || 'Fixação clínica de alto rendimento.',
       mnemonicoOuDica: c.mnemonicoOuDica || c.mnemonico,
       diretrizReferencia: c.diretrizReferencia || c.referencia || c.fonte,
       repeticoes: typeof c.repeticoes === 'number' ? c.repeticoes : 0,
@@ -353,27 +368,57 @@ export const AnkiService = {
       throw new Error('O texto fornecido está vazio.');
     }
 
-    // Se for JSON
-    if (textoLimpo.startsWith('[') || textoLimpo.startsWith('{')) {
+    // 1. Tenta extrair JSON de bloco markdown ```json ... ``` se existir
+    let jsonCandidate = '';
+    const markdownBlockMatch = textoLimpo.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (markdownBlockMatch && markdownBlockMatch[1]) {
+      jsonCandidate = markdownBlockMatch[1].trim();
+    } else {
+      // 2. Busca pelo primeiro '[' ou '{' e o correspondente final
+      const firstSquare = textoLimpo.indexOf('[');
+      const lastSquare = textoLimpo.lastIndexOf(']');
+      const firstCurly = textoLimpo.indexOf('{');
+      const lastCurly = textoLimpo.lastIndexOf('}');
+
+      if (firstSquare !== -1 && lastSquare > firstSquare) {
+        jsonCandidate = textoLimpo.substring(firstSquare, lastSquare + 1).trim();
+      } else if (firstCurly !== -1 && lastCurly > firstCurly) {
+        jsonCandidate = textoLimpo.substring(firstCurly, lastCurly + 1).trim();
+      } else {
+        jsonCandidate = textoLimpo;
+      }
+    }
+
+    // Se for identificado candidato a JSON
+    if (jsonCandidate.startsWith('[') || jsonCandidate.startsWith('{')) {
       try {
-        const dados = JSON.parse(textoLimpo);
+        const dados = JSON.parse(jsonCandidate);
         let listaBruta: any[] = [];
         let eixos: EixoClinico[] = [];
 
         if (Array.isArray(dados)) {
           listaBruta = dados;
         } else if (dados && typeof dados === 'object') {
-          // Caso seja um único card
-          if (dados.perguntaGatilho || dados.titulo || dados.tipoCard) {
-            listaBruta = [dados];
-          } else if (Array.isArray(dados.cards)) {
+          // Suporte a diferentes chaves retornadas por IA ou backups
+          if (Array.isArray(dados.cards)) {
             listaBruta = dados.cards;
+          } else if (Array.isArray(dados.flashcards)) {
+            listaBruta = dados.flashcards;
+          } else if (Array.isArray(dados.questoes)) {
+            listaBruta = dados.questoes;
+          } else if (dados.perguntaGatilho || dados.frente || dados.pergunta || dados.titulo || dados.tipoCard) {
+            listaBruta = [dados];
           }
+
           if (Array.isArray(dados.eixos)) {
             eixos = dados.eixos;
           } else if (dados.eixo) {
             eixos = [dados.eixo];
           }
+        }
+
+        if (listaBruta.length === 0) {
+          throw new Error('Nenhum cartão válido foi encontrado na estrutura JSON.');
         }
 
         const cards: CardClinico[] = listaBruta.map((c: any, index: number) => 
@@ -395,14 +440,17 @@ export const AnkiService = {
           mensagem: `${cards.length} flashcards importados com sucesso!`,
         };
       } catch (err: any) {
-        throw new Error(`JSON inválido: ${err?.message || 'Verifique se copiou o JSON completo gerado pelo Gemini.'}`);
+        // Se falhou o parse do JSON candidato, só lança se parecer com JSON explícito
+        if (jsonCandidate.startsWith('[') || jsonCandidate.startsWith('{')) {
+          throw new Error(`Erro ao interpretar JSON: ${err?.message || 'Verifique se copiou o JSON completo gerado pelo Gemini.'}`);
+        }
       }
     }
 
-    // Se for texto tabulado / estilo Anki
+    // Se não for JSON ou falhou, tenta como texto tabulado / estilo Anki
     const cards = this.parseTextoCards(textoLimpo, eixoPadraoId);
     if (cards.length === 0) {
-      throw new Error('Nenhum flashcard reconhecido. Cole em formato JSON ou separado por tabulações / linhas do Anki.');
+      throw new Error('Nenhum flashcard reconhecido. Cole o JSON gerado pelo Gemini ou texto delimitado por tabulações estilo Anki.');
     }
 
     // Aplica tópico se especificado

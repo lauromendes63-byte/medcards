@@ -1049,7 +1049,7 @@ export const CreateFlashcardView: React.FC<CreateFlashcardViewProps> = ({
             <div className="space-y-1">
               <label htmlFor="input-dica" className="text-[10.5px] font-bold text-slate-700 flex items-center gap-1">
                 <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
-                <span>Mnemônico ou Dica (Opcional):</span>
+                <span>Mnemônico / Sigla (Opcional):</span>
               </label>
               <input
                 id="input-dica"
@@ -1064,14 +1064,14 @@ export const CreateFlashcardView: React.FC<CreateFlashcardViewProps> = ({
             <div className="space-y-1">
               <label htmlFor="input-nota-explicativa" className="text-[10.5px] font-bold text-slate-700 flex items-center gap-1">
                 <BookOpen className="w-3.5 h-3.5 text-blue-500" />
-                <span>Pérola Clínica / Diretriz de Referência:</span>
+                <span>Dica Prática / Ponto-Chave:</span>
               </label>
               <input
                 id="input-nota-explicativa"
                 type="text"
                 value={notaExplicativa}
                 onChange={(e) => setNotaExplicativa(e.target.value)}
-                placeholder="Ex: SBC 2024 / UpToDate"
+                placeholder="Ex: Ponto de virada da conduta, regra de ouro ou diretriz..."
                 className="w-full p-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-3xs"
               />
             </div>

@@ -658,7 +658,7 @@ export const VisualOcclusionModal: React.FC<VisualOcclusionModalProps> = ({
             <div className="bg-amber-100/95 p-3.5 sm:p-4 rounded-2xl border-2 border-amber-300/95 space-y-1 shadow-2xs">
               <span className="text-[10px] font-black tracking-wider uppercase text-amber-900 flex items-center gap-1.5">
                 <Lightbulb className="w-4 h-4 text-amber-700 fill-amber-500" />
-                Nota de Fixação
+                Dica
               </span>
               <p className="text-xs sm:text-sm text-slate-950 leading-relaxed font-semibold">
                 {card.perolaClinica}

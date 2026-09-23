@@ -140,7 +140,7 @@ export const ClinicalFormatToolbar: React.FC<ClinicalFormatToolbarProps> = ({
           type="button"
           onClick={() => inserirLinhaEspecial('⭐ Regra de Ouro: ')}
           className="h-6 sm:h-7 px-1.5 sm:px-2 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-[10.5px] font-bold text-amber-900 shadow-3xs cursor-pointer flex items-center gap-1 active:scale-95 transition-all select-none"
-          title="Inserir Ponto de Ouro / Pérola Clínica (⭐)"
+          title="Inserir Ponto de Ouro / Dica (⭐)"
         >
           <span className="text-xs leading-none">⭐</span>
           {!compacto && <span className="font-bold text-[10.5px]">Ouro</span>}

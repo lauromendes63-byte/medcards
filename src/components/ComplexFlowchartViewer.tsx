@@ -1350,7 +1350,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                 <Lightbulb className="w-4 h-4 shrink-0 text-amber-700 mt-0.5" />
                 <div className="flex-1 min-w-0 whitespace-normal break-words">
                   <span className="font-black uppercase text-[10px] tracking-wider text-amber-900 block mb-0.5">
-                    Nota:
+                    Dica:
                   </span>
                   <span className="text-slate-900 font-semibold leading-relaxed">
                     {perolaClinica}

@@ -248,7 +248,7 @@ export const ClinicalCaseModal: React.FC<ClinicalCaseModalProps> = ({
                     <Lightbulb className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0 text-xs sm:text-[12.5px] leading-relaxed">
                       <strong className="text-amber-900 font-black uppercase text-[10px] tracking-wider block mb-0.5">
-                        Nota de Fixação:
+                        Dica:
                       </strong>
                       <span className="text-slate-900 font-semibold">
                         {card.perolaClinica}
