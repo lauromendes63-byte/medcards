@@ -3,6 +3,8 @@
 html {
   scroll-behavior: smooth;
   -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 body {
@@ -13,6 +15,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   overscroll-behavior-y: none;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 /* Ocultar barra de rolagem em carrosséis e pílulas */
