@@ -1,6 +1,6 @@
 {
-  "version": "2.2.0",
-  "buildTime": "2026-09-23T17:36:52.278Z",
-  "buildDateFormatted": "23/09/2026, 14:36:52",
-  "releaseNotes": "MedCards v2.2: Editor WYSIWYG com Active Recall Interativo (todos os tipos), Foco Provas UFPA, Tipografia Suave Semibold 600 e Processamento 100% Offline"
+  "version": "2.3.0",
+  "buildTime": "2026-09-23T18:56:15.127Z",
+  "buildDateFormatted": "23/09/2026, 15:56:15",
+  "releaseNotes": "MedCards v2.3: Personalização Alto Contraste, Janela Executiva, Árvores com Ramificação 1-Clique (+ Sim / + Não) e Timeline Rail"
 }

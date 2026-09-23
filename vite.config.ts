@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.2.0',
+        version: '2.3.0',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: 'MedCards v2.2: Editor WYSIWYG com Active Recall Interativo (todos os tipos), Foco Provas UFPA, Tipografia Suave Semibold 600 e Processamento 100% Offline'
+        releaseNotes: 'MedCards v2.3: Personalização Alto Contraste, Janela Executiva, Árvores com Ramificação 1-Clique (+ Sim / + Não) e Timeline Rail'
       };
       this.emitFile({
         type: 'asset',
