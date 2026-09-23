@@ -1397,9 +1397,9 @@ export const SimulationTrainingView: React.FC<SimulationTrainingViewProps> = ({
                           </span>
                           <div className="flex-1 min-w-0">
                             {revelado ? (
-                              <p className="text-xs font-bold text-slate-900 leading-snug break-words">
-                                {m.textoOculto}
-                              </p>
+                              <div className="text-xs sm:text-[13px] leading-snug break-words">
+                                <FormattedClinicalText text={m.textoOculto} />
+                              </div>
                             ) : (
                               <span className="text-[11px] font-semibold text-slate-400 italic">
                                 [ Toque para revelar resposta #{m.numero} ]
@@ -1643,9 +1643,9 @@ export const SimulationTrainingView: React.FC<SimulationTrainingViewProps> = ({
                           </div>
                           <div className="mt-1">
                             {revelado ? (
-                              <p className="text-xs font-bold text-slate-900 leading-snug">
-                                {bloco.textoOculto}
-                              </p>
+                              <div className="text-xs sm:text-[13px] leading-snug">
+                                <FormattedClinicalText text={bloco.textoOculto} />
+                              </div>
                             ) : (
                               <span className="text-xs font-bold text-white tracking-wide">
                                 [ Etapa Oculta - Toque para Revelar ]

@@ -28,13 +28,22 @@ export const FormattedClinicalText: React.FC<FormattedClinicalTextProps> = ({
     if (depth > 6) return rawStr; // Previne recursão infinita
 
     // Regex de captura de blocos delimitados no nível atual
-    const tokenRegex = /(==[\s\S]+?==|<mark>[\s\S]+?<\/mark>|\[amarelo\][\s\S]+?\[\/amarelo\]|\[yellow\][\s\S]+?\[\/yellow\]|\[azul\][\s\S]+?\[\/azul\]|\[blue\][\s\S]+?\[\/blue\]|<blue>[\s\S]+?<\/blue>|<azul>[\s\S]+?<\/azul>|::azul::[\s\S]+?::|\[vermelho\][\s\S]+?\[\/vermelho\]|\[red\][\s\S]+?\[\/red\]|<red>[\s\S]+?<\/red>|<vermelho>[\s\S]+?<\/vermelho>|::vermelho::[\s\S]+?::|\*\*(?:[\s\S]+?)\*\*|<b>[\s\S]+?<\/b>|<strong>[\s\S]+?<\/strong>|<u>[\s\S]+?<\/u>|__[\s\S]+?__|<em>[\s\S]+?<\/em>|\*(?:[^\*\n]+?)\*|_(?:[^_\n]+?)_)/g;
+    const tokenRegex = /(==[\s\S]+?==|<mark>[\s\S]+?<\/mark>|\[amarelo\][\s\S]+?\[\/amarelo\]|\[yellow\][\s\S]+?\[\/yellow\]|\[azul\][\s\S]+?\[\/azul\]|\[blue\][\s\S]+?\[\/blue\]|<blue>[\s\S]+?<\/blue>|<azul>[\s\S]+?<\/azul>|::azul::[\s\S]+?::|\[verde\][\s\S]+?\[\/verde\]|\[green\][\s\S]+?\[\/green\]|<green>[\s\S]+?<\/green>|<verde>[\s\S]+?<\/verde>|::verde::[\s\S]+?::|\[vermelho\][\s\S]+?\[\/vermelho\]|\[red\][\s\S]+?\[\/red\]|<red>[\s\S]+?<\/red>|<vermelho>[\s\S]+?<\/vermelho>|::vermelho::[\s\S]+?::|\[roxo\][\s\S]+?\[\/roxo\]|\[purple\][\s\S]+?\[\/purple\]|\[laranja\][\s\S]+?\[\/laranja\]|\[orange\][\s\S]+?\[\/orange\]|`[\s\S]+?`|\*\*(?:[\s\S]+?)\*\*|<b>[\s\S]+?<\/b>|<strong>[\s\S]+?<\/strong>|<u>[\s\S]+?<\/u>|__[\s\S]+?__|<em>[\s\S]+?<\/em>|\*(?:[^\*\n]+?)\*|_(?:[^_\n]+?)_{1,}|(?:\s+-->\s+|\s+->\s+))/g;
 
     const parts = rawStr.split(tokenRegex);
 
     return parts.map((part, idx) => {
       if (!part) return null;
       const key = `node-${depth}-${idx}`;
+
+      // 0. Seta de Sequência Clínica: --> ou ->
+      if (/^\s*(-->|->)\s*$/.test(part)) {
+        return (
+          <span key={key} className="text-blue-600 font-bold mx-1.5 select-none text-xs sm:text-sm inline-block">
+            ➔
+          </span>
+        );
+      }
 
       // 1. Grifado / Marca-texto Amarelo: ==texto==, <mark>texto</mark>, [amarelo]texto[/amarelo]
       if (
@@ -84,7 +93,32 @@ export const FormattedClinicalText: React.FC<FormattedClinicalTextProps> = ({
         );
       }
 
-      // 3. Destaque Vermelho: [vermelho]texto[/vermelho], <red>texto</red>, etc.
+      // 3. Destaque Verde: [verde]texto[/verde], <green>texto</green>, etc.
+      if (
+        (part.startsWith('[verde]') && part.endsWith('[/verde]')) ||
+        (part.startsWith('[green]') && part.endsWith('[/green]')) ||
+        (part.startsWith('<green>') && part.endsWith('</green>')) ||
+        (part.startsWith('<verde>') && part.endsWith('</verde>')) ||
+        (part.startsWith('::verde::') && part.endsWith('::'))
+      ) {
+        let clean = part;
+        if (part.startsWith('[verde]')) clean = part.slice(7, -8);
+        else if (part.startsWith('[green]')) clean = part.slice(7, -8);
+        else if (part.startsWith('<green>')) clean = part.slice(7, -8);
+        else if (part.startsWith('<verde>')) clean = part.slice(7, -8);
+        else if (part.startsWith('::verde::')) clean = part.slice(9, -2);
+
+        return (
+          <span
+            key={key}
+            className="font-normal text-emerald-900 bg-emerald-50/95 px-1.5 py-0.5 rounded-md border border-emerald-200/90 shadow-3xs mx-0.5 inline [box-decoration-break:clone] [-webkit-box-decoration-break:clone] [&_strong]:font-semibold [&_strong]:text-emerald-950 [&_strong]:underline [&_strong]:decoration-emerald-400/50"
+          >
+            {renderInlineFormatted(clean, depth + 1)}
+          </span>
+        );
+      }
+
+      // 4. Destaque Vermelho: [vermelho]texto[/vermelho], <red>texto</red>, etc.
       if (
         (part.startsWith('[vermelho]') && part.endsWith('[/vermelho]')) ||
         (part.startsWith('[red]') && part.endsWith('[/red]')) ||
@@ -109,7 +143,52 @@ export const FormattedClinicalText: React.FC<FormattedClinicalTextProps> = ({
         );
       }
 
-      // 4. Negrito Elegante e Nítido (Semibold 600): **texto**, <b>texto</b>, <strong>texto</strong>
+      // 5. Destaque Roxo / Purple: [roxo]texto[/roxo], [purple]texto[/purple]
+      if (
+        (part.startsWith('[roxo]') && part.endsWith('[/roxo]')) ||
+        (part.startsWith('[purple]') && part.endsWith('[/purple]'))
+      ) {
+        let clean = part.startsWith('[roxo]') ? part.slice(6, -7) : part.slice(8, -9);
+        return (
+          <span
+            key={key}
+            className="font-normal text-purple-900 bg-purple-50/95 px-1.5 py-0.5 rounded-md border border-purple-200/90 shadow-3xs mx-0.5 inline [box-decoration-break:clone] [-webkit-box-decoration-break:clone] [&_strong]:font-semibold [&_strong]:text-purple-950"
+          >
+            {renderInlineFormatted(clean, depth + 1)}
+          </span>
+        );
+      }
+
+      // 6. Destaque Laranja / Orange: [laranja]texto[/laranja], [orange]texto[/orange]
+      if (
+        (part.startsWith('[laranja]') && part.endsWith('[/laranja]')) ||
+        (part.startsWith('[orange]') && part.endsWith('[/orange]'))
+      ) {
+        let clean = part.startsWith('[laranja]') ? part.slice(9, -10) : part.slice(8, -9);
+        return (
+          <span
+            key={key}
+            className="font-normal text-amber-950 bg-amber-100/90 px-1.5 py-0.5 rounded-md border border-amber-300 shadow-3xs mx-0.5 inline [box-decoration-break:clone] [-webkit-box-decoration-break:clone] [&_strong]:font-semibold [&_strong]:text-amber-950"
+          >
+            {renderInlineFormatted(clean, depth + 1)}
+          </span>
+        );
+      }
+
+      // 7. Código / Monospace Inline: `texto`
+      if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
+        const clean = part.slice(1, -1);
+        return (
+          <code
+            key={key}
+            className="font-mono text-[11px] bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded border border-slate-200 mx-0.5 font-bold"
+          >
+            {clean}
+          </code>
+        );
+      }
+
+      // 8. Negrito Elegante e Nítido (Semibold 600): **texto**, <b>texto</b>, <strong>texto</strong>
       if (
         (part.startsWith('**') && part.endsWith('**') && part.length >= 4) ||
         (part.startsWith('<b>') && part.endsWith('</b>')) ||
@@ -120,13 +199,18 @@ export const FormattedClinicalText: React.FC<FormattedClinicalTextProps> = ({
         else if (part.startsWith('<b>')) clean = part.slice(3, -4);
         else if (part.startsWith('<strong>')) clean = part.slice(8, -9);
 
+        const leadingSpaces = clean.match(/^\s*/)?.[0] || '';
+        const trailingSpaces = clean.match(/\s*$/)?.[0] || '';
+        const innerText = clean.trim();
+
         return (
-          <strong
-            key={key}
-            className="font-semibold text-slate-900 tracking-tight [&_*]:font-semibold"
-          >
-            {renderInlineFormatted(clean, depth + 1)}
-          </strong>
+          <React.Fragment key={key}>
+            {leadingSpaces}
+            <strong className="font-semibold text-slate-900 tracking-tight [&_*]:font-semibold">
+              {renderInlineFormatted(innerText, depth + 1)}
+            </strong>
+            {trailingSpaces}
+          </React.Fragment>
         );
       }
 

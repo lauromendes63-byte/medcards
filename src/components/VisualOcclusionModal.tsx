@@ -23,6 +23,7 @@ import {
 import { CardClinico, NoFluxogramaComplexo, FluxogramaComplexoDados } from '../types';
 import { StorageService } from '../services/storage';
 import { ComplexFlowchartViewer } from './ComplexFlowchartViewer';
+import { FormattedClinicalText } from './FormattedClinicalText';
 import { EixoEmojiBadge } from './EixoEmojiBadge';
 
 interface VisualOcclusionModalProps {
@@ -96,6 +97,19 @@ export const VisualOcclusionModal: React.FC<VisualOcclusionModalProps> = ({
   const ocultarTodos = () => {
     setBlocosRevelados({});
     setMascaraAtivaId(null);
+  };
+
+  const handleRevelarProximoPasso = () => {
+    if (isImageOcclusion) {
+      const proximo = mascaras.find(m => !blocosRevelados[m.id]);
+      if (proximo) toggleMascara(proximo.id);
+    } else if (isComplexFlowchart && complexData) {
+      const proximo = complexData.nos.find(n => !blocosRevelados[n.id]);
+      if (proximo) toggleMascara(proximo.id);
+    } else {
+      const proximo = blocos.find(b => !blocosRevelados[b.id]);
+      if (proximo) toggleMascara(proximo.id);
+    }
   };
 
   const concluirRevisao = (avaliacao: 'errei' | 'dificil' | 'bom' | 'facil') => {
@@ -222,6 +236,18 @@ export const VisualOcclusionModal: React.FC<VisualOcclusionModalProps> = ({
                 : 'Toque em cada etapa do fluxo para revelar a conduta ocluída:'}
             </p>
             <div className="flex items-center gap-2">
+              {!todosRevelados && (
+                <button
+                  type="button"
+                  onClick={handleRevelarProximoPasso}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-3xs"
+                  title="Revelar o próximo passo sequencial"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>+ Próximo Passo</span>
+                </button>
+              )}
+
               {/* Botão de Habilitar / Ocultar 100% as Dicas */}
               <button
                 type="button"
@@ -331,7 +357,7 @@ export const VisualOcclusionModal: React.FC<VisualOcclusionModalProps> = ({
                       <div className="mt-2">
                         {(!noAtivo.oculto || blocosRevelados[noAtivo.id]) ? (
                           <div className="p-3 rounded-xl bg-white border border-slate-200/90 text-xs sm:text-sm text-slate-800 leading-relaxed font-medium shadow-2xs animate-in fade-in">
-                            {noAtivo.descricao}
+                            <FormattedClinicalText text={noAtivo.descricao} />
                           </div>
                         ) : (
                           <button
@@ -430,7 +456,7 @@ export const VisualOcclusionModal: React.FC<VisualOcclusionModalProps> = ({
                         </div>
                         {revelado && no.descricao && (
                           <div className="text-[10px] text-slate-600 mt-1 line-clamp-2">
-                            {no.descricao}
+                            <FormattedClinicalText text={no.descricao} />
                           </div>
                         )}
                       </div>
@@ -574,9 +600,9 @@ export const VisualOcclusionModal: React.FC<VisualOcclusionModalProps> = ({
                           </span>
                           <div className="flex-1 min-w-0">
                             {rev ? (
-                              <p className="text-xs font-bold text-slate-900 leading-snug break-words">
-                                {m.textoOculto}
-                              </p>
+                              <div className="text-xs sm:text-[13px] leading-snug break-words">
+                                <FormattedClinicalText text={m.textoOculto} />
+                              </div>
                             ) : (
                               <span className="text-[11px] font-semibold text-slate-400 italic">
                                 [ Toque para revelar resposta #{m.numero} ]
@@ -608,43 +634,65 @@ export const VisualOcclusionModal: React.FC<VisualOcclusionModalProps> = ({
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 gap-3">
+              <div className="space-y-0 relative">
                 {blocos.map((bloco, idx) => {
                   const revelado = blocosRevelados[bloco.id];
-                  return (
-                    <div
-                      key={bloco.id}
-                      onClick={() => toggleMascara(bloco.id)}
-                      className={`relative p-4 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.99] ${
-                        revelado
-                          ? 'bg-white border-blue-200 shadow-xs'
-                          : 'bg-indigo-600 border-indigo-700 text-white shadow-sm hover:bg-indigo-500'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                          revelado ? 'text-blue-600' : 'text-indigo-200'
-                        }`}>
-                          Etapa #{idx + 1} {exibirDicas && bloco.dica && `• ${bloco.dica}`}
-                        </span>
-                        <span className="text-xs font-medium opacity-80">
-                          {revelado ? 'Toque p/ ocultar' : 'Toque p/ revelar'}
-                        </span>
-                      </div>
+                  const ehPrimeiro = idx === 0;
 
-                      <div className="mt-1">
-                        {revelado ? (
-                          <p className="text-sm font-bold text-slate-800 leading-snug animate-in fade-in duration-150">
-                            {bloco.textoOculto}
-                          </p>
-                        ) : (
-                          <div className="flex items-center gap-2 py-1">
-                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-indigo-300 animate-pulse" />
-                            <span className="text-sm font-bold text-white tracking-wide">
-                              [ Conduta / Etapa Oculta ]
+                  return (
+                    <div key={bloco.id} className="relative">
+                      {/* Linha Conectora da Linha do Tempo */}
+                      {!ehPrimeiro && (
+                        <div className="flex items-center justify-center my-1.5 select-none">
+                          <div className="flex items-center gap-1.5 text-blue-500 bg-blue-50/80 px-2 py-0.5 rounded-full border border-blue-200/50 shadow-3xs">
+                            <ArrowRight className="w-3 h-3 rotate-90 stroke-[2.5]" />
+                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-blue-800">
+                              Próxima Etapa
                             </span>
                           </div>
-                        )}
+                        </div>
+                      )}
+
+                      <div
+                        onClick={() => toggleMascara(bloco.id)}
+                        className={`relative p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.99] ${
+                          revelado
+                            ? 'bg-white border-blue-200 shadow-xs hover:border-blue-300'
+                            : 'bg-gradient-to-r from-blue-700 via-indigo-700 to-indigo-800 border-indigo-700 text-white shadow-sm hover:brightness-105'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 border-b border-black/5 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-5 h-5 rounded-lg text-[10px] font-black flex items-center justify-center shrink-0 ${
+                              revelado ? 'bg-blue-600 text-white shadow-3xs' : 'bg-white/20 text-white'
+                            }`}>
+                              {idx + 1}
+                            </span>
+                            <span className={`text-[10.5px] font-bold uppercase tracking-wider ${
+                              revelado ? 'text-blue-700' : 'text-indigo-200'
+                            }`}>
+                              Etapa #{idx + 1} {exibirDicas && bloco.dica && `• ${bloco.dica}`}
+                            </span>
+                          </div>
+                          <span className={`text-xs font-semibold ${revelado ? 'text-slate-400' : 'text-indigo-200'}`}>
+                            {revelado ? 'Toque p/ ocultar' : 'Toque p/ revelar'}
+                          </span>
+                        </div>
+
+                        <div className="mt-2.5">
+                          {revelado ? (
+                            <div className="text-xs sm:text-[13.5px] leading-relaxed text-slate-900 animate-in fade-in duration-150">
+                              <FormattedClinicalText text={bloco.textoOculto} />
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 py-1.5 text-white">
+                              <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                              <span className="text-xs sm:text-[13px] font-bold tracking-wide">
+                                [ Conduta / Etapa Ocluída • Toque para Revelar ]
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -660,9 +708,9 @@ export const VisualOcclusionModal: React.FC<VisualOcclusionModalProps> = ({
                 <Lightbulb className="w-4 h-4 text-amber-700 fill-amber-500" />
                 Dica
               </span>
-              <p className="text-xs sm:text-sm text-slate-950 leading-relaxed font-semibold">
-                {card.perolaClinica}
-              </p>
+              <div className="text-xs sm:text-sm text-slate-950 leading-relaxed font-medium">
+                <FormattedClinicalText text={card.perolaClinica} />
+              </div>
             </div>
           )}
         </div>

@@ -791,9 +791,9 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                           </span>
                           <div className="flex-1 min-w-0">
                             {revelado ? (
-                              <p className="text-xs font-bold text-slate-900 leading-snug break-words">
-                                {m.textoOculto}
-                              </p>
+                              <div className="text-xs sm:text-[13px] leading-snug break-words">
+                                <FormattedClinicalText text={m.textoOculto} />
+                              </div>
                             ) : (
                               <span className="text-[11px] font-semibold text-slate-400 italic">
                                 [ Toque para revelar resposta #{m.numero} ]
@@ -1051,9 +1051,9 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                           </div>
                           <div className="mt-1">
                             {revelado ? (
-                              <p className="text-xs font-bold text-slate-900 leading-snug">
-                                {bloco.textoOculto}
-                              </p>
+                              <div className="text-xs sm:text-[13px] leading-snug">
+                                <FormattedClinicalText text={bloco.textoOculto} />
+                              </div>
                             ) : (
                               <span className="text-xs font-bold text-white tracking-wide">
                                 [ Etapa Oculta - Toque para Revelar ]
@@ -1128,9 +1128,9 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
           {!isCaso && !isImageOcclusion && !isCloze && !isFluxograma && (
             <div className="space-y-2">
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 min-h-16 flex items-center justify-center text-center">
-                <p className="text-xs sm:text-[13px] font-semibold text-slate-800 leading-relaxed max-w-xl mx-auto">
-                  {cardAtual.perguntaGatilho}
-                </p>
+                <div className="text-xs sm:text-[13.5px] font-medium text-slate-800 leading-relaxed max-w-xl mx-auto">
+                  <FormattedClinicalText text={cardAtual.perguntaGatilho} />
+                </div>
               </div>
             </div>
           )}

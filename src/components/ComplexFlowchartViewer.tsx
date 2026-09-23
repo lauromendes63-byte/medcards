@@ -27,6 +27,7 @@ import { FluxogramaComplexoDados, NoFluxogramaComplexo, RamoFluxogramaComplexo, 
 import { StorageService } from '../services/storage';
 import { formatarTempoMinutos, obterInfoRodadaCard } from '../utils/timerUtils';
 import { EixoEmojiBadge } from './EixoEmojiBadge';
+import { FormattedClinicalText } from './FormattedClinicalText';
 import { 
   CORES_RAMO, 
   calcularConexaoDinamica, 
@@ -1273,9 +1274,9 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                     </h5>
 
                     {no.descricao ? (
-                      <p className={`text-[10px] ${currentTheme.cardDescClass} line-clamp-3 leading-snug`}>
-                        {no.descricao}
-                      </p>
+                      <div className={`text-[10px] ${currentTheme.cardDescClass} line-clamp-3 leading-snug`}>
+                        <FormattedClinicalText text={no.descricao} />
+                      </div>
                     ) : null}
 
                     {/* Resumo de Saídas do Bloco */}
@@ -1341,7 +1342,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                 <div className="mt-2 space-y-1.5 text-xs max-h-36 sm:max-h-44 overflow-y-auto pr-1">
                   {noSelecionadoObj.descricao ? (
                     <div className={`p-2 rounded-xl ${themeId === 'light' ? 'bg-slate-50 border border-slate-200 text-slate-800' : 'bg-slate-800/80 border border-slate-700 text-slate-200'} leading-relaxed text-[11px]`}>
-                      {noSelecionadoObj.descricao}
+                      <FormattedClinicalText text={noSelecionadoObj.descricao} />
                     </div>
                   ) : (
                     <p className={`text-[11px] ${currentTheme.cardMutedClass} italic`}>

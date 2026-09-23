@@ -110,6 +110,17 @@ export const ClinicalFormatToolbar: React.FC<ClinicalFormatToolbarProps> = ({
         {!compacto && <span className="font-bold text-[10.5px]">Azul</span>}
       </button>
 
+      {/* 3b. Destaque Verde */}
+      <button
+        type="button"
+        onClick={() => aplicarFormatacao('[verde]', '[/verde]', 'indicação / meta')}
+        className="h-6 sm:h-7 px-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[11px] font-bold text-emerald-900 shadow-3xs cursor-pointer flex items-center gap-1 active:scale-95 transition-all select-none"
+        title="Destaque Verde ([verde]indicação[/verde])"
+      >
+        <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block shrink-0 shadow-3xs"></span>
+        {!compacto && <span className="font-bold text-[10.5px]">Verde</span>}
+      </button>
+
       {/* 4. Alerta Vermelho */}
       <button
         type="button"

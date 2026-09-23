@@ -1,6 +1,6 @@
 {
-  "version": "2.3.0",
-  "buildTime": "2026-09-23T18:56:15.127Z",
-  "buildDateFormatted": "23/09/2026, 15:56:15",
-  "releaseNotes": "MedCards v2.3: Personalização Alto Contraste, Janela Executiva, Árvores com Ramificação 1-Clique (+ Sim / + Não) e Timeline Rail"
+  "version": "2.3.1",
+  "buildTime": "2026-09-23T19:18:36.621Z",
+  "buildDateFormatted": "23/09/2026, 16:18:36",
+  "releaseNotes": "MedCards v2.3.1: Formatação médica viva (negrito, destaques coloridos, setas) renderizada em todos os visualizadores de flashcards e passo a passo"
 }

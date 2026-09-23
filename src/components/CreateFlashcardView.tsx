@@ -904,18 +904,23 @@ export const CreateFlashcardView: React.FC<CreateFlashcardViewProps> = ({
                     {/* Vinheta Clínica e Exame Físico */}
                     <div className="space-y-2">
                       <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs sm:text-[13px] text-slate-800 leading-relaxed shadow-3xs font-normal">
-                        {historiaClinica.trim() || <span className="italic text-slate-400">Preencha a história clínica no modo de edição...</span>}
+                        {historiaClinica.trim() ? (
+                          <FormattedClinicalText text={historiaClinica.trim()} />
+                        ) : (
+                          <span className="italic text-slate-400">Preencha a história clínica no modo de edição...</span>
+                        )}
                       </div>
 
                       {exameFisicoSinais.trim() && (
                         <div className="p-2.5 bg-slate-100/80 rounded-xl border border-slate-200/90 text-xs text-slate-700 font-normal">
-                          <strong className="font-semibold text-slate-900">Exame Físico / Sinais Vitais:</strong> {exameFisicoSinais}
+                          <strong className="font-semibold text-slate-900">Exame Físico / Sinais Vitais:</strong>{' '}
+                          <FormattedClinicalText text={exameFisicoSinais} />
                         </div>
                       )}
 
-                      <h4 className="text-xs sm:text-sm font-semibold text-slate-900 pt-1">
-                        {pergunta.trim() || 'Qual a conduta mais adequada para o caso acima?'}
-                      </h4>
+                      <div className="text-xs sm:text-sm font-semibold text-slate-900 pt-1">
+                        <FormattedClinicalText text={pergunta.trim() || 'Qual a conduta mais adequada para o caso acima?'} />
+                      </div>
                     </div>
 
                     {/* Alternativas Clicáveis */}
@@ -955,7 +960,11 @@ export const CreateFlashcardView: React.FC<CreateFlashcardViewProps> = ({
                               {letras[idx]}
                             </span>
                             <span className="flex-1 leading-snug font-normal">
-                              {opcao.trim() || `Alternativa ${letras[idx]}`}
+                              {opcao.trim() ? (
+                                <FormattedClinicalText text={opcao.trim()} />
+                              ) : (
+                                `Alternativa ${letras[idx]}`
+                              )}
                             </span>
                             {jaRespondeu && isCorreta && (
                               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 self-center" />
@@ -1076,8 +1085,8 @@ export const CreateFlashcardView: React.FC<CreateFlashcardViewProps> = ({
                             </div>
 
                             {revelado ? (
-                              <div className="text-xs text-slate-800 font-normal leading-relaxed pt-1 border-t border-slate-100">
-                                {bloco.condutaOuAcao}
+                              <div className="text-xs sm:text-[13px] text-slate-800 font-normal leading-relaxed pt-1 border-t border-slate-100">
+                                <FormattedClinicalText text={bloco.condutaOuAcao} />
                               </div>
                             ) : (
                               <button

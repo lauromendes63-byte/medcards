@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.3.0',
+        version: '2.3.1',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: 'MedCards v2.3: Personalização Alto Contraste, Janela Executiva, Árvores com Ramificação 1-Clique (+ Sim / + Não) e Timeline Rail'
+        releaseNotes: 'MedCards v2.3.1: Formatação médica viva (negrito, destaques coloridos, setas) renderizada em todos os visualizadores de flashcards e passo a passo'
       };
       this.emitFile({
         type: 'asset',
