@@ -18,7 +18,8 @@ import {
   Check,
   Calendar,
   SlidersHorizontal,
-  Sparkles
+  Sparkles,
+  Eye
 } from 'lucide-react';
 import { CardClinico, ProgressoDiario, EixoClinico, EspecialidadeMedica } from '../types';
 import { EixoEmojiBadge } from './EixoEmojiBadge';
@@ -40,6 +41,7 @@ export type EstiloCardBoasVindas =
   | 'navy_cirurgico'
   | 'grafite_carbono'
   | 'esmeralda_clinico'
+  | 'ametista_real'
   | 'titanio_dark'
   | 'clean_executivo';
 
@@ -69,113 +71,135 @@ export interface TemaConfig {
 export const TEMAS_CARD: TemaConfig[] = [
   {
     id: 'navy_cirurgico',
-    nome: 'Navy Cirúrgico',
-    subtitulo: 'Azul marinho escuro com iluminação técnica safira',
-    cardClasses: 'bg-gradient-to-br from-[#0b1426] via-[#0f172a] to-[#0a101f] border border-blue-900/40 shadow-md',
+    nome: 'Safira Cirúrgico',
+    subtitulo: 'Azul marinho profundo com acentos ciano e contraste cristalino',
+    cardClasses: 'bg-gradient-to-br from-[#060f1e] via-[#09172e] to-[#040914] border border-blue-500/40 shadow-xl ring-1 ring-blue-500/20',
     isDark: true,
-    tituloCor: 'text-white',
-    subtituloCor: 'text-slate-300',
-    pendenteCor: 'text-rose-400',
-    emDiaCor: 'text-emerald-400',
-    progressoFundo: 'bg-slate-800/90',
-    progressoBarra: 'bg-gradient-to-r from-blue-500 to-indigo-400',
-    metaTexto: 'text-slate-300',
-    metaValor: 'text-slate-400',
+    tituloCor: 'text-white font-extrabold',
+    subtituloCor: 'text-blue-100 font-medium',
+    pendenteCor: 'text-rose-400 font-bold',
+    emDiaCor: 'text-emerald-300 font-bold',
+    progressoFundo: 'bg-blue-950/80 border border-blue-800/40',
+    progressoBarra: 'bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-400 shadow-[0_0_12px_rgba(56,189,248,0.5)]',
+    metaTexto: 'text-blue-100 font-bold',
+    metaValor: 'text-blue-200/90 font-semibold',
     bordaDivisor: 'border-white/10',
-    chipFundo: 'bg-slate-900/80 hover:bg-slate-800/90',
-    chipBorda: 'border-blue-800/40',
-    chipTextoPrimario: 'text-blue-100',
-    chipTextoSecundario: 'text-blue-300/70',
-    chipIconeCor: 'text-blue-400',
-    previewGradient: 'from-[#0b1426] to-[#1e293b]',
+    chipFundo: 'bg-blue-950/90 hover:bg-blue-900/90 backdrop-blur-xs',
+    chipBorda: 'border-blue-400/40',
+    chipTextoPrimario: 'text-cyan-200 font-black',
+    chipTextoSecundario: 'text-blue-300 font-bold',
+    chipIconeCor: 'text-cyan-400',
+    previewGradient: 'from-[#060f1e] via-[#09172e] to-[#1e3a8a]',
+  },
+  {
+    id: 'clean_executivo',
+    nome: 'Branco Clínico Pro',
+    subtitulo: 'Branco puro hospitalar com contraste profundo e zero tons lavados',
+    cardClasses: 'bg-white border-2 border-slate-200/90 shadow-md ring-1 ring-slate-900/5',
+    isDark: false,
+    tituloCor: 'text-slate-950 font-extrabold',
+    subtituloCor: 'text-slate-600 font-medium',
+    pendenteCor: 'text-rose-600 font-bold',
+    emDiaCor: 'text-emerald-600 font-bold',
+    progressoFundo: 'bg-slate-100 border border-slate-200/80',
+    progressoBarra: 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-xs',
+    metaTexto: 'text-slate-800 font-bold',
+    metaValor: 'text-slate-600 font-semibold',
+    bordaDivisor: 'border-slate-100',
+    chipFundo: 'bg-slate-50 hover:bg-slate-100/90',
+    chipBorda: 'border-slate-300',
+    chipTextoPrimario: 'text-slate-950 font-black',
+    chipTextoSecundario: 'text-slate-600 font-bold',
+    chipIconeCor: 'text-slate-700',
+    previewGradient: 'from-white via-slate-50 to-slate-200',
   },
   {
     id: 'grafite_carbono',
-    nome: 'Grafite Carbono',
-    subtitulo: 'Carbono acetinado neutro com acabamento fosco executivo',
-    cardClasses: 'bg-gradient-to-br from-zinc-900 via-[#18181b] to-zinc-950 border border-zinc-700/60 shadow-md',
+    nome: 'Obsidiana Noturno',
+    subtitulo: 'Preto cirúrgico acetinado com tipografia níquel de alta nitidez',
+    cardClasses: 'bg-gradient-to-br from-[#09090b] via-[#121216] to-[#050507] border border-zinc-700/80 shadow-xl ring-1 ring-white/10',
     isDark: true,
-    tituloCor: 'text-zinc-100',
-    subtituloCor: 'text-zinc-400',
-    pendenteCor: 'text-rose-400',
-    emDiaCor: 'text-emerald-400',
-    progressoFundo: 'bg-zinc-800/80',
-    progressoBarra: 'bg-gradient-to-r from-zinc-300 to-slate-200',
-    metaTexto: 'text-zinc-300',
-    metaValor: 'text-zinc-500',
+    tituloCor: 'text-white font-extrabold',
+    subtituloCor: 'text-zinc-300 font-medium',
+    pendenteCor: 'text-rose-400 font-bold',
+    emDiaCor: 'text-emerald-400 font-bold',
+    progressoFundo: 'bg-zinc-900 border border-zinc-800',
+    progressoBarra: 'bg-gradient-to-r from-zinc-200 via-slate-100 to-zinc-400 shadow-[0_0_10px_rgba(255,255,255,0.2)]',
+    metaTexto: 'text-zinc-200 font-bold',
+    metaValor: 'text-zinc-400 font-semibold',
     bordaDivisor: 'border-zinc-800',
-    chipFundo: 'bg-zinc-800/80 hover:bg-zinc-700/90',
-    chipBorda: 'border-zinc-700/50',
-    chipTextoPrimario: 'text-zinc-200',
-    chipTextoSecundario: 'text-zinc-400',
-    chipIconeCor: 'text-zinc-300',
-    previewGradient: 'from-zinc-900 to-zinc-950',
+    chipFundo: 'bg-zinc-900/95 hover:bg-zinc-800/95',
+    chipBorda: 'border-zinc-700',
+    chipTextoPrimario: 'text-zinc-100 font-black',
+    chipTextoSecundario: 'text-zinc-400 font-bold',
+    chipIconeCor: 'text-zinc-200',
+    previewGradient: 'from-[#09090b] via-[#18181b] to-[#27272a]',
   },
   {
     id: 'esmeralda_clinico',
     nome: 'Esmeralda Cirúrgico',
-    subtitulo: 'Verde cirúrgico profundo com tons hospitalares',
-    cardClasses: 'bg-gradient-to-br from-[#03261e] via-[#05362b] to-[#021d17] border border-emerald-800/50 shadow-md',
+    subtitulo: 'Verde hospitalar escuro com iluminação menta de alto contraste',
+    cardClasses: 'bg-gradient-to-br from-[#021f19] via-[#043329] to-[#011410] border border-emerald-500/40 shadow-xl ring-1 ring-emerald-500/20',
     isDark: true,
-    tituloCor: 'text-emerald-50',
-    subtituloCor: 'text-emerald-200/80',
-    pendenteCor: 'text-rose-400',
-    emDiaCor: 'text-emerald-300',
-    progressoFundo: 'bg-emerald-950/80',
-    progressoBarra: 'bg-gradient-to-r from-emerald-400 to-teal-300',
-    metaTexto: 'text-emerald-200',
-    metaValor: 'text-emerald-400/60',
-    bordaDivisor: 'border-emerald-900/60',
-    chipFundo: 'bg-emerald-950/80 hover:bg-emerald-900/90',
-    chipBorda: 'border-emerald-800/40',
-    chipTextoPrimario: 'text-emerald-100',
-    chipTextoSecundario: 'text-emerald-300/70',
-    chipIconeCor: 'text-emerald-400',
-    previewGradient: 'from-[#03261e] to-[#064e3b]',
+    tituloCor: 'text-white font-extrabold',
+    subtituloCor: 'text-emerald-100 font-medium',
+    pendenteCor: 'text-rose-400 font-bold',
+    emDiaCor: 'text-emerald-300 font-bold',
+    progressoFundo: 'bg-emerald-950/90 border border-emerald-900',
+    progressoBarra: 'bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300 shadow-[0_0_12px_rgba(52,211,153,0.4)]',
+    metaTexto: 'text-emerald-100 font-bold',
+    metaValor: 'text-emerald-200/90 font-semibold',
+    bordaDivisor: 'border-emerald-900/70',
+    chipFundo: 'bg-emerald-950/90 hover:bg-emerald-900/90',
+    chipBorda: 'border-emerald-500/50',
+    chipTextoPrimario: 'text-emerald-200 font-black',
+    chipTextoSecundario: 'text-emerald-300 font-bold',
+    chipIconeCor: 'text-emerald-300',
+    previewGradient: 'from-[#021f19] via-[#043329] to-[#065f46]',
+  },
+  {
+    id: 'ametista_real',
+    nome: 'Ametista Imperial',
+    subtitulo: 'Púrpura meia-noite nobre com iluminação neon violeta sofisticada',
+    cardClasses: 'bg-gradient-to-br from-[#0f091f] via-[#1a1033] to-[#090514] border border-purple-500/40 shadow-xl ring-1 ring-purple-500/20',
+    isDark: true,
+    tituloCor: 'text-white font-extrabold',
+    subtituloCor: 'text-purple-100 font-medium',
+    pendenteCor: 'text-rose-400 font-bold',
+    emDiaCor: 'text-emerald-300 font-bold',
+    progressoFundo: 'bg-purple-950/90 border border-purple-900',
+    progressoBarra: 'bg-gradient-to-r from-purple-400 via-fuchsia-400 to-pink-400 shadow-[0_0_12px_rgba(192,132,252,0.4)]',
+    metaTexto: 'text-purple-100 font-bold',
+    metaValor: 'text-purple-200/90 font-semibold',
+    bordaDivisor: 'border-purple-900/60',
+    chipFundo: 'bg-purple-950/90 hover:bg-purple-900/90',
+    chipBorda: 'border-purple-500/40',
+    chipTextoPrimario: 'text-purple-200 font-black',
+    chipTextoSecundario: 'text-purple-300 font-bold',
+    chipIconeCor: 'text-purple-300',
+    previewGradient: 'from-[#0f091f] via-[#1a1033] to-[#4c1d95]',
   },
   {
     id: 'titanio_dark',
     nome: 'Titânio Minimal',
-    subtitulo: 'Cinza chumbo militar com contornos técnicos precisos',
-    cardClasses: 'bg-slate-900 border border-slate-700/70 shadow-md',
+    subtitulo: 'Chumbo acetinado clássico com contornos de precisão técnica',
+    cardClasses: 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 border border-slate-600/70 shadow-xl ring-1 ring-white/10',
     isDark: true,
-    tituloCor: 'text-slate-100',
-    subtituloCor: 'text-slate-400',
-    pendenteCor: 'text-rose-400',
-    emDiaCor: 'text-emerald-400',
-    progressoFundo: 'bg-slate-800',
-    progressoBarra: 'bg-blue-500',
-    metaTexto: 'text-slate-300',
-    metaValor: 'text-slate-500',
+    tituloCor: 'text-white font-extrabold',
+    subtituloCor: 'text-slate-300 font-medium',
+    pendenteCor: 'text-rose-400 font-bold',
+    emDiaCor: 'text-emerald-400 font-bold',
+    progressoFundo: 'bg-slate-950 border border-slate-800',
+    progressoBarra: 'bg-gradient-to-r from-blue-400 to-sky-300 shadow-[0_0_10px_rgba(56,189,248,0.3)]',
+    metaTexto: 'text-slate-200 font-bold',
+    metaValor: 'text-slate-400 font-semibold',
     bordaDivisor: 'border-slate-800',
-    chipFundo: 'bg-slate-800/80 hover:bg-slate-700/90',
-    chipBorda: 'border-slate-700/60',
-    chipTextoPrimario: 'text-slate-200',
-    chipTextoSecundario: 'text-slate-400',
+    chipFundo: 'bg-slate-900/90 hover:bg-slate-800/90',
+    chipBorda: 'border-slate-700/80',
+    chipTextoPrimario: 'text-slate-200 font-black',
+    chipTextoSecundario: 'text-slate-400 font-bold',
     chipIconeCor: 'text-blue-400',
-    previewGradient: 'from-slate-900 to-zinc-900',
-  },
-  {
-    id: 'clean_executivo',
-    nome: 'Clean Executivo',
-    subtitulo: 'Branco técnico hospitalar de alto contraste e legibilidade',
-    cardClasses: 'bg-gradient-to-br from-white via-slate-50 to-slate-100/90 border border-slate-200/90 shadow-2xs',
-    isDark: false,
-    tituloCor: 'text-slate-900',
-    subtituloCor: 'text-slate-500',
-    pendenteCor: 'text-rose-600',
-    emDiaCor: 'text-emerald-600',
-    progressoFundo: 'bg-slate-100',
-    progressoBarra: 'bg-blue-600',
-    metaTexto: 'text-slate-700',
-    metaValor: 'text-slate-400',
-    bordaDivisor: 'border-slate-100',
-    chipFundo: 'bg-white hover:bg-slate-50',
-    chipBorda: 'border-slate-200/90',
-    chipTextoPrimario: 'text-slate-800',
-    chipTextoSecundario: 'text-slate-500',
-    chipIconeCor: 'text-slate-600',
-    previewGradient: 'from-white to-slate-100',
+    previewGradient: 'from-slate-900 via-slate-800 to-slate-950',
   },
 ];
 
@@ -216,6 +240,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   });
 
   const [modalAberto, setModalAberto] = useState(false);
+  const [temaTemp, setTemaTemp] = useState<EstiloCardBoasVindas>(temaId);
   const [nomeTemp, setNomeTemp] = useState(nomeUsuario);
   const [focoTemp, setFocoTemp] = useState(focoClinico);
 
@@ -224,6 +249,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   }, [temaId]);
 
   const temaAtual = TEMAS_CARD.find(t => t.id === temaId) || TEMAS_CARD[0];
+  const temaPreview = TEMAS_CARD.find(t => t.id === temaTemp) || temaAtual;
 
   const metaTotal = progresso.metaDiaria || 20;
   const revisadosHoje = progresso.cardsRevisadosHoje || 0;
@@ -250,8 +276,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const handleSalvarPersonalizacao = () => {
     const novoNome = nomeTemp.trim() || 'Lauro';
     const novoFoco = focoTemp.trim() || 'R1 • CLÍNICA MÉDICA';
+    setTemaId(temaTemp);
     setNomeUsuario(novoNome);
     setFocoClinico(novoFoco);
+    localStorage.setItem('card_estilo_tema', temaTemp);
     localStorage.setItem('card_usuario_nome', novoNome);
     localStorage.setItem('card_foco_clinico', novoFoco);
     setModalAberto(false);
@@ -329,6 +357,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <button
               type="button"
               onClick={() => {
+                setTemaTemp(temaId);
                 setNomeTemp(nomeUsuario);
                 setFocoTemp(focoClinico);
                 setModalAberto(true);
@@ -367,52 +396,96 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       {/* MODAL DE PERSONALIZAÇÃO DO CARTÃO INICIAL                             */}
       {/* ===================================================================== */}
       {modalAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-150">
           <div 
-            className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-5 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl border border-slate-200/90 space-y-4 max-h-[92vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
-                  <Palette className="w-4 h-4 text-blue-400" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-xs">
+                  <Palette className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Personalizar Cartão Inicial</h3>
-                  <p className="text-[11px] text-slate-500">Escolha o visual do cabeçalho e seus dados</p>
+                  <h3 className="text-sm sm:text-base font-extrabold text-slate-900">Personalizar Cartão Inicial</h3>
+                  <p className="text-[11px] text-slate-500">Escolha o visual hospitalar e seus dados de estudo</p>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setModalAberto(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+                className="w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
+                title="Fechar"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
+            {/* Live Preview do Cartão em Tempo Real */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Eye className="w-3 h-3 text-blue-600" />
+                  <span>Prévia em Tempo Real</span>
+                </span>
+                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60">
+                  {temaPreview.nome}
+                </span>
+              </div>
+
+              <div className={`rounded-2xl p-3 sm:p-3.5 transition-all duration-300 relative overflow-hidden space-y-2.5 ${temaPreview.cardClasses}`}>
+                <div className="relative z-10 flex items-start justify-between gap-2.5">
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <span className={`text-[9.5px] font-bold flex items-center gap-1 ${temaPreview.pendenteCor}`}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                      {cardsPendentes.length} pendentes
+                    </span>
+                    <h4 className={`text-sm font-extrabold truncate ${temaPreview.tituloCor}`}>
+                      Bom dia, {nomeTemp.trim() || 'Lauro'}
+                    </h4>
+                    <p className={`text-[10px] truncate ${temaPreview.subtituloCor}`}>
+                      Faltam {restantesMeta} cards para a meta de hoje
+                    </p>
+                  </div>
+
+                  <div className={`flex flex-col text-right px-2 py-0.5 rounded-xl border text-[9px] font-black uppercase tracking-wide truncate max-w-[120px] ${temaPreview.chipFundo} ${temaPreview.chipBorda} ${temaPreview.chipTextoPrimario}`}>
+                    {focoTemp.trim() || 'R1 • CLÍNICA MÉDICA'}
+                  </div>
+                </div>
+
+                <div className={`pt-1.5 border-t space-y-1 ${temaPreview.bordaDivisor}`}>
+                  <div className="w-full h-1.5 rounded-full overflow-hidden bg-black/20">
+                    <div 
+                      className={`h-full rounded-full ${temaPreview.progressoBarra}`}
+                      style={{ width: `${percentualMeta}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Seletor de Temas de Fundo */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 block">
-                Estilo de Fundo do Card
+              <label className="text-xs font-bold text-slate-800 block">
+                Escolha o Tema de Cor
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {TEMAS_CARD.map((tema) => {
-                  const isSelecionado = temaId === tema.id;
+                  const isSelecionado = temaTemp === tema.id;
                   return (
                     <button
                       key={tema.id}
                       type="button"
-                      onClick={() => setTemaId(tema.id)}
-                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5 ${
+                      onClick={() => setTemaTemp(tema.id)}
+                      className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-2.5 ${
                         isSelecionado
-                          ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-500/20 shadow-xs'
-                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                          ? 'border-blue-600 bg-blue-50/70 ring-2 ring-blue-500/30 shadow-xs'
+                          : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/60'
                       }`}
                     >
-                      <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${tema.previewGradient} border border-white/20 shrink-0 shadow-2xs`} />
+                      <div className={`w-7 h-7 rounded-xl bg-gradient-to-br ${tema.previewGradient} border border-black/10 shrink-0 shadow-2xs`} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-slate-900 truncate">
@@ -423,7 +496,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                           )}
                         </div>
                         <span className="text-[10px] text-slate-500 block truncate">
-                          {tema.isDark ? 'Tema Escuro' : 'Tema Claro'}
+                          {tema.isDark ? 'Alto Contraste Escuro' : 'Alto Contraste Claro'}
                         </span>
                       </div>
                     </button>

@@ -251,6 +251,7 @@ export const PRESETS_FLUXOGRAMAS_COMPLEXOS: {
 import { 
   CORES_RAMO, 
   calcularConexaoDinamica, 
+  calcularLayoutHierarquicoFluxograma,
   obterDashArraySeta,
   obterStrokeWidthSeta,
   FLOWCHART_THEMES, 
@@ -258,7 +259,7 @@ import {
   getStoredFlowchartTheme, 
   setStoredFlowchartTheme 
 } from '../utils/flowchartCurves';
-export { CORES_RAMO, calcularConexaoDinamica };
+export { CORES_RAMO, calcularConexaoDinamica, calcularLayoutHierarquicoFluxograma };
 
 export const ComplexFlowchartBuilder: React.FC<ComplexFlowchartBuilderProps> = ({
   dados,
@@ -573,6 +574,23 @@ export const ComplexFlowchartBuilder: React.FC<ComplexFlowchartBuilderProps> = (
       nos: novosNos
     });
     setNoSelecionadoId(novoDestinoId);
+  };
+
+  // Organizar árvore automaticamente usando algoritmo hierárquico anti-colisão
+  const handleOrganizarArvoreAuto = () => {
+    const rootId = dados.noInicialId || dados.nos[0]?.id || '';
+    const nosOrganizados = calcularLayoutHierarquicoFluxograma(dados.nos, rootId, {
+      cardWidth: 240,
+      cardHeight: 140,
+      rankSep: 220,
+      nodeSep: 160,
+      startX: 520,
+      startY: 60,
+    });
+    onChange({
+      ...dados,
+      nos: nosOrganizados
+    });
   };
 
   // Abrir Modal de Unificação (Conectar nó de origem a um nó existente com cor garantidamente diferente)
@@ -1319,8 +1337,18 @@ Retorne APENAS um objeto JSON no formato:
           </div>
         )}
 
-        {/* Grupo 3: Ações Principais (+ Novo Bloco e Tela Cheia) */}
+        {/* Grupo 3: Ações Principais (Auto-Layout, + Novo Bloco e Tela Cheia) */}
         <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={handleOrganizarArvoreAuto}
+            title="Organizar todos os nós automaticamente em árvore sem sobreposições"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 hover:bg-indigo-100 dark:hover:bg-indigo-900 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-bold text-[11px] shadow-2xs transition-all cursor-pointer active:scale-95"
+          >
+            <GitFork className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 rotate-180" />
+            <span className="hidden sm:inline">Organizar Árvore</span>
+          </button>
+
           <button
             type="button"
             onClick={() => handleAdicionarNo('decisao')}
@@ -1634,13 +1662,50 @@ Retorne APENAS um objeto JSON no formato:
                       ) : null}
                     </div>
 
-                    {/* Botões Rápidos de Ação no Bloco: Unificar e Ramificar */}
+                    {/* Botões Rápidos de Ação no Bloco: +Sim, +Não, Seta, Unificar */}
                     <div className={`pt-2 flex items-center justify-between border-t ${currentTheme.cardDividerClass} gap-1`}>
                       <span className={`text-[9px] ${currentTheme.cardMutedClass}`}>
                         {no.ramos.length} {no.ramos.length === 1 ? 'saída' : 'saídas'}
                       </span>
 
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 flex-wrap justify-end">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAdicionarRamo(no.id, 'Sim', 'verde');
+                          }}
+                          title="Criar ramo Sim (Verde)"
+                          className="px-1.5 py-0.5 rounded bg-emerald-600/90 hover:bg-emerald-600 text-white text-[9px] font-black cursor-pointer active:scale-95 shadow-3xs"
+                        >
+                          + Sim
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAdicionarRamo(no.id, 'Não', 'vermelho');
+                          }}
+                          title="Criar ramo Não (Vermelho)"
+                          className="px-1.5 py-0.5 rounded bg-rose-600/90 hover:bg-rose-600 text-white text-[9px] font-black cursor-pointer active:scale-95 shadow-3xs"
+                        >
+                          + Não
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAdicionarRamo(no.id);
+                          }}
+                          title="Criar nova caixa conectada por seta livre"
+                          className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-indigo-600/90 hover:bg-indigo-600 text-white text-[9px] font-bold cursor-pointer active:scale-95 shadow-3xs"
+                        >
+                          <Plus className="w-2.5 h-2.5" />
+                          <span>Seta</span>
+                        </button>
+
                         {dados.nos.length > 1 && (
                           <button
                             type="button"
@@ -1649,25 +1714,12 @@ Retorne APENAS um objeto JSON no formato:
                               handleAbrirUnificar(no.id);
                             }}
                             title="Ligar esta caixa a outra existente"
-                            className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-sky-950/90 hover:bg-sky-900 border border-sky-600/50 text-sky-200 text-[9px] font-bold transition-all cursor-pointer active:scale-95"
+                            className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-sky-950/90 hover:bg-sky-900 border border-sky-600/50 text-sky-200 text-[9px] font-bold cursor-pointer active:scale-95 shadow-3xs"
                           >
-                            <GitFork className="w-2.5 h-2.5 text-sky-400" />
+                            <GitFork className="w-2 h-2 text-sky-400" />
                             <span>Ligar</span>
                           </button>
                         )}
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAdicionarRamo(no.id);
-                          }}
-                          title="Criar nova caixa conectada por seta"
-                          className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-600/90 hover:bg-emerald-600 text-white text-[9.5px] font-bold transition-all cursor-pointer active:scale-95"
-                        >
-                          <Plus className="w-2.5 h-2.5" />
-                          <span>Seta</span>
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -1773,6 +1825,58 @@ Retorne APENAS um objeto JSON no formato:
                         })}
                       </div>
                     )}
+                    {/* Botões Rápidos em Lista: +Sim, +Não, +Seta, Ligar */}
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between gap-1 flex-wrap">
+                      <span className="text-[9.5px] font-semibold text-slate-400">
+                        Ações rápidas:
+                      </span>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAdicionarRamo(no.id, 'Sim', 'verde');
+                          }}
+                          className="px-2 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black cursor-pointer shadow-3xs active:scale-95"
+                        >
+                          + Sim
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAdicionarRamo(no.id, 'Não', 'vermelho');
+                          }}
+                          className="px-2 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black cursor-pointer shadow-3xs active:scale-95"
+                        >
+                          + Não
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAdicionarRamo(no.id);
+                          }}
+                          className="px-2 py-0.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[9.5px] font-bold cursor-pointer shadow-3xs active:scale-95 flex items-center gap-0.5"
+                        >
+                          <Plus className="w-2.5 h-2.5" />
+                          <span>Seta</span>
+                        </button>
+                        {dados.nos.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAbrirUnificar(no.id);
+                            }}
+                            className="px-2 py-0.5 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-800 text-[9.5px] font-bold cursor-pointer active:scale-95 flex items-center gap-0.5"
+                          >
+                            <GitFork className="w-2.5 h-2.5 text-sky-600" />
+                            <span>Ligar</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 );
               })}
@@ -2043,28 +2147,48 @@ Retorne APENAS um objeto JSON no formato:
                 Setas de Saída ({noAtual.ramos.length})
               </span>
 
-              <div className="flex items-center gap-1">
-                {dados.nos.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleAbrirUnificar(noAtual.id)}
-                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-800 font-bold text-[10.5px] cursor-pointer transition-all"
-                    title="Ligar esta caixa a outra existente"
-                  >
-                    <GitFork className="w-3 h-3 text-sky-600" />
-                    <span>Ligar a Caixa</span>
-                  </button>
-                )}
+              <div className="flex items-center gap-1 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleAdicionarRamo(noAtual.id, 'Sim', 'verde')}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] cursor-pointer shadow-3xs transition-all active:scale-95"
+                  title="Criar ramo Sim (Verde)"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>+ Sim</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleAdicionarRamo(noAtual.id, 'Não', 'vermelho')}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-[10px] cursor-pointer shadow-3xs transition-all active:scale-95"
+                  title="Criar ramo Não (Vermelho)"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>+ Não</span>
+                </button>
 
                 <button
                   type="button"
                   onClick={() => handleAdicionarRamo(noAtual.id)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10.5px] cursor-pointer shadow-xs transition-all"
-                  title="Criar nova caixa conectada por seta"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] cursor-pointer shadow-3xs transition-all active:scale-95"
+                  title="Criar nova caixa conectada por seta livre"
                 >
                   <Plus className="w-3 h-3" />
                   <span>Seta</span>
                 </button>
+
+                {dados.nos.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => handleAbrirUnificar(noAtual.id)}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-800 font-bold text-[10px] cursor-pointer transition-all active:scale-95"
+                    title="Ligar esta caixa a outra existente"
+                  >
+                    <GitFork className="w-3 h-3 text-sky-600" />
+                    <span>Ligar</span>
+                  </button>
+                )}
               </div>
             </div>
 

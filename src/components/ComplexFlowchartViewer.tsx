@@ -217,6 +217,37 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
     jaCentralizouInicialmente.current = false;
   }, [fluxograma?.id, fluxograma?.noInicialId]);
 
+  // Trilha ativa de decisões médicas (Pathfinder breadcrumb)
+  const trilhaDecisao = useMemo(() => {
+    if (!noSelecionadoDetalheId || nos.length === 0) return [];
+    const caminho: { no: NoFluxogramaComplexo; ramoEntrada?: RamoFluxogramaComplexo }[] = [];
+    let atualId: string | null = noSelecionadoDetalheId;
+    const visitados = new Set<string>();
+
+    while (atualId && !visitados.has(atualId)) {
+      visitados.add(atualId);
+      const noAtual = nos.find(n => n.id === atualId);
+      if (!noAtual) break;
+
+      let paiEncontrado: NoFluxogramaComplexo | undefined;
+      let ramoEncontrado: RamoFluxogramaComplexo | undefined;
+
+      for (const n of nos) {
+        const r = n.ramos?.find(ramo => ramo.destinoNoId === atualId);
+        if (r) {
+          paiEncontrado = n;
+          ramoEncontrado = r;
+          break;
+        }
+      }
+
+      caminho.unshift({ no: noAtual, ramoEntrada: ramoEncontrado });
+      atualId = paiEncontrado ? paiEncontrado.id : null;
+    }
+
+    return caminho;
+  }, [noSelecionadoDetalheId, nos]);
+
   // Tema visual dinâmico do Canvas (Dark, Light Confortável, Blueprint Moderno)
   const [themeId, setThemeId] = useState<FlowchartThemeId>(getStoredFlowchartTheme);
   const currentTheme = FLOWCHART_THEMES[themeId] || FLOWCHART_THEMES.dark;
@@ -928,6 +959,51 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
           </button>
         </div>
       </div>
+
+      {/* TRILHA DECISÓRIA ATIVA (PATHFINDER BREADCRUMBS) */}
+      {trilhaDecisao.length > 0 && (
+        <div className={`px-3 py-1.5 rounded-xl border text-[11px] flex items-center gap-1.5 overflow-x-auto whitespace-nowrap shadow-3xs shrink-0 ${
+          currentTheme.id === 'dark'
+            ? 'bg-slate-900/90 border-slate-800 text-slate-300'
+            : currentTheme.id === 'blueprint'
+            ? 'bg-sky-950/90 border-sky-900 text-sky-200'
+            : 'bg-white/95 border-slate-200 text-slate-700 shadow-2xs'
+        }`}>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 shrink-0">
+            <Sparkles className="w-3 h-3 text-emerald-500" />
+            <span>Trilha da Decisão:</span>
+          </span>
+
+          <div className="flex items-center gap-1 min-w-0 flex-1 overflow-x-auto">
+            {trilhaDecisao.map((step, idx) => {
+              const ehUltimo = idx === trilhaDecisao.length - 1;
+              return (
+                <React.Fragment key={step.no.id}>
+                  {step.ramoEntrada && (
+                    <span className="text-[9.5px] font-black px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 shrink-0">
+                      {step.ramoEntrada.rotulo} →
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNoSelecionadoDetalheId(step.no.id);
+                      if (!nosRevelados[step.no.id]) handleRevelarNo(step.no.id);
+                    }}
+                    className={`px-2 py-0.5 rounded-lg font-bold text-[10.5px] transition-all cursor-pointer truncate max-w-[170px] shrink-0 ${
+                      ehUltimo
+                        ? 'bg-emerald-600 text-white shadow-2xs font-black ring-1 ring-emerald-400'
+                        : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'
+                    }`}
+                  >
+                    {step.no.titulo || `Etapa #${idx + 1}`}
+                  </button>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* =================================================================== */}
       {/* CANVAS GRÁFICO INTERATIVO DE RESOLUÇÃO (ULTRASSUAVE A 60/120 FPS)     */}

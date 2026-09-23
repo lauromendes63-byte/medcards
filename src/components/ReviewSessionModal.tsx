@@ -268,6 +268,20 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
     setMostrarVerso(true);
   };
 
+  const revelarProximoBlocoFluxo = () => {
+    const blocos = (cardAtual?.algoritmoDecisao?.blocos && Array.isArray(cardAtual.algoritmoDecisao.blocos))
+      ? cardAtual.algoritmoDecisao.blocos
+      : (cardAtual?.blocosOclusao && Array.isArray(cardAtual.blocosOclusao))
+        ? cardAtual.blocosOclusao
+        : (cardAtual?.etapasFluxograma && Array.isArray(cardAtual.etapasFluxograma))
+          ? cardAtual.etapasFluxograma
+          : [];
+    const proximo = blocos.find(b => b?.id && !blocosFluxoRevelados[b.id]);
+    if (proximo?.id) {
+      toggleBlocoFluxo(proximo.id);
+    }
+  };
+
   // Interação de Caso Clínico (Múltipla Escolha)
   const handleSelecionarAlternativa = (index: number) => {
     if (respostaSelecionada !== null || !cardAtual?.casoClinicoDados) return;
@@ -843,17 +857,27 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
 
               {cardAtual.algoritmoDecisao && Array.isArray(cardAtual.algoritmoDecisao.blocos) && cardAtual.algoritmoDecisao.blocos.length > 0 ? (
                 <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2">
-                  <div className="flex items-center justify-between pb-1 border-b border-slate-200/60">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 flex items-center gap-1">
-                      <GitFork className="w-3.5 h-3.5" />
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700 flex items-center gap-1.5">
+                      <GitFork className="w-4 h-4" />
                       <span>{cardAtual.algoritmoDecisao.titulo || 'Algoritmo de Conduta'}</span>
                     </span>
-                    <button
-                      onClick={revelarTodosBlocosFluxo}
-                      className="text-[9.5px] font-bold text-indigo-600 hover:text-indigo-800 px-2 py-0.5 rounded bg-white border border-slate-200 cursor-pointer"
-                    >
-                      Revelar Respostas
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={revelarProximoBlocoFluxo}
+                        className="text-[10px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg cursor-pointer transition-all active:scale-95 shadow-3xs"
+                      >
+                        + Próximo Passo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={revelarTodosBlocosFluxo}
+                        className="text-[10px] font-bold text-indigo-700 hover:text-indigo-900 bg-white hover:bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg cursor-pointer transition-all active:scale-95 shadow-3xs"
+                      >
+                        Revelar Tudo
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-2 pt-1">
@@ -865,13 +889,17 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                         <div key={bloco.id || `bloco-${idx}`} className="space-y-1">
                           {idx > 0 && (
                             <div className="flex items-center justify-center py-1 select-none">
-                              <div className="flex items-center gap-1.5 text-indigo-400">
+                              <div className="flex items-center gap-1.5 text-indigo-500 bg-indigo-50/60 px-2 py-0.5 rounded-full border border-indigo-200/50">
                                 <ArrowDown className="w-3.5 h-3.5 stroke-[2.5]" />
                                 {ramificacao?.criterioCondicional && ramificacao.criterioCondicional.trim() ? (
-                                  <span className="text-[9.5px] font-bold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200 shadow-3xs">
+                                  <span className="text-[9.5px] font-bold text-indigo-900">
                                     {ramificacao.criterioCondicional}
                                   </span>
-                                ) : null}
+                                ) : (
+                                  <span className="text-[9px] font-bold text-indigo-600 uppercase tracking-wider">
+                                    Próxima Etapa
+                                  </span>
+                                )}
                               </div>
                             </div>
                           )}

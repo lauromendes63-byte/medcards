@@ -818,32 +818,37 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
   });
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col max-h-[92vh] overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+      <div className="w-full max-w-2xl bg-white rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.28)] border border-slate-200/90 flex flex-col max-h-[92vh] overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200 ring-1 ring-slate-900/5">
         
-        {/* Topo Limpo e Despoluído */}
-        <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-white">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-              <Sparkles className="w-4 h-4" />
+        {/* Cabeçalho Executivo com Acabamento Hospitalar */}
+        <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white/95 backdrop-blur-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
+              <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
-                Importar & Exportar Flashcards
-              </h3>
-              <p className="text-[11px] text-slate-500">
-                Gemini AI, Anki (.apkg/.txt) e Backups JSON
+              <div className="flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-black tracking-tight text-slate-900">
+                  Central de Integração & IA
+                </h3>
+                <span className="text-[9.5px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Offline First
+                </span>
+              </div>
+              <p className="text-[11.5px] text-slate-500 font-medium">
+                Importação rápida com Gemini AI, Anki (.apkg/.txt) e Backups JSON
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             {onAbrirCriacaoManual && (
               <button
                 id="btn-modal-alternar-manual"
                 type="button"
                 onClick={onAbrirCriacaoManual}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer active:scale-95"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
                 title="Criar Flashcard Manualmente"
               >
                 <FileText className="w-3.5 h-3.5 text-blue-600" />
@@ -853,7 +858,7 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer active:scale-95"
               title="Fechar (Esc)"
             >
               <X className="w-5 h-5" />
@@ -861,48 +866,50 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
           </div>
         </div>
 
-        {/* Alternador de Abas */}
-        <div className="p-2 border-b border-slate-100 bg-slate-50/70 flex items-center justify-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setTabAtiva('importar')}
-            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              tabAtiva === 'importar'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Upload className="w-3.5 h-3.5 shrink-0" />
-            <span>Importar Flashcards</span>
-          </button>
+        {/* Navegador de Abas Segmentado (Pill Bar estilo iOS / Linear) */}
+        <div className="px-5 sm:px-6 pt-3 pb-2 bg-slate-50/60 border-b border-slate-100">
+          <div className="p-1 rounded-2xl bg-slate-200/70 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setTabAtiva('importar')}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                tabAtiva === 'importar'
+                  ? 'bg-white text-slate-900 shadow-xs ring-1 ring-black/5 font-extrabold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              }`}
+            >
+              <Upload className={`w-3.5 h-3.5 shrink-0 ${tabAtiva === 'importar' ? 'text-blue-600' : 'text-slate-500'}`} />
+              <span>Importar Flashcards</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setTabAtiva('exportar')}
-            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              tabAtiva === 'exportar'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Download className="w-3.5 h-3.5 shrink-0" />
-            <span>Exportar Dados</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setTabAtiva('exportar')}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                tabAtiva === 'exportar'
+                  ? 'bg-white text-slate-900 shadow-xs ring-1 ring-black/5 font-extrabold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              }`}
+            >
+              <Download className={`w-3.5 h-3.5 shrink-0 ${tabAtiva === 'exportar' ? 'text-blue-600' : 'text-slate-500'}`} />
+              <span>Exportar Dados</span>
+            </button>
+          </div>
         </div>
 
         {/* Conteúdo com Scroll */}
-        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
           {tabAtiva === 'importar' ? (
             <div className="space-y-3.5">
               
               {/* Seletor de Destino dos Flashcards */}
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
+              <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/70 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <Layers className="w-3.5 h-3.5 text-blue-600" />
                     Destino dos Flashcards
                   </span>
-                  <span className="text-[10px] text-slate-400 font-medium">
+                  <span className="text-[10.5px] text-slate-400 font-medium">
                     Organização automática
                   </span>
                 </div>
