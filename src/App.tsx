@@ -22,6 +22,7 @@ import { ImportExportModal } from './components/ImportExportModal';
 import { InstallPwaModal } from './components/InstallPwaModal';
 import { SettingsModal } from './components/SettingsModal';
 import { EixoEmojiBadge } from './components/EixoEmojiBadge';
+import { UpdateNotificationToast } from './components/UpdateNotificationToast';
 import { ResultadoImportacao } from './services/ankiService';
 import { isCardPendente } from './utils/timerUtils';
 
@@ -630,6 +631,9 @@ export default function App() {
           </button>
         </div>
       )}
+
+      {/* Notificação Inteligente de Atualizações Vercel em Tempo Real */}
+      <UpdateNotificationToast />
 
       {/* Cabeçalho Compacto Mobile */}
       <Header
