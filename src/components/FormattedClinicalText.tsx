@@ -1,0 +1,311 @@
+import React from 'react';
+
+interface FormattedClinicalTextProps {
+  text: string;
+  className?: string;
+}
+
+/**
+ * Componente que renderiza texto clínico de alto rendimento com suporte a:
+ * - Aninhamento recursivo e acumulação de edições (ex: **[azul]termo[/azul]**, [azul]**termo**[/azul], ==**termo**==)
+ * - Texto base em contraste agradável e descansado (peso normal 400, text-slate-700)
+ * - Negrito com contraste pronunciado e nítido (peso black 900, text-slate-950)
+ * - Marca-texto amarelo vibrante com alto contraste interno para negrito
+ * - Destaques clínicos azul e vermelho
+ * - Quebras de parágrafo e espaçamento visual (Enter duplo / tópicos)
+ * - Linhas de Alerta (⚠️) e Pontos de Ouro (⭐) destacados em caixas de foco
+ * - Tópicos e marcadores (•, -, *, 1., 2.) com recuo e tipografia nítida
+ */
+export const FormattedClinicalText: React.FC<FormattedClinicalTextProps> = ({
+  text,
+  className = '',
+}) => {
+  if (!text) return null;
+
+  // Função recursiva para renderizar tags inline com suporte a aninhamento e acumulação
+  const renderInlineFormatted = (rawStr: string, depth: number = 0): React.ReactNode => {
+    if (!rawStr) return null;
+    if (depth > 6) return rawStr; // Previne recursão infinita
+
+    // Regex de captura de blocos delimitados no nível atual
+    const tokenRegex = /(==[\s\S]+?==|<mark>[\s\S]+?<\/mark>|\[amarelo\][\s\S]+?\[\/amarelo\]|\[yellow\][\s\S]+?\[\/yellow\]|\[azul\][\s\S]+?\[\/azul\]|\[blue\][\s\S]+?\[\/blue\]|<blue>[\s\S]+?<\/blue>|<azul>[\s\S]+?<\/azul>|::azul::[\s\S]+?::|\[vermelho\][\s\S]+?\[\/vermelho\]|\[red\][\s\S]+?\[\/red\]|<red>[\s\S]+?<\/red>|<vermelho>[\s\S]+?<\/vermelho>|::vermelho::[\s\S]+?::|\*\*(?:[\s\S]+?)\*\*|<b>[\s\S]+?<\/b>|<strong>[\s\S]+?<\/strong>|<u>[\s\S]+?<\/u>|__[\s\S]+?__|<em>[\s\S]+?<\/em>|\*(?:[^\*\n]+?)\*|_(?:[^_\n]+?)_)/g;
+
+    const parts = rawStr.split(tokenRegex);
+
+    return parts.map((part, idx) => {
+      if (!part) return null;
+      const key = `node-${depth}-${idx}`;
+
+      // 1. Grifado / Marca-texto Amarelo: ==texto==, <mark>texto</mark>, [amarelo]texto[/amarelo]
+      if (
+        (part.startsWith('==') && part.endsWith('==') && part.length >= 4) ||
+        (part.startsWith('<mark>') && part.endsWith('</mark>')) ||
+        (part.startsWith('[amarelo]') && part.endsWith('[/amarelo]')) ||
+        (part.startsWith('[yellow]') && part.endsWith('[/yellow]'))
+      ) {
+        let clean = part;
+        if (part.startsWith('==')) clean = part.slice(2, -2);
+        else if (part.startsWith('<mark>')) clean = part.slice(6, -7);
+        else if (part.startsWith('[amarelo]')) clean = part.slice(9, -10);
+        else if (part.startsWith('[yellow]')) clean = part.slice(8, -9);
+
+        return (
+          <mark
+            key={key}
+            className="bg-amber-200/90 text-amber-950 font-normal px-1.5 py-0.5 rounded shadow-3xs tracking-normal mx-0.5 border border-amber-300/80 inline [box-decoration-break:clone] [-webkit-box-decoration-break:clone] [&_strong]:font-black [&_strong]:text-black [&_strong]:underline [&_strong]:decoration-amber-600/50 [&_strong]:decoration-2 [&_strong]:underline-offset-2"
+          >
+            {renderInlineFormatted(clean, depth + 1)}
+          </mark>
+        );
+      }
+
+      // 2. Destaque Azul: [azul]texto[/azul], <blue>texto</blue>, etc.
+      if (
+        (part.startsWith('[azul]') && part.endsWith('[/azul]')) ||
+        (part.startsWith('[blue]') && part.endsWith('[/blue]')) ||
+        (part.startsWith('<blue>') && part.endsWith('</blue>')) ||
+        (part.startsWith('<azul>') && part.endsWith('</azul>')) ||
+        (part.startsWith('::azul::') && part.endsWith('::'))
+      ) {
+        let clean = part;
+        if (part.startsWith('[azul]')) clean = part.slice(6, -7);
+        else if (part.startsWith('[blue]')) clean = part.slice(6, -7);
+        else if (part.startsWith('<blue>')) clean = part.slice(6, -7);
+        else if (part.startsWith('<azul>')) clean = part.slice(6, -7);
+        else if (part.startsWith('::azul::')) clean = part.slice(8, -2);
+
+        return (
+          <span
+            key={key}
+            className="font-normal text-blue-900 bg-blue-50/95 px-1.5 py-0.5 rounded-md border border-blue-200/90 shadow-3xs mx-0.5 inline [box-decoration-break:clone] [-webkit-box-decoration-break:clone] [&_strong]:font-black [&_strong]:text-blue-950 [&_strong]:underline [&_strong]:decoration-blue-400/50"
+          >
+            {renderInlineFormatted(clean, depth + 1)}
+          </span>
+        );
+      }
+
+      // 3. Destaque Vermelho: [vermelho]texto[/vermelho], <red>texto</red>, etc.
+      if (
+        (part.startsWith('[vermelho]') && part.endsWith('[/vermelho]')) ||
+        (part.startsWith('[red]') && part.endsWith('[/red]')) ||
+        (part.startsWith('<red>') && part.endsWith('</red>')) ||
+        (part.startsWith('<vermelho>') && part.endsWith('</vermelho>')) ||
+        (part.startsWith('::vermelho::') && part.endsWith('::'))
+      ) {
+        let clean = part;
+        if (part.startsWith('[vermelho]')) clean = part.slice(10, -11);
+        else if (part.startsWith('[red]')) clean = part.slice(5, -6);
+        else if (part.startsWith('<red>')) clean = part.slice(5, -6);
+        else if (part.startsWith('<vermelho>')) clean = part.slice(10, -11);
+        else if (part.startsWith('::vermelho::')) clean = part.slice(12, -2);
+
+        return (
+          <span
+            key={key}
+            className="font-normal text-rose-900 bg-rose-50/95 px-1.5 py-0.5 rounded-md border border-rose-200/90 shadow-3xs mx-0.5 inline [box-decoration-break:clone] [-webkit-box-decoration-break:clone] [&_strong]:font-black [&_strong]:text-rose-950 [&_strong]:underline [&_strong]:decoration-rose-400/50"
+          >
+            {renderInlineFormatted(clean, depth + 1)}
+          </span>
+        );
+      }
+
+      // 4. Negrito de Alto Contraste: **texto**, <b>texto</b>, <strong>texto</strong>
+      if (
+        (part.startsWith('**') && part.endsWith('**') && part.length >= 4) ||
+        (part.startsWith('<b>') && part.endsWith('</b>')) ||
+        (part.startsWith('<strong>') && part.endsWith('</strong>'))
+      ) {
+        let clean = part;
+        if (part.startsWith('**')) clean = part.slice(2, -2);
+        else if (part.startsWith('<b>')) clean = part.slice(3, -4);
+        else if (part.startsWith('<strong>')) clean = part.slice(8, -9);
+
+        return (
+          <strong
+            key={key}
+            className="font-black text-slate-950 tracking-tight [&_*]:font-black"
+          >
+            {renderInlineFormatted(clean, depth + 1)}
+          </strong>
+        );
+      }
+
+      // 5. Sublinhado: <u>texto</u> ou __texto__
+      if (
+        (part.startsWith('<u>') && part.endsWith('</u>')) ||
+        (part.startsWith('__') && part.endsWith('__') && part.length >= 4)
+      ) {
+        const clean = part.startsWith('<u>') ? part.slice(3, -4) : part.slice(2, -2);
+        return (
+          <span
+            key={key}
+            className="underline decoration-blue-600 decoration-2 underline-offset-3 font-semibold text-slate-900"
+          >
+            {renderInlineFormatted(clean, depth + 1)}
+          </span>
+        );
+      }
+
+      // 6. Itálico: *texto*, _texto_, <em>texto</em>
+      if (
+        (part.startsWith('*') && part.endsWith('*') && part.length >= 2) ||
+        (part.startsWith('_') && part.endsWith('_') && part.length >= 2) ||
+        (part.startsWith('<em>') && part.endsWith('</em>'))
+      ) {
+        let clean = part;
+        if (part.startsWith('*')) clean = part.slice(1, -1);
+        else if (part.startsWith('_')) clean = part.slice(1, -1);
+        else if (part.startsWith('<em>')) clean = part.slice(4, -5);
+        return (
+          <em key={key} className="italic text-slate-800 font-normal">
+            {renderInlineFormatted(clean, depth + 1)}
+          </em>
+        );
+      }
+
+      // Texto plano
+      return <React.Fragment key={key}>{part}</React.Fragment>;
+    });
+  };
+
+  // Pré-normalização para quebrar itens enumerados (1., 2., 3.) e marcadores (•, -, *) que venham na mesma linha
+  let textoProcessado = text;
+  // Quebra "1. " se vier logo após dois-pontos ou ponto:
+  textoProcessado = textoProcessado.replace(/([.:;])\s+(1\.\s+)/g, '$1\n$2');
+  // Quebra "2. ", "3. ", "4. " etc. no meio do texto quando precedido de pontuação ou parênteses:
+  textoProcessado = textoProcessado.replace(/([.!?;\)])\s+(\d+[\.\)]\s+)/g, '$1\n$2');
+  // Quebra marcadores de tópico "• " ou "- " ou "* " no meio da linha precedidos de pontuação ou no fluxo:
+  textoProcessado = textoProcessado.replace(/([.!?;\)])\s+([•\-\*]\s+)/g, '$1\n$2');
+  // Quebra itens iniciados com traço ou asterisco isolado após espaço com letra maiúscula (ex: "...testadas. - Lâmina..."):
+  textoProcessado = textoProcessado.replace(/\s+-\s+([A-ZÀ-Ú0-9])/g, '\n- $1');
+  textoProcessado = textoProcessado.replace(/\s+•\s+([A-ZÀ-Ú0-9])/g, '\n• $1');
+
+  // Divide o texto por quebras duplas (parágrafos/seções distintas)
+  const blocos = textoProcessado.split(/\n\n+/);
+
+  return (
+    <div className={`space-y-3 text-left font-sans ${className}`}>
+      {blocos.map((bloco, blocoIdx) => {
+        const linhas = bloco.split('\n');
+
+        return (
+          <div key={`bloco-${blocoIdx}`} className="space-y-1.5">
+            {linhas.map((linha, linhaIdx) => {
+              const linhaLimpa = linha.trim();
+              if (!linhaLimpa) return null;
+
+              // Linha de Alerta / Perigo / Red Flag (⚠️ ou 🚨)
+              if (linhaLimpa.startsWith('⚠️') || linhaLimpa.startsWith('🚨') || /^(atenção|alerta|contraindicação|red flag):/i.test(linhaLimpa)) {
+                return (
+                  <div
+                    key={`alerta-${linhaIdx}`}
+                    className="p-2.5 sm:p-3 bg-rose-50/90 rounded-xl border border-rose-200/90 text-rose-900 text-xs sm:text-[13.5px] leading-relaxed flex items-start gap-2 shadow-3xs [&_strong]:font-black [&_strong]:text-rose-950"
+                  >
+                    <span className="text-base leading-none shrink-0 select-none">⚠️</span>
+                    <div className="flex-1 font-normal">
+                      {renderInlineFormatted(linhaLimpa.replace(/^[⚠️🚨]\s*/, ''))}
+                    </div>
+                  </div>
+                );
+              }
+
+              // Linha de Ponto de Ouro / Regra Essencial (⭐ ou ★ ou 📌)
+              if (linhaLimpa.startsWith('⭐') || linhaLimpa.startsWith('★') || linhaLimpa.startsWith('📌') || /^(ponto de ouro|regra de ouro|essencial):/i.test(linhaLimpa)) {
+                return (
+                  <div
+                    key={`ouro-${linhaIdx}`}
+                    className="p-2.5 sm:p-3 bg-amber-50/90 rounded-xl border border-amber-200/90 text-amber-900 text-xs sm:text-[13.5px] leading-relaxed flex items-start gap-2 shadow-3xs [&_strong]:font-black [&_strong]:text-amber-950"
+                  >
+                    <span className="text-base leading-none shrink-0 select-none">⭐</span>
+                    <div className="flex-1 font-normal">
+                      {renderInlineFormatted(linhaLimpa.replace(/^[⭐★📌]\s*/, ''))}
+                    </div>
+                  </div>
+                );
+              }
+
+              // Linha de Dica Rápida / Mnemônico (💡)
+              if (linhaLimpa.startsWith('💡') || /^(dica|mnemônico):/i.test(linhaLimpa)) {
+                return (
+                  <div
+                    key={`dica-${linhaIdx}`}
+                    className="p-2.5 sm:p-3 bg-indigo-50/90 rounded-xl border border-indigo-200/90 text-indigo-900 text-xs sm:text-[13.5px] leading-relaxed flex items-start gap-2 shadow-3xs [&_strong]:font-black [&_strong]:text-indigo-950"
+                  >
+                    <span className="text-base leading-none shrink-0 select-none">💡</span>
+                    <div className="flex-1 font-normal">
+                      {renderInlineFormatted(linhaLimpa.replace(/^[💡]\s*/, ''))}
+                    </div>
+                  </div>
+                );
+              }
+
+              // Linha com seta de conduta (➔ ou ->)
+              if (linhaLimpa.startsWith('➔') || linhaLimpa.startsWith('->') || linhaLimpa.startsWith('—>')) {
+                return (
+                  <div
+                    key={`conduta-${linhaIdx}`}
+                    className="flex items-start gap-2 pl-1 text-xs sm:text-[13.5px] font-normal text-slate-700 leading-relaxed"
+                  >
+                    <span className="text-blue-600 font-black text-sm shrink-0 leading-tight">➔</span>
+                    <div className="flex-1">
+                      {renderInlineFormatted(linhaLimpa.replace(/^(➔|->|—>)\s*/, ''))}
+                    </div>
+                  </div>
+                );
+              }
+
+              // Linha com marcador de tópico (•, -, *, 1., 2., etc.)
+              const matchMarcador = linhaLimpa.match(/^([•\-\*]|\d+[\.\)])\s+(.*)$/);
+              if (matchMarcador) {
+                const marcador = matchMarcador[1];
+                const conteudo = matchMarcador[2];
+
+                return (
+                  <div
+                    key={`topico-${linhaIdx}`}
+                    className="flex items-start gap-2 pl-1 text-xs sm:text-[13.5px] text-slate-700 font-normal leading-relaxed"
+                  >
+                    <span className="text-blue-600 font-black text-xs sm:text-sm shrink-0 select-none leading-normal mt-0.5">
+                      {marcador === '-' || marcador === '*' ? '•' : marcador}
+                    </span>
+                    <div className="flex-1 text-slate-700">
+                      {renderInlineFormatted(conteudo)}
+                    </div>
+                  </div>
+                );
+              }
+
+              // Subtítulo destacado (ex: "Critérios Diagnósticos:", "### Título" ou "**ANTIBIOTICOTERAPIA IMEDIATA:**")
+              const semAsteriscosHeader = linhaLimpa.replace(/^\*\*([\s\S]+?)\*\*$/, '$1').trim();
+              const isSubtitulo =
+                linhaLimpa.startsWith('###') ||
+                (semAsteriscosHeader.endsWith(':') && semAsteriscosHeader.length < 80 && !semAsteriscosHeader.slice(0, -1).includes('.'));
+
+              if (isSubtitulo) {
+                const cleanHeader = semAsteriscosHeader.replace(/^###\s*/, '');
+                return (
+                  <h4
+                    key={`hdr-${linhaIdx}`}
+                    className="text-[11.5px] sm:text-xs font-black text-slate-900 tracking-wider uppercase mt-2.5 mb-1 pb-0.5 border-b border-slate-200/80"
+                  >
+                    {cleanHeader}
+                  </h4>
+                );
+              }
+
+              // Parágrafo regular de texto clínico com contraste equilibrado e negrito pronunciado
+              return (
+                <p
+                  key={`p-${linhaIdx}`}
+                  className="clinical-prose text-xs sm:text-[13.5px] text-slate-700 font-normal leading-relaxed [text-align-last:left]"
+                >
+                  {renderInlineFormatted(linhaLimpa)}
+                </p>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
