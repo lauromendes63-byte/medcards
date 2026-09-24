@@ -1,6 +1,6 @@
 {
-  "version": "2.3.5",
-  "buildTime": "2026-09-24T23:43:01.231Z",
-  "buildDateFormatted": "24/09/2026, 20:43:01",
-  "releaseNotes": "MedCards v2.3.5: Correção definitiva na importação de arquivos .json de Eixos e Backups com preservação integral de Oclusão de Imagem"
+  "version": "2.3.6",
+  "buildTime": "2026-09-24T23:53:55.980Z",
+  "buildDateFormatted": "24/09/2026, 20:53:55",
+  "releaseNotes": "MedCards v2.3.6: Setas de voltar e pular na sessão de estudos, prompt mestre com ensino completo de cores e seletor de quantidade de cards"
 }

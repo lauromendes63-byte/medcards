@@ -117,17 +117,25 @@ Com base no material médico, diretrizes institucionais, casos de alta complexid
   }
 };
 
-export const gerarPromptCompleto = (foco: FocoInstitucional): string => {
+export const gerarPromptCompleto = (foco: FocoInstitucional, quantidadeCards: number = 20): string => {
   const f = FOCOS_INSTITUCIONAIS[foco];
+  const qtdTotal = Math.max(1, Math.min(100, Math.round(quantidadeCards || 20)));
+  const qtdConceito = Math.max(1, Math.round(qtdTotal * 0.45));
+  const qtdFluxogramaComplexo = Math.max(1, Math.round(qtdTotal * 0.20));
+  const qtdFluxogramaOclusao = Math.max(1, Math.round(qtdTotal * 0.15));
+  const qtdCaso = Math.max(1, Math.round(qtdTotal * 0.10));
+  const qtdCloze = Math.max(0, qtdTotal - qtdConceito - qtdFluxogramaComplexo - qtdFluxogramaOclusao - qtdCaso);
+
   return `${f.instrucaoPrompt}
+IMPORTANTE: Elabore rigorosamente um total exato de ${qtdTotal} flashcards de alto rendimento com base no material fornecido.
 
 ${f.regraOuroPrompt}
 
 REGRAS DE FORMATAÇÃO E TIPOGRAFIA MÉDICA:
 1. PROIBIÇÃO ABSOLUTA DE COLCHETES PARA SEPARAR ITENS:
    - NUNCA use colchetes [...] para separar itens, títulos, categorias, etapas ou termos nas perguntas ou respostas.
-   - Use colchetes APENAS se for a sintaxe obrigatória de cloze do MedCards {{c1::termo}} ou a sintaxe de array JSON [].
-   - Para listar ou separar elementos no texto clínico, use marcadores visuais (•), hífens (-), numeração (1., 2.) ou setas (➔).
+   - Use colchetes APENAS para as tags oficiais de cor do MedCards ([azul], [vermelho], [verde], [roxo], [laranja], [amarelo]), para a sintaxe de cloze {{c1::termo}} ou para arrays JSON [].
+   - Para listar ou separar elementos no texto clínico, use marcadores visuais (•), hífens (-), numeração (1., 2.) ou a seta clínica (--> ou ➔).
 
 2. EVITAR PARÊNTESES AO MÁXIMO:
    - Evite o uso de parênteses (...) nas perguntas, respostas e justificativas.
@@ -137,23 +145,54 @@ REGRAS DE FORMATAÇÃO E TIPOGRAFIA MÉDICA:
    - Em cada flashcard gerado, SEMPRE preencha o campo "topico" com o nome específico do assunto/aula (ex: "topico": "Manejo da Sepse no Idoso" ou "topico": "Semiologia Respiratória").
    - Isso permite que o MedCards identifique e crie automaticamente os tópicos correspondentes e organize tudo por Eixos e Tópicos no celular e no computador de forma sincronizada.
 
-4. ARQUITETURA VISUAL E PALETA DE DESTAQUES MÉDICOS DE ALTO CONTRASTE (CRÍTICO):
+4. ARQUITETURA VISUAL, CORES E MARCAÇÕES MÉDICAS (CRÍTICO & MANDATÓRIO):
+   O MedCards possui um motor tipográfico clínico proprietário de alto contraste. Para criar uma experiência visual digna de material médico de ponta, você DEVE utilizar ativamente as seguintes marcações nos campos "resposta", "perguntaGatilho", "justificativaDetalhada" e nos nós dos fluxogramas:
+
+   🎨 PALETA DE CORES E DESTAQUES CLÍNICOS:
+   • ==amarelo== ou [amarelo]termo[/amarelo]: MARCA-TEXTO AMARELO VIBRANTE.
+     - Quando usar: Valores de corte numéricos, metas de tempo (ex: tempo porta-balão, metas de PA, dosagens críticas, critérios de escores definidores).
+     - Exemplo: "Meta de PAM ==≥ 65 mmHg== em choque séptico." ou "Delta-T de reperfusão ==< 4,5 horas== no AVC isquêmico."
+
+   • [azul]termo[/azul]: DESTAQUE AZUL CLÍNICO (Conduta Imediata / Padrão-Ouro).
+     - Quando usar: Fármacos de 1ª escolha, condutas prioritárias imediatas e exames diagnósticos padrão-ouro.
+     - Exemplo: "Iniciar [azul]Noradrenalina[/azul] precocemente se refratário a volume." ou "Exame padrão-ouro: [azul]Angiotomografia de Artérias Pulmonares[/azul]."
+
+   • [vermelho]termo[/vermelho]: DESTAQUE VERMELHO ALERTA (Red Flags / Contraindicações).
+     - Quando usar: Contraindicações formais absolutas, pegadinhas frequentes de prova, sinais de alarme ("Red Flags") e risco iminente de morte.
+     - Exemplo: "⚠️ [vermelho]Contraindicação absoluta:[/vermelho] uso de beta-bloqueador em intoxicação por cocaína ou BAV avançado!"
+
+   • [verde]termo[/verde]: DESTAQUE VERDE CLÍNICO (Metas Terapêuticas / Profilaxias / Critérios de Alta).
+     - Quando usar: Metas terapêuticas atingidas, medidas preventivas/profiláticas, sinais de bom prognóstico e critérios de alta segura.
+     - Exemplo: "Profilaxia primária com [verde]Vacinação contra Hepatite B e Tétano[/verde]." ou "Critério de compensação clínica: [verde]Diurese > 0,5 mL/kg/h[/verde]."
+
+   • [roxo]termo[/roxo]: DESTAQUE ROXO / PÚRPURA (Diferenciais & Fisiopatologia).
+     - Quando usar: Diagnósticos diferenciais cruciais, mecanismos fisiopatológicos, etiologias e correlações anatômicas.
+     - Exemplo: "Diferencial obrigatório: [roxo]Dissecção Aguda de Aorta tipo Stanford A[/roxo]."
+
+   • [laranja]termo[/laranja]: DESTAQUE LARANJA ÂMBAR (Avisos Intermediários / Condições Especiais).
+     - Quando usar: Critérios de exclusão relativa, monitorização intermediária e ajustes para gestantes ou insuficiência renal.
+     - Exemplo: "Atenção: [laranja]Ajustar dose para ClCr < 30 mL/min[/laranja] e monitorar função renal."
+
+   🖋️ MARCADORES DE TEXTO E TIPOGRAFIA:
+   • **negrito**: Títulos de seções, parâmetros clínicos, nomes de patologias e doses farmacológicas.
+   • <u>sublinhado</u>: Faixas etárias, grupos de risco e populações especiais (ex: <u>gestantes no 3º trimestre</u>, <u>idosos institucionalizados</u>).
+   • --> ou ->: Transforma-se AUTOMATICAMENTE na seta médica de sequência (➔).
+     - Exemplo: "Dor torácica típica --> ECG em até 10 minutos --> Dosagem de Troponina ultrassensível".
+
+   🔤 OCLUSÃO DE TEXTO (CLOZE):
+   • {{c1::termo_oculto}}: Cria a lacuna interativa nos cards do tipo "cloze".
+     - Exemplo: "A principal causa de abdome agudo cirúrgico no jovem é a {{c1::Apendicite Aguda}}."
+
+   ⚡ EMOJIS ESTRATÉGICOS DE FIXAÇÃO VISUAL:
+   • ⚠️ : No início de linhas com Red Flags, riscos iminentes ou alertas de bancas.
+   • ⭐ : No início de linhas com Regra de Ouro da conduta ou critério diagnóstico definidor.
+   • 💡 : Para mnemônicos, pérolas clínicas e sacadas práticas de prova.
+
+   📐 ARQUITETURA DE RESPOSTA SEM "TEXTÃO":
    - NUNCA GERAR "TEXTÃO" OU PARÁGRAFO CONTÍNUO: É terminantemente proibido devolver o campo "resposta" ou "justificativaDetalhada" como um bloco denso e ininterrupto de texto.
    - SEPARAÇÃO POR QUEBRAS DE LINHA DUPLAS (\\n\\n): Separe tópicos e seções por quebras de linha duplas ("enter") para garantir respiro visual e leitura rápida no celular.
    - SUBTÍTULOS ESTRUTURADOS:
      • Quando houver etapas ou categorias na conduta, inicie a seção com um subtítulo em maiúsculas terminado em dois-pontos (ex: "ANTIBIOTICOTERAPIA IMEDIATA (1ª HORA):" ou "CRITÉRIOS DE INDICAÇÃO CIRÚRGICA:").
-   - PALETA DE CORES E DESTAQUES DE FIXAÇÃO:
-     • [azul]termo[/azul]: Use para FÁRMACOS DE 1ª ESCOLHA, CONDUTAS IMEDIATAS e EXAMES PADRÃO-OURO. Fica num azul vívido de alto contraste visual.
-     • [vermelho]termo[/vermelho]: Use para RED FLAGS, CONTRAINDICAÇÕES FORMAIS, RISCO DE MORTE e PEGADINHAS CLÁSSICAS DE PROVA. Fica num vermelho marcante.
-     • ==termo==: Marca-texto AMARELO VIVO para metas de tempo e valores de corte definitivos.
-     • **termo**: Negrito refinado para títulos de tópicos, dosagens e parâmetros clínicos.
-     • <u>termo</u>: Sublinhado para faixas etárias ou subgrupos de risco.
-   - HIERARQUIA DE TÓPICOS:
-     • Início de cada tópico (•): Inicie sempre com a palavra-chave ou conduta destacada.
-   - EMOJIS ESTRATÉGICOS DE FIXAÇÃO:
-     • ⚠️ no início de linhas com Red Flags ou alertas graves.
-     • ⭐ no início de linhas com Regra de Ouro da conduta.
-     • 💡 para mnemônicos e dicas de prova.
    - DICA PRÁTICA / PONTO-CHAVE ("dica" ou "perolaClinica"):
      • Deve ser curta, direta e objetiva (1 a 2 frases no máximo) com o ponto de virada da conduta médica ou da questão.
 
@@ -174,22 +213,23 @@ GRANDE TUTORIAL DOS FORMATOS DO MEDCARDS:
 5. CASO CLÍNICO COM MÚLTIPLA ESCOLHA (tipoCard: "caso_clinico"):
    - Estrutura: "tipoCard": "caso_clinico", com "casoClinicoDados" contendo "historiaClinica", "exameFisicoSinais", "opcoes" (4 alternativas), "indiceCorreto" (0 a 3) e "justificativaDetalhada".
 
-DISTRIBUIÇÃO SUGERIDA POR TEMA (TOTAL DE 12 A 14 FLASHCARDS):
-- 6 Flashcards "conceito"
-- 2 a 3 Flashcards "fluxograma_complexo"
-- 2 Flashcards "fluxograma_oclusao"
-- 2 a 3 Flashcards "cloze" ou "caso_clinico"
+DISTRIBUIÇÃO SUGERIDA PARA ESTE TEMA (TOTAL EXATO DE ${qtdTotal} FLASHCARDS):
+- ${qtdConceito} Flashcards "conceito" (conceito direto, perguntas gatilho de conduta)
+- ${qtdFluxogramaComplexo} Flashcards "fluxograma_complexo" (árvores de decisão com ramificações)
+- ${qtdFluxogramaOclusao} Flashcards "fluxograma_oclusao" (algoritmos sequenciais passo a passo)
+- ${qtdCaso} Flashcards "caso_clinico" (casos com história clínica, exame físico e alternativas)
+- ${qtdCloze} Flashcards "cloze" (lacunas estratégicas {{c1::...}})
 
 ESTRUTURA JSON EXATA (Retorne APENAS o JSON válido sem nenhum texto explicativo fora dele):
 [
   {
     "tipoCard": "conceito",
     "topico": "Síndrome Coronariana Aguda",
-    "titulo": "Critérios Eletrocardiográficos de Reperfusão no IAMCSST",
+    "titulo": "Critérios Eletrocardiográficos e Metas no IAMCSST",
     "especialidade": "Cardiologia",
-    "perguntaGatilho": "Quais são os critérios eletrocardiográficos para definir Supra de ST e indicar reperfusão imediata?",
-    "resposta": "**Critérios de Supra de ST no Ponto J (em 2 ou mais derivações contíguas):**\\n\\n• **Derivações em geral:** ==Elevação ≥ 1 mm== em todas derivações (exceto V2-V3).\\n\\n• <u>Nas derivações V2-V3</u>:\\n  - Homens < 40 anos: **≥ 2,5 mm**\\n  - Homens ≥ 40 anos: **≥ 2,0 mm**\\n  - Mulheres (qualquer idade): **≥ 1,5 mm**\\n\\n• **Bloqueio de Ramo:** BRE novo ou presumivelmente novo com clínica isquêmica típica.\\n\\n⚠️ **Alerta Clínico:** Sempre solicitar derivações direitas (V3R, V4R) e posteriores (V7, V8) em caso de infarto de parede inferior!\\n\\n⭐ **Regra de Ouro:** Tempo porta-balão meta: ==< 90 minutos== (ou < 120 min se transferido).",
-    "perolaClinica": "Tempo porta-agulha para trombólise química: meta menos de 30 minutos quando a angioplastia primária não for alcançável em até 120 minutos."
+    "perguntaGatilho": "Quais os critérios eletrocardiográficos do IAMCSST e as metas de tempo para reperfusão imediata?",
+    "resposta": "**Critérios de Supra de ST no Ponto J (em 2 ou mais derivações contíguas):**\\n\\n• **Derivações gerais:** ==Elevação ≥ 1 mm== em todas derivações (exceto V2-V3).\\n\\n• <u>Nas derivações V2-V3</u>:\\n  - Homens < 40 anos: **≥ 2,5 mm**\\n  - Homens ≥ 40 anos: **≥ 2,0 mm**\\n  - Mulheres: **≥ 1,5 mm**\\n\\n• **Conduta Imediata:** Iniciar dupla antiagregação com [azul]AAS + Ticagrelor[/azul] e anticoagulação plena com [azul]Enoxaparina[/azul].\\n\\n• **Fluxo de Atendimento:** Dor torácica --> ECG em até ==10 minutos== --> Encaminhar para hemodinâmica.\\n\\n• **Metas Terapêuticas:** [verde]Resolução da dor e queda do supra > 50% em 90 min[/verde].\\n\\n• **Diferencial Obrigatório:** Descartar [roxo]Dissecção Aguda de Aorta[/roxo] antes de qualquer trombólise.\\n\\n• **Atenção Especial:** [laranja]Ajustar dose de Enoxaparina se ClCr < 30 mL/min[/laranja].\\n\\n⚠️ **Red Flag:** ⚠️ [vermelho]Contraindicação formal a nitratos:[/vermelho] Infarto de VD (V3R/V4R), PAS < 90 mmHg ou uso recente de inibidores da 5-PDE (Sildenafila)!\\n\\n⭐ **Regra de Ouro:** Tempo porta-balão meta: ==< 90 minutos== (ou ==< 120 min== se transferido).",
+    "perolaClinica": "Tempo porta-agulha para trombólise química com Tenecteplase: meta ==< 30 minutos== se a angioplastia primária não for realizável em até 120 minutos."
   }
 ]
 
@@ -268,9 +308,10 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [focoInstitucional, setFocoInstitucional] = useState<FocoInstitucional>('ufpa');
+  const [quantidadePrompt, setQuantidadePrompt] = useState<number>(20);
 
   const handleCopiarPrompt = async () => {
-    const promptTexto = gerarPromptCompleto(focoInstitucional);
+    const promptTexto = gerarPromptCompleto(focoInstitucional, quantidadePrompt);
     const ok = await AnkiService.copiarParaClipboard(promptTexto);
     if (ok) {
       setPromptCopiado(true);
@@ -1044,24 +1085,53 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={handleCopiarPrompt}
-                        className="inline-flex items-center justify-center gap-2 text-xs font-bold px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-sm shadow-blue-600/25 cursor-pointer transition-all active:scale-95 shrink-0"
-                        title="Copiar prompt completo formatado para colar na IA"
-                      >
-                        {promptCopiado ? (
-                          <>
-                            <ClipboardCheck className="w-4 h-4 text-white" />
-                            <span>Prompt Copiado!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4 text-white" />
-                            <span>Copiar Prompt</span>
-                          </>
-                        )}
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto justify-end shrink-0">
+                        {/* Caixa pequena para digitar a quantidade desejada de flashcards (padrão 20) */}
+                        <div 
+                          className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/90 rounded-xl px-2.5 py-1.5 shadow-3xs"
+                          title="Quantidade de flashcards a ser gerada pelo prompt (padrão: 20)"
+                        >
+                          <label htmlFor="input-qtd-prompt" className="text-[11px] font-bold text-slate-700 whitespace-nowrap cursor-pointer">
+                            Qtd:
+                          </label>
+                          <input
+                            id="input-qtd-prompt"
+                            type="number"
+                            min={1}
+                            max={100}
+                            value={quantidadePrompt}
+                            onChange={e => {
+                              const val = parseInt(e.target.value, 10);
+                              if (isNaN(val)) {
+                                setQuantidadePrompt(20);
+                              } else {
+                                setQuantidadePrompt(Math.max(1, Math.min(100, val)));
+                              }
+                            }}
+                            className="w-12 text-center text-xs font-black text-slate-900 bg-white border border-slate-300 rounded-lg py-1 px-1 focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 outline-none"
+                          />
+                          <span className="text-[10px] text-slate-500 font-semibold hidden sm:inline">cards</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleCopiarPrompt}
+                          className="inline-flex items-center justify-center gap-2 text-xs font-bold px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-sm shadow-blue-600/25 cursor-pointer transition-all active:scale-95 shrink-0"
+                          title="Copiar prompt completo formatado para colar na IA"
+                        >
+                          {promptCopiado ? (
+                            <>
+                              <ClipboardCheck className="w-4 h-4 text-white" />
+                              <span>Prompt Copiado!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-4 h-4 text-white" />
+                              <span>Copiar Prompt ({quantidadePrompt})</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
 
                     {/* Guia em 3 Passos Espaçosos */}
@@ -1096,13 +1166,13 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                         onClick={() => setVerPromptDetalhado(!verPromptDetalhado)}
                         className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
-                        <span>{verPromptDetalhado ? 'Ocultar diretrizes do prompt' : `Ver texto completo do prompt (${FOCOS_INSTITUCIONAIS[focoInstitucional].sigla})`}</span>
+                        <span>{verPromptDetalhado ? 'Ocultar diretrizes do prompt' : `Ver texto completo do prompt (${FOCOS_INSTITUCIONAIS[focoInstitucional].sigla} • ${quantidadePrompt} cards)`}</span>
                         {verPromptDetalhado ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                       </button>
 
                       {verPromptDetalhado && (
                         <div className="mt-2.5 p-3.5 bg-slate-950 text-slate-200 rounded-2xl border border-slate-800 text-[11px] font-mono max-h-56 overflow-y-auto whitespace-pre-wrap leading-relaxed shadow-inner selection:bg-blue-600 selection:text-white">
-                          {gerarPromptCompleto(focoInstitucional)}
+                          {gerarPromptCompleto(focoInstitucional, quantidadePrompt)}
                         </div>
                       )}
                     </div>

@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.3.5',
+        version: '2.3.6',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: 'MedCards v2.3.5: Correção definitiva na importação de arquivos .json de Eixos e Backups com preservação integral de Oclusão de Imagem'
+        releaseNotes: 'MedCards v2.3.6: Setas de voltar e pular na sessão de estudos, prompt mestre com ensino completo de cores e seletor de quantidade de cards'
       };
       this.emitFile({
         type: 'asset',

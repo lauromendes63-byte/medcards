@@ -13,6 +13,8 @@ import {
   Info, 
   ChevronUp, 
   ChevronDown, 
+  ChevronLeft,
+  ChevronRight,
   Sun, 
   Moon, 
   Compass,
@@ -56,6 +58,9 @@ interface ComplexFlowchartViewerProps {
   card?: CardClinico;
   topico?: TopicoClinico;
   onEditarCard?: (card: CardClinico) => void;
+  onVoltarCard?: () => void;
+  onPularCard?: () => void;
+  canVoltar?: boolean;
 }
 
 export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
@@ -73,6 +78,9 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
   card,
   topico,
   onEditarCard,
+  onVoltarCard,
+  onPularCard,
+  canVoltar = false,
 }) => {
   // FIX #9: configTimers em useMemo ao invés de leitura direta no render (evita JSON.parse por re-render)
   const configTimers = useMemo(() => StorageService.getConfiguracaoTimers(), []);
@@ -752,6 +760,36 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              {(onVoltarCard || onPularCard) && (
+                <div className="flex items-center bg-slate-200/70 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-300/80 dark:border-slate-700 shrink-0">
+                  {onVoltarCard && (
+                    <button
+                      type="button"
+                      onClick={onVoltarCard}
+                      disabled={!canVoltar}
+                      title={!canVoltar ? "Primeiro flashcard da sessão" : "Voltar ao flashcard anterior (←)"}
+                      className={`p-1 rounded flex items-center transition-all ${
+                        !canVoltar
+                          ? 'opacity-40 cursor-not-allowed text-slate-400'
+                          : 'text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 active:scale-95 cursor-pointer shadow-3xs'
+                      }`}
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <div className="h-3 w-px bg-slate-300 dark:bg-slate-700 mx-0.5" />
+                  {onPularCard && (
+                    <button
+                      type="button"
+                      onClick={onPularCard}
+                      title="Pular para o próximo flashcard (→)"
+                      className="p-1 rounded flex items-center text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 active:scale-95 cursor-pointer transition-all shadow-3xs"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
               {progressoTexto && (
                 <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap shrink-0">
                   {progressoTexto}

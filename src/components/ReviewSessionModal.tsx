@@ -9,6 +9,7 @@ import {
   CheckCircle2, 
   Clock, 
   Lightbulb, 
+  ChevronLeft,
   ChevronRight, 
   PartyPopper, 
   Image as ImageIcon, 
@@ -170,26 +171,6 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
     return () => clearInterval(interval);
   }, [indiceAtual, sessaoFinalizada]);
 
-  // Teclas de atalho para estudo veloz (Espaço = Virar/Revelar, 1-4 = SRS)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (sessaoFinalizada || isQuickEditOpen) return;
-
-      if (e.code === 'Space') {
-        e.preventDefault();
-        setMostrarVerso(prev => !prev);
-      } else if (mostrarVerso || respostaSelecionada !== null) {
-        if (e.key === '1') responder('errei');
-        else if (e.key === '2') responder('dificil');
-        else if (e.key === '3') responder('bom');
-        else if (e.key === '4') responder('facil');
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mostrarVerso, respostaSelecionada, indiceAtual, sessaoFinalizada]);
-
   // Interações de Oclusão de Imagem
   const toggleMascaraOclusao = (mascaraId: string) => {
     setMascarasReveladas(prev => {
@@ -342,6 +323,66 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
     }
   };
 
+  const handleVoltarCard = () => {
+    if (indiceAtual > 0) {
+      setIndiceAtual(prev => prev - 1);
+    }
+  };
+
+  const handlePularCard = () => {
+    if (indiceAtual + 1 < filaCards.length) {
+      setIndiceAtual(prev => prev + 1);
+    } else {
+      setSessaoFinalizada(true);
+      try {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 },
+        });
+      } catch (e) {
+        // Fallback
+      }
+    }
+  };
+
+  // Teclas de atalho para estudo veloz (Espaço = Virar/Revelar, Setas = Voltar/Pular, 1-4 = SRS)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (sessaoFinalizada || isQuickEditOpen) return;
+
+      const tag = (document.activeElement?.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || (document.activeElement as HTMLElement)?.isContentEditable) {
+        return;
+      }
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handleVoltarCard();
+        return;
+      }
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handlePularCard();
+        return;
+      }
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setMostrarVerso(prev => !prev);
+      } else if (mostrarVerso || respostaSelecionada !== null) {
+        if (e.key === '1') responder('errei');
+        else if (e.key === '2') responder('dificil');
+        else if (e.key === '3') responder('bom');
+        else if (e.key === '4') responder('facil');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mostrarVerso, respostaSelecionada, indiceAtual, sessaoFinalizada, filaCards.length, isQuickEditOpen]);
+
   const formatarTempo = (segundos: number) => {
     const mins = Math.floor(segundos / 60);
     const secs = segundos % 60;
@@ -461,6 +502,9 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
         badgeEspecialidade={cardAtual.especialidade}
         card={cardAtual}
         onEditarCard={onEditarCard}
+        onVoltarCard={handleVoltarCard}
+        onPularCard={handlePularCard}
+        canVoltar={indiceAtual > 0}
       />
     );
   }
@@ -473,15 +517,47 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
       <div className="w-full max-w-2xl mx-auto px-1.5 sm:px-4 py-2 sm:py-3 space-y-2 flex-1 flex flex-col pb-[max(2.5rem,env(safe-area-inset-bottom))] animate-in fade-in duration-150">
         
         {/* Barra Superior da Questão / Flashcard (Compacta, elegante e centralizada) */}
-        <div className="bg-white rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 border border-slate-200/90 shadow-2xs flex items-center justify-between gap-2 shrink-0">
-          {/* Esquerda: Número da Questão + Especialidade + Tópico */}
+        <div className="bg-white rounded-2xl px-2.5 sm:px-4 py-2 sm:py-2.5 border border-slate-200/90 shadow-2xs flex items-center justify-between gap-1.5 sm:gap-2 shrink-0">
+          {/* Esquerda: 2 Setinhas de Navegação (Voltar / Pular) + Número da Questão + Especialidade + Tópico */}
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            {/* Bloco com as 2 Setinhas: Voltar (←) e Pular (→) */}
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200/90 shadow-3xs shrink-0">
+              <button
+                type="button"
+                id="btn-nav-voltar-card"
+                onClick={handleVoltarCard}
+                disabled={indiceAtual === 0}
+                title={indiceAtual === 0 ? "Primeiro flashcard da sessão" : "Voltar ao flashcard anterior (←)"}
+                className={`p-1.5 sm:px-2 sm:py-1 rounded-lg flex items-center gap-1 text-xs font-bold transition-all ${
+                  indiceAtual === 0
+                    ? 'text-slate-300 cursor-not-allowed opacity-40'
+                    : 'text-slate-700 hover:text-blue-700 hover:bg-white active:scale-95 cursor-pointer shadow-3xs'
+                }`}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline text-[11px]">Voltar</span>
+              </button>
+
+              <div className="h-3.5 w-px bg-slate-200 mx-0.5" />
+
+              <button
+                type="button"
+                id="btn-nav-pular-card"
+                onClick={handlePularCard}
+                title={indiceAtual + 1 >= totalCards ? "Concluir sessão (→)" : "Pular este flashcard e ir ao próximo (→)"}
+                className="p-1.5 sm:px-2 sm:py-1 rounded-lg flex items-center gap-1 text-xs font-bold text-slate-700 hover:text-blue-700 hover:bg-white active:scale-95 cursor-pointer transition-all shadow-3xs"
+              >
+                <span className="hidden sm:inline text-[11px]">Pular</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
             <span className="text-xs sm:text-sm font-black text-slate-900 whitespace-nowrap">
-              {totalCards > 1 ? `Questão ${indiceAtual + 1}/${totalCards}` : 'Questão 1/1'}
+              {totalCards > 1 ? `${indiceAtual + 1}/${totalCards}` : '1/1'}
             </span>
             <EixoEmojiBadge card={cardAtual} size="sm" />
             {cardAtual.topicoNome && (
-              <span className="text-[10.5px] text-slate-600 font-medium truncate max-w-[120px] sm:max-w-[200px] hidden md:inline">
+              <span className="text-[10.5px] text-slate-600 font-medium truncate max-w-[90px] sm:max-w-[180px] hidden md:inline">
                 • {cardAtual.topicoNome.replace(/^tópico:\s*/i, '')}
               </span>
             )}
@@ -1159,13 +1235,23 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
           {/* RESPOSTA COMPLETA & PÉROLA CLÍNICA REVELADA                      */}
           {/* =============================================================== */}
           {!isCaso && !mostrarVerso && (
-            <div className="pt-2">
+            <div className="pt-2 flex items-center gap-2">
               <button
                 onClick={() => setMostrarVerso(true)}
-                className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shadow-xs transition-transform duration-100 ease-out active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 min-h-[48px]"
+                className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shadow-xs transition-transform duration-100 ease-out active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 min-h-[48px]"
               >
                 <Eye className="w-4 h-4" strokeWidth={2} />
                 <span>Ver Resposta Esperada (Espaço)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePularCard}
+                title="Pular para o próximo flashcard (→)"
+                className="px-3.5 py-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-blue-700 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer min-h-[48px] shrink-0"
+              >
+                <span>Pular</span>
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           )}
