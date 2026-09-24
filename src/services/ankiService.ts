@@ -23,17 +23,23 @@ export const AnkiService = {
     especialidadePadrao?: string
   ): CardClinico {
     const frente = c.perguntaGatilho || c.frente || c.pergunta || c.questao || c.enunciado || c.titulo || 'Pergunta';
-    const verso = c.resposta || c.verso || c.gabarito || c.conteudo || '';
-    const isCloze = c.tipoCard === 'cloze' || (typeof c.textoCloze === 'string') || (typeof frente === 'string' && frente.includes('{{c'));
-    const isCasoClinico = c.tipoCard === 'caso_clinico' || !!c.casoClinicoDados || Array.isArray(c.opcoes) || Array.isArray(c.alternativas) || Array.isArray(c.itens);
-    const isFluxogramaComplexo = c.tipoCard === 'fluxograma_complexo' || !!c.fluxogramaComplexo || !!c.arvoreDecisao || (c.tipoCard === 'fluxograma' && Array.isArray(c.nos));
-    const isFluxograma = !isFluxogramaComplexo && (c.tipoCard === 'fluxograma_oclusao' || (c.tipoCard === 'fluxograma' && !Array.isArray(c.nos)) || !!c.algoritmoDecisao || Array.isArray(c.etapas) || Array.isArray(c.passos));
+    let verso = c.resposta || c.verso || c.gabarito || c.conteudo || '';
+    const isImageOcclusion = c.tipoCard === 'image_occlusion' || c.tipoCard === 'oclusao_imagem' || (!!c.imagemUrl && Array.isArray(c.mascarasImagem) && c.mascarasImagem.length > 0);
+    const isCloze = !isImageOcclusion && (c.tipoCard === 'cloze' || (typeof c.textoCloze === 'string') || (typeof frente === 'string' && frente.includes('{{c')));
+    const isCasoClinico = !isImageOcclusion && (c.tipoCard === 'caso_clinico' || !!c.casoClinicoDados || Array.isArray(c.opcoes) || Array.isArray(c.alternativas));
+    const isFluxogramaComplexo = !isImageOcclusion && (c.tipoCard === 'fluxograma_complexo' || !!c.fluxogramaComplexo || !!c.arvoreDecisao || (c.tipoCard === 'fluxograma' && Array.isArray(c.nos)));
+    const isFluxograma = !isImageOcclusion && !isFluxogramaComplexo && (c.tipoCard === 'fluxograma_oclusao' || (c.tipoCard === 'fluxograma' && !Array.isArray(c.nos)) || !!c.algoritmoDecisao || Array.isArray(c.etapas) || Array.isArray(c.passos));
 
     let tipoCardFinal = c.tipoCard || 'conceito';
-    if (isFluxogramaComplexo) tipoCardFinal = 'fluxograma_complexo';
+    if (isImageOcclusion) tipoCardFinal = 'image_occlusion';
+    else if (isFluxogramaComplexo) tipoCardFinal = 'fluxograma_complexo';
     else if (isCloze) tipoCardFinal = 'cloze';
     else if (isCasoClinico) tipoCardFinal = 'caso_clinico';
     else if (isFluxograma) tipoCardFinal = 'fluxograma_oclusao';
+
+    if (isImageOcclusion && !verso && Array.isArray(c.mascarasImagem) && c.mascarasImagem.length > 0) {
+      verso = c.mascarasImagem.map((m: any) => `#${m.numero || ''}: ${m.textoOculto || ''}`).join('\n');
+    }
 
     // Normalização de Caso Clínico (Múltipla Escolha)
     let casoClinicoDados = c.casoClinicoDados;
@@ -355,6 +361,90 @@ export const AnkiService = {
   /**
    * Processa texto colado diretamente (JSON ou TSV/Delimitado)
    */
+  /**
+   * Extrai e interpreta JSON de forma ultra-resiliente, suportando:
+   * 1. Arquivos JSON válidos diretos (.json de eixos e backups completos do MedCards)
+   * 2. Blocos de código Markdown (```json ... ```)
+   * 3. Texto livre contendo um array ou objeto JSON (respeitando o delimitador de abertura real)
+   * 4. JSONs com trailing commas comuns de respostas de LLMs (Gemini / ChatGPT)
+   */
+  interpretarJsonResiliente(texto: string): any {
+    const limpo = texto.trim();
+    if (!limpo) {
+      throw new Error('O conteúdo fornecido está vazio.');
+    }
+
+    // Tentativa 1: Parse direto do texto completo (caso padrão de arquivos .json)
+    try {
+      return JSON.parse(limpo);
+    } catch {
+      // Continua para extração
+    }
+
+    // Tentativa 2: Extrair de bloco markdown ```json ... ``` se presente
+    const markdownMatch = limpo.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (markdownMatch && markdownMatch[1]) {
+      const candidatoMarkdown = markdownMatch[1].trim();
+      try {
+        return JSON.parse(candidatoMarkdown);
+      } catch {
+        try {
+          const reparado = candidatoMarkdown.replace(/,\s*([}\]])/g, '$1');
+          return JSON.parse(reparado);
+        } catch {}
+      }
+    }
+
+    // Tentativa 3: Identificar se o JSON raiz mais externo é um Objeto {...} ou Array [...]
+    const firstSquare = limpo.indexOf('[');
+    const lastSquare = limpo.lastIndexOf(']');
+    const firstCurly = limpo.indexOf('{');
+    const lastCurly = limpo.lastIndexOf('}');
+
+    const temObjeto = firstCurly !== -1 && lastCurly > firstCurly;
+    const temArray = firstSquare !== -1 && lastSquare > firstSquare;
+
+    const candidatos: string[] = [];
+
+    if (temObjeto && (!temArray || firstCurly < firstSquare)) {
+      // O objeto raiz começa antes do primeiro array (ex: { "eixo": ..., "cards": [...] })
+      candidatos.push(limpo.substring(firstCurly, lastCurly + 1).trim());
+      if (temArray) {
+        candidatos.push(limpo.substring(firstSquare, lastSquare + 1).trim());
+      }
+    } else if (temArray && (!temObjeto || firstSquare < firstCurly)) {
+      // O array raiz começa antes do primeiro objeto (ex: [ { "tipoCard": ... } ])
+      candidatos.push(limpo.substring(firstSquare, lastSquare + 1).trim());
+      if (temObjeto) {
+        candidatos.push(limpo.substring(firstCurly, lastCurly + 1).trim());
+      }
+    } else {
+      if (temObjeto) candidatos.push(limpo.substring(firstCurly, lastCurly + 1).trim());
+      if (temArray) candidatos.push(limpo.substring(firstSquare, lastSquare + 1).trim());
+    }
+
+    let ultimoErro: any = null;
+
+    for (const cand of candidatos) {
+      try {
+        return JSON.parse(cand);
+      } catch (e) {
+        ultimoErro = e;
+        try {
+          const reparado = cand.replace(/,\s*([}\]])/g, '$1');
+          return JSON.parse(reparado);
+        } catch (e2) {
+          ultimoErro = e2;
+        }
+      }
+    }
+
+    throw new Error(`Erro ao interpretar JSON: ${ultimoErro?.message || 'Formato JSON inválido ou corrompido.'}`);
+  },
+
+  /**
+   * Processa texto colado diretamente ou lido de arquivo (JSON ou TSV/Delimitado)
+   */
   processarTextoDireto(
     texto: string, 
     eixoPadraoId: string, 
@@ -368,38 +458,16 @@ export const AnkiService = {
       throw new Error('O texto fornecido está vazio.');
     }
 
-    // 1. Tenta extrair JSON de bloco markdown ```json ... ``` se existir
-    let jsonCandidate = '';
-    const markdownBlockMatch = textoLimpo.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-    if (markdownBlockMatch && markdownBlockMatch[1]) {
-      jsonCandidate = markdownBlockMatch[1].trim();
-    } else {
-      // 2. Busca pelo primeiro '[' ou '{' e o correspondente final
-      const firstSquare = textoLimpo.indexOf('[');
-      const lastSquare = textoLimpo.lastIndexOf(']');
-      const firstCurly = textoLimpo.indexOf('{');
-      const lastCurly = textoLimpo.lastIndexOf('}');
-
-      if (firstSquare !== -1 && lastSquare > firstSquare) {
-        jsonCandidate = textoLimpo.substring(firstSquare, lastSquare + 1).trim();
-      } else if (firstCurly !== -1 && lastCurly > firstCurly) {
-        jsonCandidate = textoLimpo.substring(firstCurly, lastCurly + 1).trim();
-      } else {
-        jsonCandidate = textoLimpo;
-      }
-    }
-
-    // Se for identificado candidato a JSON
-    if (jsonCandidate.startsWith('[') || jsonCandidate.startsWith('{')) {
-      try {
-        const dados = JSON.parse(jsonCandidate);
+    // 1. Tenta interpretar como JSON resiliente
+    try {
+      const dados = this.interpretarJsonResiliente(textoLimpo);
+      if (dados) {
         let listaBruta: any[] = [];
         let eixos: EixoClinico[] = [];
 
         if (Array.isArray(dados)) {
           listaBruta = dados;
         } else if (dados && typeof dados === 'object') {
-          // Suporte a diferentes chaves retornadas por IA ou backups
           if (Array.isArray(dados.cards)) {
             listaBruta = dados.cards;
           } else if (Array.isArray(dados.flashcards)) {
@@ -421,14 +489,17 @@ export const AnkiService = {
           throw new Error('Nenhum cartão válido foi encontrado na estrutura JSON.');
         }
 
+        const targetEixoId = eixos[0]?.id || eixoPadraoId;
+        const targetEsp = eixos[0]?.especialidade || especialidadePadrao;
+
         const cards: CardClinico[] = listaBruta.map((c: any, index: number) => 
           this.normalizarCardImportado(
             c, 
-            eixoPadraoId, 
+            targetEixoId, 
             index, 
             topicoDestinoId, 
             topicoDestinoNome, 
-            especialidadePadrao
+            targetEsp
           )
         );
 
@@ -436,21 +507,22 @@ export const AnkiService = {
           cardsImportados: cards,
           eixosCriados: eixos,
           totalCards: cards.length,
-          nomeDeck: nomeOrigem,
+          nomeDeck: eixos[0]?.titulo || nomeOrigem,
           mensagem: `${cards.length} flashcards importados com sucesso!`,
         };
-      } catch (err: any) {
-        // Se falhou o parse do JSON candidato, só lança se parecer com JSON explícito
-        if (jsonCandidate.startsWith('[') || jsonCandidate.startsWith('{')) {
-          throw new Error(`Erro ao interpretar JSON: ${err?.message || 'Verifique se copiou o JSON completo gerado pelo Gemini.'}`);
-        }
+      }
+    } catch (err: any) {
+      // Se parece com JSON explícito, repassa o erro detalhado
+      const pareceJson = textoLimpo.startsWith('{') || textoLimpo.startsWith('[') || textoLimpo.includes('```json') || textoLimpo.includes('{"') || textoLimpo.includes('[{');
+      if (pareceJson) {
+        throw new Error(`Erro ao interpretar JSON: ${err?.message || 'Verifique se o arquivo JSON está completo e não foi corrompido ao transferir.'}`);
       }
     }
 
     // Se não for JSON ou falhou, tenta como texto tabulado / estilo Anki
     const cards = this.parseTextoCards(textoLimpo, eixoPadraoId);
     if (cards.length === 0) {
-      throw new Error('Nenhum flashcard reconhecido. Cole o JSON gerado pelo Gemini ou texto delimitado por tabulações estilo Anki.');
+      throw new Error('Nenhum flashcard reconhecido. Use arquivos .json exportados pelo MedCards, pacotes .apkg do Anki ou texto delimitado por tabulações.');
     }
 
     // Aplica tópico se especificado
@@ -472,7 +544,7 @@ export const AnkiService = {
 
   /**
    * Processa texto de forma 100% local e assíncrona (fatiada no tempo)
-   * Garante que mesmo payloads gigantes de 100+ cards não congelem a thread principal da UI.
+   * Garante que mesmo payloads gigantes de 100+ cards ou com imagens em base64 não travem a UI.
    * Funciona 100% offline, sem nenhuma dependência de rede ou API externa.
    */
   async processarTextoAssincrono(
@@ -483,7 +555,6 @@ export const AnkiService = {
     topicoDestinoNome?: string,
     especialidadePadrao?: string
   ): Promise<ResultadoImportacao> {
-    // 1. Cede tempo para a thread do navegador atualizar a interface
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     const textoLimpo = texto.trim();
@@ -491,29 +562,10 @@ export const AnkiService = {
       throw new Error('O texto fornecido está vazio.');
     }
 
-    // 2. Extração rápida de candidato JSON
-    let jsonCandidate = '';
-    const markdownBlockMatch = textoLimpo.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-    if (markdownBlockMatch && markdownBlockMatch[1]) {
-      jsonCandidate = markdownBlockMatch[1].trim();
-    } else {
-      const firstSquare = textoLimpo.indexOf('[');
-      const lastSquare = textoLimpo.lastIndexOf(']');
-      const firstCurly = textoLimpo.indexOf('{');
-      const lastCurly = textoLimpo.lastIndexOf('}');
-
-      if (firstSquare !== -1 && lastSquare > firstSquare) {
-        jsonCandidate = textoLimpo.substring(firstSquare, lastSquare + 1).trim();
-      } else if (firstCurly !== -1 && lastCurly > firstCurly) {
-        jsonCandidate = textoLimpo.substring(firstCurly, lastCurly + 1).trim();
-      } else {
-        jsonCandidate = textoLimpo;
-      }
-    }
-
-    if (jsonCandidate.startsWith('[') || jsonCandidate.startsWith('{')) {
-      try {
-        const dados = JSON.parse(jsonCandidate);
+    // 1. Tenta interpretar como JSON resiliente
+    try {
+      const dados = this.interpretarJsonResiliente(textoLimpo);
+      if (dados) {
         let listaBruta: any[] = [];
         let eixos: EixoClinico[] = [];
 
@@ -535,6 +587,9 @@ export const AnkiService = {
           throw new Error('Nenhum cartão válido foi encontrado na estrutura JSON.');
         }
 
+        const targetEixoId = eixos[0]?.id || eixoPadraoId;
+        const targetEsp = eixos[0]?.especialidade || especialidadePadrao;
+
         // Processamento fatiado em lotes de 15 cards para manter 60fps na tela
         const cards: CardClinico[] = [];
         const BATCH_SIZE = 15;
@@ -543,11 +598,11 @@ export const AnkiService = {
           const normalizedBatch = batch.map((c: any, subIdx: number) =>
             this.normalizarCardImportado(
               c,
-              eixoPadraoId,
+              targetEixoId,
               i + subIdx,
               topicoDestinoId,
               topicoDestinoNome,
-              especialidadePadrao
+              targetEsp
             )
           );
           cards.push(...normalizedBatch);
@@ -560,13 +615,14 @@ export const AnkiService = {
           cardsImportados: cards,
           eixosCriados: eixos,
           totalCards: cards.length,
-          nomeDeck: nomeOrigem,
+          nomeDeck: eixos[0]?.titulo || nomeOrigem,
           mensagem: `${cards.length} flashcards processados localmente com sucesso!`,
         };
-      } catch (err: any) {
-        if (jsonCandidate.startsWith('[') || jsonCandidate.startsWith('{')) {
-          throw new Error(`Erro ao interpretar JSON: ${err?.message || 'Verifique se copiou a resposta completa do Gemini.'}`);
-        }
+      }
+    } catch (err: any) {
+      const pareceJson = textoLimpo.startsWith('{') || textoLimpo.startsWith('[') || textoLimpo.includes('```json') || textoLimpo.includes('{"') || textoLimpo.includes('[{');
+      if (pareceJson) {
+        throw new Error(`Erro ao interpretar JSON: ${err?.message || 'Verifique se copiou a resposta completa do Gemini.'}`);
       }
     }
 

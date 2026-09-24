@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.3.4',
+        version: '2.3.5',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: 'MedCards v2.3.4: Seletor de foco institucional (UFPA, ENAMED, USP) no prompt mestre, redesign clean da central de importação e ampliação da área de colagem de JSON'
+        releaseNotes: 'MedCards v2.3.5: Correção definitiva na importação de arquivos .json de Eixos e Backups com preservação integral de Oclusão de Imagem'
       };
       this.emitFile({
         type: 'asset',

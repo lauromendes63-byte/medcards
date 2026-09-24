@@ -312,6 +312,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
             fluxograma_oclusao: 0,
             cloze: 0,
             conceito: 0,
+            image_occlusion: 0,
           };
           const topicosDetectados = new Set<string>();
 
@@ -381,14 +382,26 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
       const res = await AnkiService.importarArquivo(file, finalEixoId, eixos);
       onImportarConcluido(res);
 
-      const eixoRef = eixos.find(e => e.id === finalEixoId);
+      const contagem: Record<string, number> = {};
+      res.cardsImportados.forEach(c => {
+        contagem[c.tipoCard] = (contagem[c.tipoCard] || 0) + 1;
+      });
+
+      const eixoCriadoPrincipal = res.eixosCriados && res.eixosCriados.length > 0 ? res.eixosCriados[0] : null;
+      const eixoRef = eixoCriadoPrincipal || eixos.find(e => e.id === finalEixoId);
+
+      const topicosQtd = (eixoCriadoPrincipal?.topicos || []).length;
+      const topicoDescricao = topicosQtd > 0
+        ? `${topicosQtd} tópico${topicosQtd > 1 ? 's' : ''} estruturado${topicosQtd > 1 ? 's' : ''}`
+        : 'Tópicos sincronizados';
+
       setSucessoPopUp({
         totalCards: res.totalCards,
-        eixoId: finalEixoId,
-        eixoNome: eixoRef?.titulo || 'Eixo Importado',
+        eixoId: eixoRef?.id || finalEixoId,
+        eixoNome: res.eixosCriados.length > 1 ? `${res.eixosCriados.length} Eixos Clínicos` : (eixoRef?.titulo || 'Eixo Importado'),
         especialidade: eixoRef?.especialidade || 'Geral / Outros',
-        topicoNome: 'Geral / Automático',
-        tiposContagem: { total: res.totalCards },
+        topicoNome: topicoDescricao,
+        tiposContagem: contagem,
         cardsCriados: res.cardsImportados,
       });
     } catch (e: any) {
@@ -1146,6 +1159,11 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
 
                       {/* Badges de Tipos */}
                       <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        {analiseTextoColado.tiposContagem.image_occlusion > 0 && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-100 text-teal-800">
+                            {analiseTextoColado.tiposContagem.image_occlusion} Oclusão Imagem
+                          </span>
+                        )}
                         {analiseTextoColado.tiposContagem.caso_clinico > 0 && (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-800">
                             {analiseTextoColado.tiposContagem.caso_clinico} Casos Clínicos
@@ -1219,12 +1237,14 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                             c.tipoCard === 'caso_clinico' ? 'Caso Clínico' :
                             c.tipoCard === 'fluxograma_complexo' ? 'Árvore Decisão' :
                             c.tipoCard === 'fluxograma_oclusao' ? 'Fluxograma' :
+                            c.tipoCard === 'image_occlusion' ? 'Oclusão Imagem' :
                             c.tipoCard === 'cloze' ? 'Cloze' : 'Conceito';
                           
                           const tipoCor = 
                             c.tipoCard === 'caso_clinico' ? 'bg-purple-100 text-purple-700' :
                             c.tipoCard === 'fluxograma_complexo' ? 'bg-emerald-100 text-emerald-700' :
                             c.tipoCard === 'fluxograma_oclusao' ? 'bg-indigo-100 text-indigo-700' :
+                            c.tipoCard === 'image_occlusion' ? 'bg-teal-100 text-teal-700' :
                             c.tipoCard === 'cloze' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700';
 
                           return (
@@ -1637,9 +1657,19 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
 
               {/* Contagem por tipo */}
               <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200/60">
+                {sucessoPopUp.tiposContagem.image_occlusion > 0 && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-100 text-teal-800">
+                    {sucessoPopUp.tiposContagem.image_occlusion} Oclusão Imagem
+                  </span>
+                )}
                 {sucessoPopUp.tiposContagem.caso_clinico > 0 && (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-800">
                     {sucessoPopUp.tiposContagem.caso_clinico} Casos Clínicos
+                  </span>
+                )}
+                {sucessoPopUp.tiposContagem.fluxograma_complexo > 0 && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
+                    {sucessoPopUp.tiposContagem.fluxograma_complexo} Árvores de Decisão
                   </span>
                 )}
                 {sucessoPopUp.tiposContagem.fluxograma_oclusao > 0 && (
