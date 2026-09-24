@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.3.3',
+        version: '2.3.4',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: 'MedCards v2.3.3: Abertura direta no modo de estudo oficial SRS, limpeza visual de etapas em fluxogramas e remoção de colchetes'
+        releaseNotes: 'MedCards v2.3.4: Seletor de foco institucional (UFPA, ENAMED, USP) no prompt mestre, redesign clean da central de importação e ampliação da área de colagem de JSON'
       };
       this.emitFile({
         type: 'asset',

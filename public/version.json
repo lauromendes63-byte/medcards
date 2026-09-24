@@ -1,6 +1,6 @@
 {
-  "version": "2.3.3",
-  "buildTime": "2026-09-23T22:48:40.581Z",
-  "buildDateFormatted": "23/09/2026, 19:48:40",
-  "releaseNotes": "MedCards v2.3.3: Abertura direta no modo de estudo oficial SRS, limpeza visual de etapas em fluxogramas e remoção de colchetes"
+  "version": "2.3.4",
+  "buildTime": "2026-09-24T22:24:22.813Z",
+  "buildDateFormatted": "24/09/2026, 19:24:22",
+  "releaseNotes": "MedCards v2.3.4: Seletor de foco institucional (UFPA, ENAMED, USP) no prompt mestre, redesign clean da central de importação e ampliação da área de colagem de JSON"
 }

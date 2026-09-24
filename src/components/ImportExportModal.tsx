@@ -19,7 +19,10 @@ import {
   BookOpen,
   ArrowRight,
   RefreshCw,
-  HardDrive
+  HardDrive,
+  ChevronDown,
+  ChevronUp,
+  Trash2
 } from 'lucide-react';
 import { CardClinico, EixoClinico, ProgressoDiario, EspecialidadeMedica, TODAS_ESPECIALIDADES_MEDICAS } from '../types';
 import { AnkiService, ResultadoImportacao } from '../services/ankiService';
@@ -41,6 +44,158 @@ interface ImportExportModalProps {
   onNavegarParaEixo?: (eixoId: string) => void;
   onEstudarCardsImportados?: (cards: CardClinico[]) => void;
 }
+
+export type FocoInstitucional = 'ufpa' | 'enamed' | 'usp';
+
+export interface InfoFocoInstitucional {
+  id: FocoInstitucional;
+  sigla: string;
+  nomeCurto: string;
+  nomeCompleto: string;
+  descricao: string;
+  corBadge: string;
+  corFundoPill: string;
+  iconeEmoji: string;
+  instrucaoPrompt: string;
+  regraOuroPrompt: string;
+}
+
+export const FOCOS_INSTITUCIONAIS: Record<FocoInstitucional, InfoFocoInstitucional> = {
+  ufpa: {
+    id: 'ufpa',
+    sigla: 'UFPA',
+    nomeCurto: 'Provas UFPA',
+    nomeCompleto: 'Foco Provas & Aulas UFPA',
+    descricao: 'Fidelidade estrita aos slides, apostilas e gravações de aula dos professores da UFPA.',
+    corBadge: 'bg-blue-600 text-white',
+    corFundoPill: 'bg-blue-600 text-white shadow-xs',
+    iconeEmoji: '🏛️',
+    instrucaoPrompt: `Você é um preceptor médico especialista em elaboração de flashcards de alto rendimento para o MedCards, com FOCO PRINCIPAL NAS PROVAS DA FACULDADE DE MEDICINA DA UFPA (Universidade Federal do Pará), módulos acadêmicos, internato e residência médica.
+Com base no material médico, transcrições de aulas, slides de professores da UFPA, casos clínicos, apostilas, PDFs ou fotos fornecidos, elabore flashcards rigorosamente estruturados no formato JSON para o aplicativo MedCards.`,
+    regraOuroPrompt: `REGRA DE OURO CRÍTICA — FIDELIDADE ESTRITA AO CONTEÚDO FORNECIDO (FOCO PROVAS UFPA):
+1. ESTRITA ADERÊNCIA AO CONTEÚDO ENVIADO:
+   - Seu foco primário e mandatório são as cobranças das provas e módulos da Faculdade de Medicina da UFPA.
+   - Os flashcards devem se ater ESTRITAMENTE e EXCLUSIVAMENTE ao conteúdo que o aluno passar junto ao prompt (transcrições de aulas, slides de professores da UFPA, discussões clínicas de enfermaria/ambulatório, apostilas e resumos enviados).
+   - NUNCA invente condutas, parâmetros ou diretrizes conflitantes com os slides ou materiais fornecidos pelo aluno. Se o professor da UFPA destacou uma conduta, dosagem, classificação ou pegadinha específica no material, essa informação TEM PRIORIDADE ABSOLUTA nos cartões.
+   - NUNCA omita, resuma superficialmente, corte ou descarte informações presentes nos materiais enviados. Todos os dados, dosagens exatas de medicamentos, valores de corte laboratoriais, achados de imagem, sinais clínicos, condutas e contraindicações fornecidos são essenciais e devem ser integralmente aproveitados e distribuídos nos flashcards gerados.`
+  },
+  enamed: {
+    id: 'enamed',
+    sigla: 'ENAMED',
+    nomeCurto: 'ENAMED / ENARE',
+    nomeCompleto: 'Foco ENAMED & Residência Nacional (ENARE)',
+    descricao: 'Matriz de competências do INEP, condutas prioritárias do SUS e pegadinhas de alto rendimento.',
+    corBadge: 'bg-emerald-600 text-white',
+    corFundoPill: 'bg-emerald-600 text-white shadow-xs',
+    iconeEmoji: '🩺',
+    instrucaoPrompt: `Você é um preceptor médico especialista em elaboração de flashcards de alto rendimento para o MedCards, com FOCO PRINCIPAL NO ENAMED (Exame Nacional de Medicina), ENARE (Exame Nacional de Residência Médica) e diretrizes nacionais do SUS / Ministério da Saúde.
+Com base no material médico, apostilas, diretrizes, casos clínicos ou resumos fornecidos, elabore flashcards rigorosamente estruturados no formato JSON para o aplicativo MedCards.`,
+    regraOuroPrompt: `REGRA DE OURO CRÍTICA — MATRIZ DE COMPETÊNCIAS DO ENAMED / ENARE:
+1. FOCO NA TOMADA DE CONDUTA E DIRETRIZES DO SUS:
+   - Seu foco primário e mandatório é a matriz oficial do ENAMED / INEP e as provas do ENARE.
+   - Priorize cenários de pronto-socorro, atenção primária à saúde (APS) e grandes síndromes clínicas de alta prevalência (Cardiologia, Pediatria, GO, Preventiva e Cirurgia).
+   - Formate condutas segundo os Protocolos Clínicos e Diretrizes Terapêuticas (PCDT) do Ministério da Saúde e consensos nacionais de referência.
+   - Destaque pegadinhas clássicas de bancas de residência médica: critérios de gravidade, contraindicações imediatas e conduta diagnóstica inicial versus conduta definitiva.`
+  },
+  usp: {
+    id: 'usp',
+    sigla: 'USP',
+    nomeCurto: 'Residência USP',
+    nomeCompleto: 'Foco Residência Médica USP (FMUSP / USP-RP)',
+    descricao: 'Diretrizes do Hospital das Clínicas (HCFMUSP), casos de alta complexidade e diagnósticos diferenciais.',
+    corBadge: 'bg-amber-600 text-white',
+    corFundoPill: 'bg-amber-600 text-white shadow-xs',
+    iconeEmoji: '🏥',
+    instrucaoPrompt: `Você é um preceptor médico especialista em elaboração de flashcards de alto rendimento para o MedCards, com FOCO PRINCIPAL NAS PROVAS DE RESIDÊNCIA MÉDICA DA USP (FMUSP - Hospital das Clínicas, FUVEST e USP Ribeirão Preto).
+Com base no material médico, diretrizes institucionais, casos de alta complexidade, apostilas e consensos fornecidos, elabore flashcards rigorosamente estruturados no formato JSON para o aplicativo MedCards.`,
+    regraOuroPrompt: `REGRA DE OURO CRÍTICA — PADRÃO DE EXCELÊNCIA E ALTA COMPLEXIDADE USP:
+1. FOCO NO PADRÃO HCFMUSP E DIRETRIZES DE PONTA:
+   - Seu foco primário e mandatório são as bancas da USP (FMUSP e USP-RP), reconhecidas pelo rigor clínico e alta complexidade.
+   - Priorize diagnósticos diferenciais sutis, estratificação prognóstica e condutas baseadas nas publicações do Hospital das Clínicas da FMUSP e consensos internacionais de ponta.
+   - Explore detalhadamente parâmetros hemodinâmicos de UTI, dosagens precisas de drogas vasoativas, achados tomográficos/radiológicos específicos e indicações cirúrgicas de urgência.
+   - Valorize o raciocínio fisiopatológico que costuma ser o diferencial nas questões de alta discriminação da FUVEST/USP.`
+  }
+};
+
+export const gerarPromptCompleto = (foco: FocoInstitucional): string => {
+  const f = FOCOS_INSTITUCIONAIS[foco];
+  return `${f.instrucaoPrompt}
+
+${f.regraOuroPrompt}
+
+REGRAS DE FORMATAÇÃO E TIPOGRAFIA MÉDICA:
+1. PROIBIÇÃO ABSOLUTA DE COLCHETES PARA SEPARAR ITENS:
+   - NUNCA use colchetes [...] para separar itens, títulos, categorias, etapas ou termos nas perguntas ou respostas.
+   - Use colchetes APENAS se for a sintaxe obrigatória de cloze do MedCards {{c1::termo}} ou a sintaxe de array JSON [].
+   - Para listar ou separar elementos no texto clínico, use marcadores visuais (•), hífens (-), numeração (1., 2.) ou setas (➔).
+
+2. EVITAR PARÊNTESES AO MÁXIMO:
+   - Evite o uso de parênteses (...) nas perguntas, respostas e justificativas.
+   - Use parênteses APENAS quando a situação for estritamente necessária (exemplo: indicar que uma conduta ou droga é opcional, como "(opcional)", ou para unidades de dosagem e siglas médicas indispensáveis). No restante, integre o texto de forma fluida e direta sem poluição de parênteses desnecessários.
+
+3. PREENCHIMENTO OBRIGATÓRIO DO CAMPO "topico":
+   - Em cada flashcard gerado, SEMPRE preencha o campo "topico" com o nome específico do assunto/aula (ex: "topico": "Manejo da Sepse no Idoso" ou "topico": "Semiologia Respiratória").
+   - Isso permite que o MedCards identifique e crie automaticamente os tópicos correspondentes e organize tudo por Eixos e Tópicos no celular e no computador de forma sincronizada.
+
+4. ARQUITETURA VISUAL E PALETA DE DESTAQUES MÉDICOS DE ALTO CONTRASTE (CRÍTICO):
+   - NUNCA GERAR "TEXTÃO" OU PARÁGRAFO CONTÍNUO: É terminantemente proibido devolver o campo "resposta" ou "justificativaDetalhada" como um bloco denso e ininterrupto de texto.
+   - SEPARAÇÃO POR QUEBRAS DE LINHA DUPLAS (\\n\\n): Separe tópicos e seções por quebras de linha duplas ("enter") para garantir respiro visual e leitura rápida no celular.
+   - SUBTÍTULOS ESTRUTURADOS:
+     • Quando houver etapas ou categorias na conduta, inicie a seção com um subtítulo em maiúsculas terminado em dois-pontos (ex: "ANTIBIOTICOTERAPIA IMEDIATA (1ª HORA):" ou "CRITÉRIOS DE INDICAÇÃO CIRÚRGICA:").
+   - PALETA DE CORES E DESTAQUES DE FIXAÇÃO:
+     • [azul]termo[/azul]: Use para FÁRMACOS DE 1ª ESCOLHA, CONDUTAS IMEDIATAS e EXAMES PADRÃO-OURO. Fica num azul vívido de alto contraste visual.
+     • [vermelho]termo[/vermelho]: Use para RED FLAGS, CONTRAINDICAÇÕES FORMAIS, RISCO DE MORTE e PEGADINHAS CLÁSSICAS DE PROVA. Fica num vermelho marcante.
+     • ==termo==: Marca-texto AMARELO VIVO para metas de tempo e valores de corte definitivos.
+     • **termo**: Negrito refinado para títulos de tópicos, dosagens e parâmetros clínicos.
+     • <u>termo</u>: Sublinhado para faixas etárias ou subgrupos de risco.
+   - HIERARQUIA DE TÓPICOS:
+     • Início de cada tópico (•): Inicie sempre com a palavra-chave ou conduta destacada.
+   - EMOJIS ESTRATÉGICOS DE FIXAÇÃO:
+     • ⚠️ no início de linhas com Red Flags ou alertas graves.
+     • ⭐ no início de linhas com Regra de Ouro da conduta.
+     • 💡 para mnemônicos e dicas de prova.
+   - DICA PRÁTICA / PONTO-CHAVE ("dica" ou "perolaClinica"):
+     • Deve ser curta, direta e objetiva (1 a 2 frases no máximo) com o ponto de virada da conduta médica ou da questão.
+
+GRANDE TUTORIAL DOS FORMATOS DO MEDCARDS:
+
+1. CONCEITO DIRETO (tipoCard: "conceito"):
+   - Estrutura: "tipoCard": "conceito", "titulo", "topico", "especialidade", "perguntaGatilho", "resposta", "dica" (ou "perolaClinica").
+
+2. FLUXOGRAMA COMPLEXO / ÁRVORE DE DECISÃO RAMIFICADA (tipoCard: "fluxograma_complexo"):
+   - Estrutura: "tipoCard": "fluxograma_complexo", com "fluxogramaComplexo" contendo "noInicialId", "nos" (com "id", "titulo", "descricao", "tipo", "oculto": true, "ramos" apontando para "destinoNoId" com "rotulo" e "cor": "verde"|"vermelho"|"azul"|"amber"|"roxo").
+
+3. FLUXOGRAMA LINEAR PASSO A PASSO (tipoCard: "fluxograma_oclusao"):
+   - Estrutura: "tipoCard": "fluxograma_oclusao", com "algoritmoDecisao" contendo "blocos" ordenados (com "id", "titulo", "criterioEntrada", "descricao", "tipo": "inicio"|"conduta"|"decisao"|"alerta").
+
+4. OCLUSÃO DE TEXTO / CLOZE (tipoCard: "cloze"):
+   - Estrutura: "tipoCard": "cloze", com campo "textoCloze" contendo {{c1::termo_oculto}}.
+
+5. CASO CLÍNICO COM MÚLTIPLA ESCOLHA (tipoCard: "caso_clinico"):
+   - Estrutura: "tipoCard": "caso_clinico", com "casoClinicoDados" contendo "historiaClinica", "exameFisicoSinais", "opcoes" (4 alternativas), "indiceCorreto" (0 a 3) e "justificativaDetalhada".
+
+DISTRIBUIÇÃO SUGERIDA POR TEMA (TOTAL DE 12 A 14 FLASHCARDS):
+- 6 Flashcards "conceito"
+- 2 a 3 Flashcards "fluxograma_complexo"
+- 2 Flashcards "fluxograma_oclusao"
+- 2 a 3 Flashcards "cloze" ou "caso_clinico"
+
+ESTRUTURA JSON EXATA (Retorne APENAS o JSON válido sem nenhum texto explicativo fora dele):
+[
+  {
+    "tipoCard": "conceito",
+    "topico": "Síndrome Coronariana Aguda",
+    "titulo": "Critérios Eletrocardiográficos de Reperfusão no IAMCSST",
+    "especialidade": "Cardiologia",
+    "perguntaGatilho": "Quais são os critérios eletrocardiográficos para definir Supra de ST e indicar reperfusão imediata?",
+    "resposta": "**Critérios de Supra de ST no Ponto J (em 2 ou mais derivações contíguas):**\\n\\n• **Derivações em geral:** ==Elevação ≥ 1 mm== em todas derivações (exceto V2-V3).\\n\\n• <u>Nas derivações V2-V3</u>:\\n  - Homens < 40 anos: **≥ 2,5 mm**\\n  - Homens ≥ 40 anos: **≥ 2,0 mm**\\n  - Mulheres (qualquer idade): **≥ 1,5 mm**\\n\\n• **Bloqueio de Ramo:** BRE novo ou presumivelmente novo com clínica isquêmica típica.\\n\\n⚠️ **Alerta Clínico:** Sempre solicitar derivações direitas (V3R, V4R) e posteriores (V7, V8) em caso de infarto de parede inferior!\\n\\n⭐ **Regra de Ouro:** Tempo porta-balão meta: ==< 90 minutos== (ou < 120 min se transferido).",
+    "perolaClinica": "Tempo porta-agulha para trombólise química: meta menos de 30 minutos quando a angioplastia primária não for alcançável em até 120 minutos."
+  }
+]
+
+MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
+[COLE AQUI SEU TEXTO, RESUMO OU TRANSCRIÇÃO]`;
+};
 
 export const ImportExportModal: React.FC<ImportExportModalProps> = ({
   cards,
@@ -112,264 +267,11 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
   } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // =========================================================================
-  // PROMPT MODELO GEMINI REFINADO COM DIRETRIZES E FOCO NAS PROVAS DA UFPA
-  // =========================================================================
-  const promptModeloGemini = `Você é um preceptor médico especialista em elaboração de flashcards de alto rendimento para o MedCards, com FOCO PRINCIPAL NAS PROVAS DA FACULDADE DE MEDICINA DA UFPA (Universidade Federal do Pará), módulos acadêmicos, internato e residência médica.
-Com base no material médico, transcrições de aulas, slides de professores da UFPA, casos clínicos, apostilas, PDFs ou fotos fornecidos, elabore flashcards rigorosamente estruturados no formato JSON para o aplicativo MedCards.
-
-REGRA DE OURO CRÍTICA — FIDELIDADE ESTRITA AO CONTEÚDO FORNECIDO (FOCO PROVAS UFPA):
-1. ESTRITA ADERÊNCIA AO CONTEÚDO ENVIADO:
-   - Seu foco primário e mandatório são as cobranças das provas e módulos da Faculdade de Medicina da UFPA.
-   - Os flashcards devem se ater ESTRITAMENTE e EXCLUSIVAMENTE ao conteúdo que o aluno passar junto ao prompt (transcrições de aulas, slides de professores da UFPA, discussões clínicas de enfermaria/ambulatório, apostilas e resumos enviados).
-   - NUNCA invente condutas, parâmetros ou diretrizes conflitantes com os slides ou materiais fornecidos pelo aluno. Se o professor da UFPA destacou uma conduta, dosagem, classificação ou pegadinha específica no material, essa informação TEM PRIORIDADE ABSOLUTA nos cartões.
-   - NUNCA omita, resuma superficialmente, corte ou descarte informações presentes nos materiais enviados. Todos os dados, dosagens exatas de medicamentos, valores de corte laboratoriais, achados de imagem, sinais clínicos, condutas e contraindicações fornecidos são essenciais e devem ser integralmente aproveitados e distribuídos nos flashcards gerados.
-
-REGRAS DE FORMATAÇÃO E TIPOGRAFIA MÉDICA:
-1. PROIBIÇÃO ABSOLUTA DE COLCHETES PARA SEPARAR ITENS:
-   - NUNCA use colchetes [...] para separar itens, títulos, categorias, etapas ou termos nas perguntas ou respostas.
-   - Use colchetes APENAS se for a sintaxe obrigatória de cloze do MedCards {{c1::termo}} ou a sintaxe de array JSON [].
-   - Para listar ou separar elementos no texto clínico, use marcadores visuais (•), hífens (-), numeração (1., 2.) ou setas (➔).
-
-2. EVITAR PARÊNTESES AO MÁXIMO:
-   - Evite o uso de parênteses (...) nas perguntas, respostas e justificativas.
-   - Use parênteses APENAS quando a situação for estritamente necessária (exemplo: indicar que uma conduta ou droga é opcional, como "(opcional)", ou para unidades de dosagem e siglas médicas indispensáveis). No restante, integre o texto de forma fluida e direta sem poluição de parênteses desnecessários.
-
-3. PREENCHIMENTO OBRIGATÓRIO DO CAMPO "topico":
-   - Em cada flashcard gerado, SEMPRE preencha o campo "topico" com o nome específico do assunto/aula da faculdade (ex: "topico": "Manejo da Sepse no Idoso" ou "topico": "Semiologia Respiratória UFPA").
-   - Isso permite que o MedCards identifique e crie automaticamente os tópicos correspondentes e organize tudo por Eixos e Tópicos no celular e no computador de forma sincronizada.
-
-4. ARQUITETURA VISUAL E PALETA DE DESTAQUES MÉDICOS DE ALTO CONTRASTE (CRÍTICO):
-   - NUNCA GERAR "TEXTÃO" OU PARÁGRAFO CONTÍNUO: É terminantemente proibido devolver o campo "resposta" ou "justificativaDetalhada" como um bloco denso e ininterrupto de texto.
-   - SEPARAÇÃO POR QUEBRAS DE LINHA DUPLAS (\\n\\n): Separe tópicos e seções por quebras de linha duplas ("enter") para garantir respiro visual e leitura rápida no celular.
-   - SUBTÍTULOS ESTRUTURADOS:
-     • Quando houver etapas ou categorias na conduta, inicie a seção com um subtítulo em maiúsculas terminado em dois-pontos (ex: "ANTIBIOTICOTERAPIA IMEDIATA (1ª HORA):" ou "CRITÉRIOS DE INDICAÇÃO CIRÚRGICA:").
-   - PALETA DE CORES E DESTAQUES DE FIXAÇÃO:
-     • [azul]termo[/azul]: Use para FÁRMACOS DE 1ª ESCOLHA, CONDUTAS IMEDIATAS e EXAMES PADRÃO-OURO (ex: [azul]Noradrenalina IV[/azul], [azul]Angioplastia Primária[/azul]). Fica num azul vívido de alto contraste visual.
-     • [vermelho]termo[/vermelho]: Use para RED FLAGS, CONTRAINDICAÇÕES FORMAIS, RISCO DE MORTE e PEGADINHAS CLÁSSICAS DE PROVA DA UFPA (ex: [vermelho]Beta-bloqueador contraindicado se congestão ou choque[/vermelho]). Fica num vermelho marcante.
-     • ==termo==: Marca-texto AMARELO VIVO para metas de tempo e valores de corte definitivos (ex: ==Porta-Balão < 90 min==, ==Lactato sérico > 2 mmol/L==).
-     • **termo**: Negrito refinado para títulos de tópicos, dosagens e parâmetros clínicos.
-     • <u>termo</u>: Sublinhado para faixas etárias ou subgrupos de risco.
-   - HIERARQUIA DE TÓPICOS:
-     • Início de cada tópico (•): Inicie sempre com a palavra-chave ou conduta destacada (ex: "• **Cefazolina 2g IV**: Cefalosporina de 1ª geração...").
-   - EMOJIS ESTRATÉGICOS DE FIXAÇÃO:
-     • ⚠️ no início de linhas com Red Flags ou alertas graves.
-     • ⭐ no início de linhas com Regra de Ouro da conduta.
-     • 💡 para mnemônicos e dicas de prova da UFPA.
-   - DICA PRÁTICA / PONTO-CHAVE ("dica" ou "perolaClinica"):
-     • Deve ser curta, direta e objetiva (1 a 2 frases no máximo) com o ponto de virada da conduta médica ou da questão de prova da faculdade (UFPA) / residência médica.
-
-GRANDE TUTORIAL DOS FORMATOS DO MEDCARDS (COMO O ESTUDANTE VISUALIZA E RESOLVE):
-
-1. CONCEITO DIRETO (tipoCard: "conceito"):
-   - Como o estudante vê: O estudante visualiza a "perguntaGatilho" na frente do cartão. Ao clicar, o cartão gira e exibe a "resposta" detalhada e a "dica".
-   - Como resolver: Evocação ativa rápida (Active Recall) de critérios diagnósticos, valores de corte e indicações terapêuticas.
-   - Estrutura: "tipoCard": "conceito", "titulo", "topico", "especialidade", "perguntaGatilho", "resposta", "dica" (ou "perolaClinica").
-
-2. FLUXOGRAMA COMPLEXO / ÁRVORE DE DECISÃO RAMIFICADA (tipoCard: "fluxograma_complexo"):
-   - Como o estudante vê: Uma árvore de decisão com nós e ramificações conectadas por setas. O primeiro nó ("inicio") é visível com a condição clínica. Os nós seguintes ("decisao", "alerta", "conduta", "diagnostico") começam OCLUÍDOS ("oculto": true). As setas entre os nós contêm os critérios de decisão (ex: "rotulo": "Supra de ST presente" ou "rotulo": "Tempo para hemodinâmica < 120 min").
-   - Como resolver: O estudante analisa o cenário, lê os critérios das setas ramificadas, raciocina mentalmente sobre qual conduta deve vir a seguir e clica no nó para desocultar e verificar a conduta médica correta.
-   - Estrutura: "tipoCard": "fluxograma_complexo", com "fluxogramaComplexo" contendo "noInicialId", "nos" (com "id", "titulo", "descricao", "tipo", "oculto": true, "ramos" apontando para "destinoNoId" com "rotulo" e "cor": "verde"|"vermelho"|"azul"|"amber"|"roxo").
-
-3. FLUXOGRAMA LINEAR PASSO A PASSO (tipoCard: "fluxograma_oclusao"):
-   - Como o estudante vê: Uma linha do tempo sequencial (ex: Protocolo de Intubação em Sequência Rápida, Manejo de PCR). O primeiro bloco fica visível e os blocos seguintes ficam com as ações ocultas.
-   - Como resolver: O estudante lê o critério de entrada na seta ("criterioEntrada"), deduz mentalmente qual é o próximo passo de intervenção e clica para revelar o bloco.
-   - Estrutura: "tipoCard": "fluxograma_oclusao", com "algoritmoDecisao" contendo "blocos" ordenados (com "id", "titulo", "criterioEntrada", "descricao", "tipo": "inicio"|"conduta"|"decisao"|"alerta").
-
-4. OCLUSÃO DE TEXTO / CLOZE (tipoCard: "cloze"):
-   - Como o estudante vê: Um texto clínico contendo lacunas interativas nos termos-chave.
-   - Como resolver: O estudante tenta recordar o valor numérico exato, medicamento ou critério oculto e clica na lacuna para desocultar.
-   - Estrutura: "tipoCard": "cloze", com campo "textoCloze" contendo marcações no padrão {{c1::termo_oculto}}, {{c2::outro_termo}}.
-
-5. CASO CLÍNICO COM MÚLTIPLA ESCOLHA (tipoCard: "caso_clinico"):
-   - Como o estudante vê: Uma vinheta clínica realista ("historiaClinica" com idade, sintomas e tempo de evolução), achados de exame físico ("exameFisicoSinais") e a "perguntaGatilho". Apresenta 4 alternativas clínicas de conduta ("opcoes").
-   - Como resolver: O estudante clica na alternativa que considera correta; o MedCards valida instantaneamente e abre a "justificativaDetalhada" explicando por que a opção está certa e o erro das demais.
-   - Estrutura: "tipoCard": "caso_clinico", com "casoClinicoDados" contendo "historiaClinica", "exameFisicoSinais", "opcoes" (array com 4 strings), "indiceCorreto" (0 a 3) e "justificativaDetalhada".
-
-DISTRIBUIÇÃO SUGERIDA POR TEMA (TOTAL DE 12 A 14 FLASHCARDS):
-- 6 Flashcards "conceito" (Critérios diagnósticos e tratamento)
-- 2 a 3 Flashcards "fluxograma_complexo" (Árvores ramificadas de conduta)
-- 2 Flashcards "fluxograma_oclusao" (Protocolos lineares passo a passo)
-- 2 a 3 Flashcards "cloze" ou "caso_clinico" (Fixação de doses, lacunas e tomada de decisão)
-
-ESTRUTURA JSON EXATA (Retorne APENAS o JSON válido sem nenhum texto explicativo fora dele):
-[
-  {
-    "tipoCard": "conceito",
-    "topico": "Síndrome Coronariana Aguda",
-    "titulo": "Critérios Eletrocardiográficos de Reperfusão no IAMCSST",
-    "especialidade": "Cardiologia",
-    "perguntaGatilho": "Quais são os critérios eletrocardiográficos para definir Supra de ST e indicar reperfusão imediata?",
-    "resposta": "**Critérios de Supra de ST no Ponto J (em 2 ou mais derivações contíguas):**\\n\\n• **Derivações em geral:** ==Elevação ≥ 1 mm== em todas derivações (exceto V2-V3).\\n\\n• <u>Nas derivações V2-V3</u>:\\n  - Homens < 40 anos: **≥ 2,5 mm**\\n  - Homens ≥ 40 anos: **≥ 2,0 mm**\\n  - Mulheres (qualquer idade): **≥ 1,5 mm**\\n\\n• **Bloqueio de Ramo:** BRE novo ou presumivelmente novo com clínica isquêmica típica.\\n\\n⚠️ **Alerta Clínico:** Sempre solicitar derivações direitas (V3R, V4R) e posteriores (V7, V8) em caso de infarto de parede inferior!\\n\\n⭐ **Regra de Ouro:** Tempo porta-balão meta: ==< 90 minutos== (ou < 120 min se transferido).",
-    "perolaClinica": "Tempo porta-agulha para trombólise química: meta menos de 30 minutos quando a angioplastia primária não for alcançável em até 120 minutos."
-  },
-  {
-    "tipoCard": "fluxograma_complexo",
-    "topico": "Dor Torácica & Coronariopatias",
-    "titulo": "Abordagem da Dor Torácica Aguda na Sala de Emergência",
-    "especialidade": "Cardiologia",
-    "perguntaGatilho": "Reconstrua o algoritmo de triagem e conduta inicial na suspeita de Síndrome Coronariana Aguda:",
-    "resposta": "ECG em menos de 10 min. Se Supra ST ➔ Reperfusão imediata. Se sem Supra ST ➔ Troponina ultrassensível e Escore HEART.",
-    "fluxogramaComplexo": {
-      "titulo": "Algoritmo de Dor Torácica no Pronto-Socorro",
-      "descricao": "Triagem e condutas com estratificação por ECG e marcadores",
-      "noInicialId": "no-1",
-      "nos": [
-        {
-          "id": "no-1",
-          "titulo": "Paciente com Dor Torácica no PS: ECG em menos de 10 minutos",
-          "descricao": "Monitorização multiparamétrica, acesso venoso calibroso e oximetria.",
-          "tipo": "inicio",
-          "ramos": [
-            { "id": "r1", "rotulo": "Supra de ST em 2 ou mais derivações", "destinoNoId": "no-2", "cor": "vermelho" },
-            { "id": "r2", "rotulo": "Sem Supra de ST", "destinoNoId": "no-3", "cor": "azul" }
-          ]
-        },
-        {
-          "id": "no-2",
-          "titulo": "IAM com Supra de ST",
-          "descricao": "AAS 200mg mastigado + Clopidogrel 300mg + Heparina. Estratificar tempo para hemodinâmica.",
-          "tipo": "alerta",
-          "oculto": true,
-          "dica": "Critério de Reperfusão Imediata",
-          "ramos": [
-            { "id": "r3", "rotulo": "Tempo para hemodinâmica menos de 120 min", "destinoNoId": "no-4", "cor": "verde" },
-            { "id": "r4", "rotulo": "Tempo para hemodinâmica mais de 120 min", "destinoNoId": "no-5", "cor": "amber" }
-          ]
-        },
-        {
-          "id": "no-4",
-          "titulo": "Angioplastia Primária Imediata",
-          "descricao": "Transferência imediata para laboratório de hemodinâmica. Meta Porta-Balão menos de 90 min.",
-          "tipo": "conduta",
-          "oculto": true,
-          "ramos": []
-        },
-        {
-          "id": "no-5",
-          "titulo": "Fibrinólise Química na Sala de Emergência",
-          "descricao": "Tenecteplase ou Alteplase em até 30 min (Porta-Agulha).",
-          "tipo": "conduta",
-          "oculto": true,
-          "ramos": []
-        },
-        {
-          "id": "no-3",
-          "titulo": "Troponina Ultrassensível e Escore HEART",
-          "descricao": "Coletar troponina na admissão e seriar conforme protocolo institucional.",
-          "tipo": "decisao",
-          "ramos": [
-            { "id": "r5", "rotulo": "Troponina Positiva ou HEART Alto", "destinoNoId": "no-6", "cor": "vermelho" },
-            { "id": "r6", "rotulo": "Troponina Negativa e HEART Baixo", "destinoNoId": "no-7", "cor": "verde" }
-          ]
-        },
-        {
-          "id": "no-6",
-          "titulo": "IAM sem Supra de ST ou Angina Instável",
-          "descricao": "Internação em UTI Coronariana + Dupla Antiagregação + Anticoagulação + Cateterismo precoce.",
-          "tipo": "conduta",
-          "oculto": true,
-          "ramos": []
-        },
-        {
-          "id": "no-7",
-          "titulo": "Dor Não Cardíaca ou Baixa Probabilidade",
-          "descricao": "Investigação ambulatorial com teste provocativo de isquemia ou alta assistida.",
-          "tipo": "diagnostico",
-          "ramos": []
-        }
-      ]
-    },
-    "perolaClinica": "No IAM com Supra de ST o tempo é músculo: meta porta-balão menos de 90 minutos e porta-agulha menos de 30 minutos."
-  },
-  {
-    "tipoCard": "fluxograma_oclusao",
-    "topico": "Taquicardias & Arritmias",
-    "titulo": "Taquicardia Supraventricular Regular - Braço: Paciente Estável",
-    "especialidade": "Cardiologia",
-    "perguntaGatilho": "Reconstrua o algoritmo sequencial de condutas na Taquicardia Supraventricular em paciente clinicamente estável:",
-    "resposta": "1. Manobra vagal modificada ➔ 2. Adenosina 6mg IV bolus ➔ 3. Adenosina 12mg se persistir ➔ 4. Bloqueador de Canal de Cálcio ou Betabloqueador.",
-    "algoritmoDecisao": {
-      "titulo": "Manejo da Taquicardia Regular no Paciente Estável",
-      "blocos": [
-        {
-          "id": "b1",
-          "titulo": "1. Avaliação de Critérios de Estabilidade",
-          "descricao": "Confirmar ausência dos 4Ds: sem dor precordial anginosa, sem dispneia ou edema agudo de pulmão, sem rebaixamento de consciência e sem choque.",
-          "tipo": "inicio",
-          "criterioEntrada": "ECG com QRS estreito e regular"
-        },
-        {
-          "id": "b2",
-          "titulo": "2. Manobra Vagal Modificada",
-          "descricao": "Expiração forçada em seringa de 10mL por 15 segundos seguida de elevação passiva dos membros inferiores a 45 graus.",
-          "tipo": "conduta",
-          "criterioEntrada": "Paciente estável confirmado"
-        },
-        {
-          "id": "b3",
-          "titulo": "3. Adenosina 6 mg IV em Bolus Rápido",
-          "descricao": "Adenosina 6 mg IV em veia antecubital calibrosa acompanhada de flush imediato de 20 mL de soro fisiológico 0,9% com elevação do membro.",
-          "tipo": "conduta",
-          "criterioEntrada": "Falha da manobra vagal"
-        },
-        {
-          "id": "b4",
-          "titulo": "4. Adenosina 12 mg IV",
-          "descricao": "Se refratário em 1 a 2 minutos, aplicar segunda dose de 12 mg IV com flush.",
-          "tipo": "conduta",
-          "criterioEntrada": "Manutenção da arritmia"
-        },
-        {
-          "id": "b5",
-          "titulo": "5. Bloqueador de Canal de Cálcio ou Betabloqueador",
-          "descricao": "Diltiazem ou Verapamil IV se persistir sem reversão após 2 doses de adenosina.",
-          "tipo": "alerta",
-          "criterioEntrada": "Taquicardia refratária à adenosina"
-        }
-      ]
-    },
-    "perolaClinica": "A meia-vida da adenosina é inferior a 10 segundos. A administração exige veia calibrosa, flush imediato e elevação do membro."
-  },
-  {
-    "tipoCard": "cloze",
-    "topico": "Emergências Alérgicas",
-    "titulo": "Choque Anafilático - Critérios de Tratamento Imediato",
-    "especialidade": "Medicina de Emergência",
-    "perguntaGatilho": "Qual a dose, concentração e via da adrenalina no choque anafilático em adultos?",
-    "resposta": "Adrenalina 1:1.000 (1 mg/mL) na dose de 0,3 a 0,5 mg IM na face anterolateral da coxa.",
-    "textoCloze": "No choque anafilático adulto, administrar {{c1::Adrenalina 1:1.000}} na dose de {{c2::0,3 a 0,5 mg}} por via {{c3::Intramuscular}} no {{c4::vasto lateral da coxa}} a cada {{c5::5 a 15 minutos}} conforme resposta clínica.",
-    "perolaClinica": "Nunca faça subcutâneo no choque e nunca aguarde efeito de corticoide ou anti-histamínico para aplicar a adrenalina."
-  },
-  {
-    "tipoCard": "caso_clinico",
-    "topico": "Sepse & Choque Séptico",
-    "titulo": "Reconhecimento e Ressuscitação Volêmica Inicial na Sepse",
-    "especialidade": "Terapia Intensiva",
-    "perguntaGatilho": "Qual a conduta inicial prioritária quanto à ressuscitação volêmica?",
-    "resposta": "Cristaloide balanceado ou SF 0,9% na dose de 30 mL/kg nas primeiras 3 horas.",
-    "casoClinicoDados": {
-      "historiaClinica": "Paciente de 68 anos, admitido com confusão mental, tosse produtiva há 3 dias e febre.",
-      "exameFisicoSinais": "PA 82x50 mmHg, FC 124 bpm, FR 28 irpm, Tax 38,9°C, SatO2 91% em ar ambiente. Tempo de enchimento capilar de 4 segundos e lactato arterial de 3,8 mmol/L.",
-      "opcoes": [
-        "Iniciar cristaloides na dose de 30 mL/kg IV nas primeiras 3 horas associado a coleta de culturas e antibiótico na 1ª hora",
-        "Iniciar Noradrenalina imediatamente em acesso periférico antes de qualquer expansão volêmica",
-        "Administrar 500 mL de albumina a 20% em bólus e aguardar resultado do raio-x de tórax",
-        "Prescrever Furosemida 40 mg IV devido ao risco de sobrecarga hídrica no paciente idoso"
-      ],
-      "indiceCorreto": 0,
-      "justificativaDetalhada": "De acordo com as diretrizes da Surviving Sepsis Campaign, pacientes com hipotensão induzida por sepse ou lactato maior ou igual a 4 mmol/L devem receber pelo menos 30 mL/kg de cristaloides nas primeiras 3 horas de ressuscitação."
-    },
-    "perolaClinica": "Na sepse, a ressuscitação volêmica precoce restaura a perfusão tecidual e reduz a mortalidade."
-  }
-]
-
-MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
-[COLE AQUI SEU TEXTO, RESUMO OU TRANSCRIÇÃO]`;
+  const [focoInstitucional, setFocoInstitucional] = useState<FocoInstitucional>('ufpa');
 
   const handleCopiarPrompt = async () => {
-    const ok = await AnkiService.copiarParaClipboard(promptModeloGemini);
+    const promptTexto = gerarPromptCompleto(focoInstitucional);
+    const ok = await AnkiService.copiarParaClipboard(promptTexto);
     if (ok) {
       setPromptCopiado(true);
       setTimeout(() => setPromptCopiado(false), 3000);
@@ -819,25 +721,20 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-      <div className="w-full max-w-2xl bg-white rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.28)] border border-slate-200/90 flex flex-col max-h-[92vh] overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200 ring-1 ring-slate-900/5">
+      <div className="w-full max-w-3xl bg-white rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.28)] border border-slate-200/90 flex flex-col max-h-[92vh] overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200 ring-1 ring-slate-900/5">
         
-        {/* Cabeçalho Executivo com Acabamento Hospitalar */}
+        {/* Cabeçalho Executivo Clean */}
         <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white/95 backdrop-blur-xs">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black tracking-tight text-slate-900">
-                  Central de Integração & IA
-                </h3>
-                <span className="text-[9.5px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Offline First
-                </span>
-              </div>
-              <p className="text-[11.5px] text-slate-500 font-medium">
-                Importação rápida com Gemini AI, Anki (.apkg/.txt) e Backups JSON
+              <h3 className="text-base sm:text-lg font-black tracking-tight text-slate-900">
+                Central de Integração
+              </h3>
+              <p className="text-xs text-slate-500 font-medium">
+                Importação estruturada de flashcards clínicos e sincronização
               </p>
             </div>
           </div>
@@ -1079,19 +976,57 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
                 </>
               ) : (
                 <div className="space-y-3">
-                  {/* Card Minimalista do Prompt Mestre UFPA */}
-                  <div className="p-3.5 bg-slate-50/90 border border-slate-200/90 rounded-2xl space-y-2.5 shadow-3xs">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold shadow-3xs">
-                          UFPA
+                  {/* Card Executivo do Prompt Mestre com Seletor de Foco Institucional */}
+                  <div className="p-4 sm:p-5 bg-gradient-to-b from-slate-50 to-slate-100/70 border border-slate-200/90 rounded-3xl space-y-4 shadow-xs">
+                    
+                    {/* Linha de Seleção do Foco: UFPA | ENAMED | USP */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-extrabold text-slate-800 tracking-tight flex items-center gap-1.5">
+                          <span>🎯</span>
+                          <span>Foco do Prompt Mestre:</span>
                         </span>
-                        <div>
-                          <h4 className="text-xs font-semibold text-slate-900 leading-tight">
-                            Prompt Mestre • Foco Provas UFPA
+                        <span className="text-[11px] font-semibold text-slate-500">
+                          Selecione o perfil desejado
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/80 rounded-2xl">
+                        {(['ufpa', 'enamed', 'usp'] as FocoInstitucional[]).map(focoId => {
+                          const info = FOCOS_INSTITUCIONAIS[focoId];
+                          const ativo = focoInstitucional === focoId;
+                          return (
+                            <button
+                              key={focoId}
+                              type="button"
+                              onClick={() => setFocoInstitucional(focoId)}
+                              className={`py-2 px-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                ativo
+                                  ? `${info.corBadge} shadow-sm ring-1 ring-black/5`
+                                  : 'text-slate-600 hover:text-slate-950 hover:bg-white/60'
+                              }`}
+                            >
+                              <span className="text-xs">{info.iconeEmoji}</span>
+                              <span className="truncate">{info.sigla}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Bloco de Apresentação e Botão de Copiar */}
+                    <div className="p-3.5 bg-white rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 rounded-2xl ${FOCOS_INSTITUCIONAIS[focoInstitucional].corBadge} flex flex-col items-center justify-center font-black tracking-tight shrink-0 shadow-sm ring-1 ring-black/5`}>
+                          <span className="text-[9px] opacity-80 uppercase leading-none font-bold">Foco</span>
+                          <span className="text-xs font-black leading-tight">{FOCOS_INSTITUCIONAIS[focoInstitucional].sigla}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs sm:text-sm font-black text-slate-900 leading-snug">
+                            {FOCOS_INSTITUCIONAIS[focoInstitucional].nomeCompleto}
                           </h4>
-                          <p className="text-[10px] text-slate-500">
-                            Fidelidade estrita aos slides e materiais de aula
+                          <p className="text-[11px] text-slate-600 font-medium leading-relaxed mt-0.5">
+                            {FOCOS_INSTITUCIONAIS[focoInstitucional].descricao}
                           </p>
                         </div>
                       </div>
@@ -1099,89 +1034,98 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
                       <button
                         type="button"
                         onClick={handleCopiarPrompt}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-3xs cursor-pointer transition-all active:scale-95 shrink-0"
-                        title="Copiar prompt completo para enviar ao Gemini ou ChatGPT"
+                        className="inline-flex items-center justify-center gap-2 text-xs font-bold px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-sm shadow-blue-600/25 cursor-pointer transition-all active:scale-95 shrink-0"
+                        title="Copiar prompt completo formatado para colar na IA"
                       >
                         {promptCopiado ? (
                           <>
-                            <ClipboardCheck className="w-3.5 h-3.5 text-white" />
-                            <span>Copiado!</span>
+                            <ClipboardCheck className="w-4 h-4 text-white" />
+                            <span>Prompt Copiado!</span>
                           </>
                         ) : (
                           <>
-                            <Copy className="w-3.5 h-3.5 text-white" />
+                            <Copy className="w-4 h-4 text-white" />
                             <span>Copiar Prompt</span>
                           </>
                         )}
                       </button>
                     </div>
 
-                    {/* Fluxo em 3 etapas sem fricção */}
-                    <div className="grid grid-cols-3 gap-1.5 pt-1 text-[10.5px]">
-                      <div className="p-1.5 rounded-lg bg-white border border-slate-200/80 text-slate-700 flex items-center gap-1.5">
-                        <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center justify-center shrink-0">1</span>
-                        <span className="truncate">Copie o Prompt</span>
+                    {/* Guia em 3 Passos Espaçosos */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                      <div className="p-2.5 rounded-xl bg-white/90 border border-slate-200/80 text-slate-700 flex items-center gap-2.5 shadow-2xs">
+                        <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-extrabold text-[11px] flex items-center justify-center shrink-0">1</span>
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 text-[11.5px] leading-tight">Copiar Prompt</p>
+                          <p className="text-[10px] text-slate-500 truncate">Clique no botão azul acima</p>
+                        </div>
                       </div>
-                      <div className="p-1.5 rounded-lg bg-white border border-slate-200/80 text-slate-700 flex items-center gap-1.5">
-                        <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center justify-center shrink-0">2</span>
-                        <span className="truncate">Envie c/ Aula UFPA</span>
+                      <div className="p-2.5 rounded-xl bg-white/90 border border-slate-200/80 text-slate-700 flex items-center gap-2.5 shadow-2xs">
+                        <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-extrabold text-[11px] flex items-center justify-center shrink-0">2</span>
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 text-[11.5px] leading-tight">Enviar com Aula/PDF</p>
+                          <p className="text-[10px] text-slate-500 truncate">No Gemini ou ChatGPT</p>
+                        </div>
                       </div>
-                      <div className="p-1.5 rounded-lg bg-white border border-slate-200/80 text-slate-700 flex items-center gap-1.5">
-                        <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center justify-center shrink-0">3</span>
-                        <span className="truncate">Cole o JSON Aqui</span>
+                      <div className="p-2.5 rounded-xl bg-white/90 border border-slate-200/80 text-slate-700 flex items-center gap-2.5 shadow-2xs">
+                        <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-extrabold text-[11px] flex items-center justify-center shrink-0">3</span>
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 text-[11.5px] leading-tight">Colar o JSON</p>
+                          <p className="text-[10px] text-slate-500 truncate">No campo abaixo e salvar</p>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Botão de Expansão Sutil do Prompt */}
+                    {/* Acordeão de Prévia do Prompt */}
                     <div className="pt-0.5">
                       <button
                         type="button"
                         onClick={() => setVerPromptDetalhado(!verPromptDetalhado)}
-                        className="text-[10.5px] font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors cursor-pointer"
+                        className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
-                        <span>{verPromptDetalhado ? 'Ocultar texto completo do prompt' : 'Ver diretrizes completas do prompt'}</span>
-                        <span className="text-[9px]">{verPromptDetalhado ? '▲' : '▼'}</span>
+                        <span>{verPromptDetalhado ? 'Ocultar diretrizes do prompt' : `Ver texto completo do prompt (${FOCOS_INSTITUCIONAIS[focoInstitucional].sigla})`}</span>
+                        {verPromptDetalhado ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                       </button>
 
                       {verPromptDetalhado && (
-                        <div className="mt-2 p-2.5 bg-white rounded-xl border border-slate-200 text-[10.5px] font-mono text-slate-600 max-h-48 overflow-y-auto whitespace-pre-wrap leading-relaxed">
-                          {promptModeloGemini}
+                        <div className="mt-2.5 p-3.5 bg-slate-950 text-slate-200 rounded-2xl border border-slate-800 text-[11px] font-mono max-h-56 overflow-y-auto whitespace-pre-wrap leading-relaxed shadow-inner selection:bg-blue-600 selection:text-white">
+                          {gerarPromptCompleto(focoInstitucional)}
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Textarea do JSON com Indicação Offline */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
-                        <span>Cole o JSON gerado:</span>
-                        <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded-md">
-                          ⚡ 100% Offline (Local)
-                        </span>
+                  {/* Textarea do JSON Espaçosa e Clean */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <span>Cole o JSON gerado pela IA:</span>
                       </label>
                       {textoColado.trim() && (
                         <button
                           type="button"
                           onClick={() => setTextoColado('')}
-                          className="text-[10.5px] text-slate-400 hover:text-rose-600 font-semibold transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600 font-semibold transition-colors cursor-pointer"
+                          title="Limpar texto colado"
                         >
-                          Limpar
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Limpar</span>
                         </button>
                       )}
                     </div>
 
                     <div className="relative">
                       <textarea
-                        rows={5}
+                        rows={8}
                         value={textoColado}
                         onChange={e => setTextoColado(e.target.value)}
-                        placeholder='Cole o JSON aqui... (ex: [{"tipoCard": "conceito", "titulo": "...", "topico": "..."}, ...])'
-                        className="w-full p-3 rounded-2xl border border-slate-200 text-xs font-mono bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all resize-y shadow-3xs"
+                        placeholder='Cole aqui o JSON gerado... (ex: [{"tipoCard": "conceito", "titulo": "...", "topico": "..."}, ...])'
+                        className="w-full min-h-[190px] sm:min-h-[220px] p-3.5 sm:p-4 rounded-2xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 text-xs sm:text-[12.5px] font-mono bg-slate-50/50 focus:bg-white transition-all resize-y shadow-inner text-slate-800 placeholder:text-slate-400 leading-relaxed"
                       />
                       {analisandoTexto && (
-                        <div className="absolute top-2 right-2.5 px-2 py-0.5 rounded-md bg-blue-50/90 border border-blue-200 text-blue-700 text-[10px] font-semibold flex items-center gap-1 animate-pulse">
-                          <span>Analisando localmente...</span>
+                        <div className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-blue-50/95 border border-blue-200 text-blue-700 text-[11px] font-bold flex items-center gap-1.5 shadow-2xs animate-pulse">
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Identificando cards...</span>
                         </div>
                       )}
                     </div>
