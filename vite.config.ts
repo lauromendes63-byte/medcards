@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.4.3',
+        version: '2.4.4',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: 'MedCards v2.4.3: Novo layout compacto estilo Mapa Mental para o Modo Trilha no celular com algoritmo de ramificação universal (suporte a bifurcações em qualquer etapa), carrossel horizontal snap para comparação de ramos lado a lado em telas pequenas, chips ultra-compactos de desdobramentos clínicos e alternador de densidade (Compacto / Expandido).'
+        releaseNotes: 'MedCards v2.4.4: Otimização responsiva completa da Central de Integração para telas de celular — resolução do atochamento visual com tipografia fluida, eliminação de quebras de linha duplas em botões/pills, opções enxutas em selects para evitar reticências cortadas (...), cabeçalho de destino compacto em linha única e guia em 3 passos horizontal ultra-clean.'
       };
       this.emitFile({
         type: 'asset',

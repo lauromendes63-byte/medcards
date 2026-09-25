@@ -1059,40 +1059,41 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
       : eixos.find(e => e.id === eixoDestinoId);
 
     return (
-      <div className="relative overflow-hidden p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-blue-50/50 via-white to-slate-50/70 border border-blue-200/80 shadow-xs space-y-3.5 transition-all">
+      <div className="relative overflow-hidden p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-blue-50/50 via-white to-slate-50/70 border border-blue-200/80 shadow-xs space-y-2.5 sm:space-y-3.5 transition-all">
         {/* Luz ambiente sutil decorativa */}
         <div className="absolute -top-10 -right-10 w-36 h-36 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
 
         {/* Cabeçalho do Card */}
-        <div className="flex items-center justify-between gap-3 relative z-10">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xs shadow-blue-500/25 shrink-0">
-              <Layers className="w-4 h-4" />
+        <div className="flex items-center justify-between gap-2 relative z-10">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xs shadow-blue-500/25 shrink-0">
+              <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
-            <div>
-              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5">
+            <div className="min-w-0">
+              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 tracking-tight truncate">
                 <span>Destino dos Flashcards</span>
               </h4>
-              <p className="text-[10.5px] text-slate-500 font-medium">
-                Eixo clínico e tópico onde seus cartões serão organizados
+              <p className="text-[10px] sm:text-[10.5px] text-slate-500 font-medium truncate max-w-[180px] sm:max-w-none">
+                Organização de eixo e tópico dos cartões
               </p>
             </div>
           </div>
 
           <div className="shrink-0">
             {eixoDestinoId === '__auto__' ? (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-200/80 shadow-3xs">
-                <Sparkles className="w-3 h-3 text-blue-600" />
-                <span>Auto-detecção Ativa</span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-200/80 shadow-3xs">
+                <Sparkles className="w-3 h-3 text-blue-600 shrink-0" />
+                <span className="sm:hidden">Auto IA</span>
+                <span className="hidden sm:inline">Auto-detecção Ativa</span>
               </span>
             ) : eixoDestinoId === '__novo_eixo__' ? (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200/80 shadow-3xs">
-                <Plus className="w-3 h-3 text-amber-600" />
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200/80 shadow-3xs">
+                <Plus className="w-3 h-3 text-amber-600 shrink-0" />
                 <span>Novo Eixo</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-100 text-slate-700 border border-slate-200/80 shadow-3xs">
-                <Stethoscope className="w-3 h-3 text-slate-500" />
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-black bg-slate-100 text-slate-700 border border-slate-200/80 shadow-3xs">
+                <Stethoscope className="w-3 h-3 text-slate-500 shrink-0" />
                 <span>Eixo Manual</span>
               </span>
             )}
@@ -1100,15 +1101,15 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
         </div>
 
         {/* Grid de Seleção Eixo & Tópico */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 relative z-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 pt-0.5 relative z-10">
           {/* Coluna 1: Eixo Clínico */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
+          <div className="space-y-1">
+            <label className="text-[10.5px] sm:text-[11px] font-bold text-slate-700 flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                <Stethoscope className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600 shrink-0" />
                 <span>Eixo Clínico:</span>
               </span>
-              <span className="text-[10px] text-slate-400 font-medium">
+              <span className="text-[9.5px] sm:text-[10px] text-slate-400 font-medium">
                 {eixoDestinoId === '__auto__' ? 'Automático por IA' : 'Destino fixo'}
               </span>
             </label>
@@ -1117,9 +1118,9 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
               <select
                 value={eixoDestinoId}
                 onChange={e => setEixoDestinoId(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:ring-2 focus:ring-blue-600/25 focus:border-blue-600 bg-white text-slate-900 shadow-3xs transition-all cursor-pointer"
+                className="w-full px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl border border-slate-300 text-[11.5px] sm:text-xs font-semibold focus:ring-2 focus:ring-blue-600/25 focus:border-blue-600 bg-white text-slate-900 shadow-3xs transition-all cursor-pointer"
               >
-                <option value="__auto__">✨ Detectar automaticamente do JSON (Recomendado)</option>
+                <option value="__auto__">✨ Auto pelo JSON (Recomendado)</option>
                 <option disabled value="">──────── Eixos Existentes ────────</option>
                 {eixos.map(ex => (
                   <option key={ex.id} value={ex.id}>
@@ -1134,7 +1135,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
             {/* Feedback contextual de auto-detecção do Eixo */}
             {eixoDestinoId === '__auto__' && (
               analiseTextoColado?.especialidadeDetectada ? (
-                <div className="p-2 rounded-xl bg-blue-50/90 border border-blue-200/80 text-[11px] font-bold text-blue-900 flex items-center gap-1.5 shadow-3xs">
+                <div className="p-2 rounded-xl bg-blue-50/90 border border-blue-200/80 text-[10.5px] sm:text-[11px] font-bold text-blue-900 flex items-center gap-1.5 shadow-3xs">
                   <Sparkles className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                   <div className="min-w-0 truncate">
                     <span>IA detectou: </span>
@@ -1151,35 +1152,35 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <p className="text-[10.5px] text-slate-500 font-medium flex items-center gap-1 pt-0.5">
-                  <span>💡</span>
-                  <span>O MedCards identifica o eixo diretamente pela especialidade no JSON</span>
+                <p className="text-[10px] sm:text-[10.5px] text-slate-500 font-medium flex items-center gap-1 pt-0.5 leading-snug">
+                  <span className="shrink-0">💡</span>
+                  <span className="truncate sm:whitespace-normal">Identifica o eixo pela especialidade no JSON</span>
                 </p>
               )
             )}
           </div>
 
           {/* Coluna 2: Tópico / Aula */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+          <div className="space-y-1">
+            <label className="text-[10.5px] sm:text-[11px] font-bold text-slate-700 flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                <BookOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-indigo-600 shrink-0" />
                 <span>Tópico / Aula:</span>
               </span>
-              <span className="text-[10px] text-slate-400 font-medium">
+              <span className="text-[9.5px] sm:text-[10px] text-slate-400 font-medium">
                 (Agrupamento)
               </span>
             </label>
 
             {eixoDestinoId !== '__novo_eixo__' ? (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="relative">
                   <select
                     value={topicoSelecionadoModo}
                     onChange={e => setTopicoSelecionadoModo(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:ring-2 focus:ring-blue-600/25 focus:border-blue-600 bg-white text-slate-900 shadow-3xs transition-all cursor-pointer"
+                    className="w-full px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl border border-slate-300 text-[11.5px] sm:text-xs font-semibold focus:ring-2 focus:ring-blue-600/25 focus:border-blue-600 bg-white text-slate-900 shadow-3xs transition-all cursor-pointer"
                   >
-                    <option value="__auto__">✨ Detectar automaticamente do JSON ou manter Geral</option>
+                    <option value="__auto__">✨ Auto pelo JSON (ou Geral)</option>
                     {eixoSelecionadoObj?.topicos && eixoSelecionadoObj.topicos.length > 0 && (
                       <>
                         <option disabled value="">── Tópicos em {eixoSelecionadoObj.titulo} ──</option>
@@ -1201,13 +1202,13 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                     value={novoTopicoTitulo}
                     onChange={e => setNovoTopicoTitulo(e.target.value)}
                     placeholder="Nome do novo tópico (ex: Manejo de Sepse)"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
+                    className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
                   />
                 )}
 
                 {topicoSelecionadoModo === '__auto__' && (
                   analiseTextoColado?.topicos && analiseTextoColado.topicos.length > 0 ? (
-                    <div className="p-2 rounded-xl bg-indigo-50/90 border border-indigo-200/80 text-[11px] font-bold text-indigo-900 flex items-center gap-1.5 shadow-3xs truncate">
+                    <div className="p-2 rounded-xl bg-indigo-50/90 border border-indigo-200/80 text-[10.5px] sm:text-[11px] font-bold text-indigo-900 flex items-center gap-1.5 shadow-3xs truncate">
                       <BookOpen className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                       <span className="truncate">
                         Tópico detectado: <strong className="text-indigo-700">{analiseTextoColado.topicos[0]}</strong>
@@ -1215,9 +1216,9 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                       </span>
                     </div>
                   ) : (
-                    <p className="text-[10.5px] text-slate-500 font-medium flex items-center gap-1 pt-0.5">
-                      <span>📌</span>
-                      <span>Agrupa os cartões pelo nome da aula ("topico" no JSON)</span>
+                    <p className="text-[10px] sm:text-[10.5px] text-slate-500 font-medium flex items-center gap-1 pt-0.5 leading-snug">
+                      <span className="shrink-0">📌</span>
+                      <span className="truncate sm:whitespace-normal">Agrupa cartões pelo "topico" no JSON</span>
                     </p>
                   )
                 )}
@@ -1229,7 +1230,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                   value={novoTopicoTitulo}
                   onChange={e => setNovoTopicoTitulo(e.target.value)}
                   placeholder="Nome do Tópico inicial (ex: Manejo de Sepse)"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs bg-white font-medium focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
+                  className="w-full px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl border border-slate-300 text-xs bg-white font-medium focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
                 />
               </div>
             )}
@@ -1278,35 +1279,35 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-      <div className="w-full max-w-3xl bg-white rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.28)] border border-slate-200/90 flex flex-col max-h-[92vh] overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200 ring-1 ring-slate-900/5">
+    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-2 sm:p-5 overflow-y-auto">
+      <div className="w-full max-w-3xl bg-white rounded-2xl sm:rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.28)] border border-slate-200/90 flex flex-col max-h-[96vh] sm:max-h-[92vh] overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200 ring-1 ring-slate-900/5">
         
         {/* Cabeçalho Executivo Clean */}
-        <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white/95 backdrop-blur-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
-              <Sparkles className="w-5 h-5 text-white" />
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-white/95 backdrop-blur-xs">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-black tracking-tight text-slate-900">
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-lg font-black tracking-tight text-slate-900 truncate">
                 Central de Integração
               </h3>
-              <p className="text-xs text-slate-500 font-medium">
+              <p className="text-[10.5px] sm:text-xs text-slate-500 font-medium truncate max-w-[200px] sm:max-w-none">
                 Importação estruturada de flashcards clínicos e sincronização
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {onAbrirCriacaoManual && (
               <button
                 id="btn-modal-alternar-manual"
                 type="button"
                 onClick={onAbrirCriacaoManual}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
                 title="Criar Flashcard Manualmente"
               >
-                <FileText className="w-3.5 h-3.5 text-blue-600" />
+                <FileText className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                 <span className="hidden sm:inline">Criar Manual</span>
               </button>
             )}
@@ -1322,70 +1323,74 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
         </div>
 
         {/* Navegador de Abas Segmentado (Pill Bar estilo iOS / Linear) */}
-        <div className="px-5 sm:px-6 pt-3 pb-2 bg-slate-50/60 border-b border-slate-100">
+        <div className="px-4 sm:px-6 pt-2.5 pb-2 bg-slate-50/60 border-b border-slate-100">
           <div className="p-1 rounded-2xl bg-slate-200/70 flex items-center gap-1">
             <button
               type="button"
               onClick={() => setTabAtiva('importar')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              className={`flex-1 py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
                 tabAtiva === 'importar'
                   ? 'bg-white text-slate-900 shadow-xs ring-1 ring-black/5 font-extrabold'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
               }`}
             >
               <Upload className={`w-3.5 h-3.5 shrink-0 ${tabAtiva === 'importar' ? 'text-blue-600' : 'text-slate-500'}`} />
-              <span>Importar Flashcards</span>
+              <span className="sm:hidden">Importar</span>
+              <span className="hidden sm:inline">Importar Flashcards</span>
             </button>
 
             <button
               type="button"
               onClick={() => setTabAtiva('exportar')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              className={`flex-1 py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
                 tabAtiva === 'exportar'
                   ? 'bg-white text-slate-900 shadow-xs ring-1 ring-black/5 font-extrabold'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
               }`}
             >
               <Download className={`w-3.5 h-3.5 shrink-0 ${tabAtiva === 'exportar' ? 'text-blue-600' : 'text-slate-500'}`} />
-              <span>Exportar Dados</span>
+              <span className="sm:hidden">Exportar</span>
+              <span className="hidden sm:inline">Exportar Dados</span>
             </button>
           </div>
         </div>
 
         {/* Conteúdo com Scroll */}
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
+        <div className="p-3.5 sm:p-6 overflow-y-auto space-y-3 sm:space-y-4 flex-1">
           {tabAtiva === 'importar' ? (
-            <div className="space-y-3.5">
+            <div className="space-y-3 sm:space-y-3.5">
               {/* Alternador de Modo: Colar do Gemini vs Arquivo */}
               <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-2xl">
                 <button
                   type="button"
                   onClick={() => setModoImportacao('texto')}
-                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  className={`flex-1 py-1.5 sm:py-2 px-2 sm:px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
                     modoImportacao === 'texto'
                       ? 'bg-white text-blue-700 shadow-2xs font-black'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Colar do Gemini / IA</span>
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span className="sm:hidden">Colar IA</span>
+                  <span className="hidden sm:inline">Colar do Gemini / IA</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setModoImportacao('arquivo')}
-                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  className={`flex-1 py-1.5 sm:py-2 px-2 sm:px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
                     modoImportacao === 'arquivo'
                       ? 'bg-white text-slate-900 shadow-2xs font-black'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  <Package className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Arquivo (.apkg / .json / .txt)</span>
+                  <Package className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  <span className="sm:hidden">Arquivo (Anki/JSON)</span>
+                  <span className="hidden sm:inline">Arquivo (.apkg / .json / .txt)</span>
                 </button>
               </div>
 
               {modoImportacao === 'arquivo' ? (
-                <div className="space-y-3.5">
+                <div className="space-y-3 sm:space-y-3.5">
                   {/* Seletor de Destino dos Flashcards Repaginado */}
                   {renderDestinoFlashcards()}
                   <div
@@ -1420,23 +1425,24 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                   />
                 </div>
               ) : (
-                <div className="space-y-3.5">
+                <div className="space-y-3 sm:space-y-3.5">
                   {/* Card Executivo do Prompt Mestre com Seletor de Foco Institucional */}
-                  <div className="p-4 sm:p-5 bg-gradient-to-b from-slate-50 to-slate-100/70 border border-slate-200/90 rounded-3xl space-y-4 shadow-xs">
+                  <div className="p-3 sm:p-5 bg-gradient-to-b from-slate-50 to-slate-100/70 border border-slate-200/90 rounded-2xl sm:rounded-3xl space-y-3 sm:space-y-4 shadow-xs">
                     
                     {/* Linha de Seleção do Foco: UFPA | ENAMED | USP */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-1 sm:space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-extrabold text-slate-800 tracking-tight flex items-center gap-1.5">
+                        <span className="font-extrabold text-slate-800 tracking-tight flex items-center gap-1.5 text-xs sm:text-[13px]">
                           <span>🎯</span>
-                          <span>Foco do Prompt Mestre:</span>
+                          <span className="sm:hidden">Perfil do Prompt:</span>
+                          <span className="hidden sm:inline">Foco do Prompt Mestre:</span>
                         </span>
-                        <span className="text-[11px] font-semibold text-slate-500">
-                          Selecione o perfil desejado
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 shrink-0">
+                          Selecione o perfil
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/80 rounded-2xl">
+                      <div className="grid grid-cols-3 gap-1 p-1 bg-slate-200/80 rounded-xl sm:rounded-2xl">
                         {(['ufpa', 'enamed', 'usp'] as FocoInstitucional[]).map(focoId => {
                           const info = FOCOS_INSTITUCIONAIS[focoId];
                           const ativo = focoInstitucional === focoId;
@@ -1445,14 +1451,14 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                               key={focoId}
                               type="button"
                               onClick={() => setFocoInstitucional(focoId)}
-                              className={`py-2 px-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              className={`py-1.5 sm:py-2 px-1 sm:px-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${
                                 ativo
                                   ? `${info.corBadge} shadow-sm ring-1 ring-black/5`
                                   : 'text-slate-600 hover:text-slate-950 hover:bg-white/60'
                               }`}
                             >
-                              <span className="text-xs">{info.iconeEmoji}</span>
-                              <span className="truncate">{info.sigla}</span>
+                              <span className="text-[11px] sm:text-xs shrink-0">{info.iconeEmoji}</span>
+                              <span className="tracking-tight">{info.sigla}</span>
                             </button>
                           );
                         })}
@@ -1460,29 +1466,29 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                     </div>
 
                     {/* Bloco de Apresentação e Botão de Copiar */}
-                    <div className="p-3.5 bg-white rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-2xl ${FOCOS_INSTITUCIONAIS[focoInstitucional].corBadge} flex flex-col items-center justify-center font-black tracking-tight shrink-0 shadow-sm ring-1 ring-black/5`}>
-                          <span className="text-[9px] opacity-80 uppercase leading-none font-bold">Foco</span>
-                          <span className="text-xs font-black leading-tight">{FOCOS_INSTITUCIONAIS[focoInstitucional].sigla}</span>
+                    <div className="p-2.5 sm:p-3.5 bg-white rounded-xl sm:rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 shadow-2xs">
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl ${FOCOS_INSTITUCIONAIS[focoInstitucional].corBadge} flex flex-col items-center justify-center font-black tracking-tight shrink-0 shadow-sm ring-1 ring-black/5`}>
+                          <span className="text-[8px] sm:text-[9px] opacity-80 uppercase leading-none font-bold">Foco</span>
+                          <span className="text-[11px] sm:text-xs font-black leading-tight">{FOCOS_INSTITUCIONAIS[focoInstitucional].sigla}</span>
                         </div>
                         <div className="min-w-0">
-                          <h4 className="text-xs sm:text-sm font-black text-slate-900 leading-snug">
+                          <h4 className="text-xs sm:text-sm font-black text-slate-900 leading-snug truncate">
                             {FOCOS_INSTITUCIONAIS[focoInstitucional].nomeCompleto}
                           </h4>
-                          <p className="text-[11px] text-slate-600 font-medium leading-relaxed mt-0.5">
+                          <p className="text-[10.5px] sm:text-[11px] text-slate-600 font-medium leading-snug sm:leading-relaxed mt-0.5 line-clamp-2 sm:line-clamp-none">
                             {FOCOS_INSTITUCIONAIS[focoInstitucional].descricao}
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto justify-end shrink-0">
+                      <div className="flex items-center gap-2 w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100 justify-end">
                         {/* Caixa pequena para digitar a quantidade desejada de flashcards (padrão 20) */}
                         <div 
-                          className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/90 rounded-xl px-2.5 py-1.5 shadow-3xs"
+                          className="flex items-center gap-1 bg-slate-50 border border-slate-200/90 rounded-xl px-2 py-1.5 shadow-3xs shrink-0"
                           title="Quantidade de flashcards a ser gerada pelo prompt (padrão: 20)"
                         >
-                          <label htmlFor="input-qtd-prompt" className="text-[11px] font-bold text-slate-700 whitespace-nowrap cursor-pointer">
+                          <label htmlFor="input-qtd-prompt" className="text-[10.5px] font-bold text-slate-700 whitespace-nowrap cursor-pointer">
                             Qtd:
                           </label>
                           <input
@@ -1499,7 +1505,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                                 setQuantidadePrompt(Math.max(1, Math.min(100, val)));
                               }
                             }}
-                            className="w-12 text-center text-xs font-black text-slate-900 bg-white border border-slate-300 rounded-lg py-1 px-1 focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 outline-none"
+                            className="w-10 text-center text-xs font-black text-slate-900 bg-white border border-slate-300 rounded-lg py-0.5 px-0.5 focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 outline-none"
                           />
                           <span className="text-[10px] text-slate-500 font-semibold hidden sm:inline">cards</span>
                         </div>
@@ -1507,17 +1513,17 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                         <button
                           type="button"
                           onClick={handleCopiarPrompt}
-                          className="inline-flex items-center justify-center gap-2 text-xs font-bold px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-sm shadow-blue-600/25 cursor-pointer transition-all active:scale-95 shrink-0"
+                          className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-sm shadow-blue-600/25 cursor-pointer transition-all active:scale-95 shrink-0"
                           title="Copiar prompt completo formatado para colar na IA"
                         >
                           {promptCopiado ? (
                             <>
-                              <ClipboardCheck className="w-4 h-4 text-white" />
+                              <ClipboardCheck className="w-4 h-4 text-white shrink-0" />
                               <span>Prompt Copiado!</span>
                             </>
                           ) : (
                             <>
-                              <Copy className="w-4 h-4 text-white" />
+                              <Copy className="w-4 h-4 text-white shrink-0" />
                               <span>Copiar Prompt ({quantidadePrompt})</span>
                             </>
                           )}
@@ -1525,27 +1531,27 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Guia em 3 Passos Espaçosos */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                      <div className="p-2.5 rounded-xl bg-white/90 border border-slate-200/80 text-slate-700 flex items-center gap-2.5 shadow-2xs">
-                        <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-extrabold text-[11px] flex items-center justify-center shrink-0">1</span>
+                    {/* Guia em 3 Passos: Horizontal e Compacto no Mobile */}
+                    <div className="grid grid-cols-3 gap-1.5 text-xs">
+                      <div className="p-1.5 sm:p-2.5 rounded-xl bg-white/90 border border-slate-200/80 text-slate-700 flex items-center gap-1.5 sm:gap-2.5 shadow-2xs min-w-0">
+                        <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-blue-100 text-blue-700 font-extrabold text-[10px] sm:text-[11px] flex items-center justify-center shrink-0">1</span>
                         <div className="min-w-0">
-                          <p className="font-bold text-slate-900 text-[11.5px] leading-tight">Copiar Prompt</p>
-                          <p className="text-[10px] text-slate-500 truncate">Clique no botão azul acima</p>
+                          <p className="font-bold text-slate-900 text-[10.5px] sm:text-[11.5px] leading-tight truncate">Copiar</p>
+                          <p className="text-[9px] sm:text-[10px] text-slate-500 truncate hidden xs:block sm:block">No botão azul</p>
                         </div>
                       </div>
-                      <div className="p-2.5 rounded-xl bg-white/90 border border-slate-200/80 text-slate-700 flex items-center gap-2.5 shadow-2xs">
-                        <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-extrabold text-[11px] flex items-center justify-center shrink-0">2</span>
+                      <div className="p-1.5 sm:p-2.5 rounded-xl bg-white/90 border border-slate-200/80 text-slate-700 flex items-center gap-1.5 sm:gap-2.5 shadow-2xs min-w-0">
+                        <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-blue-100 text-blue-700 font-extrabold text-[10px] sm:text-[11px] flex items-center justify-center shrink-0">2</span>
                         <div className="min-w-0">
-                          <p className="font-bold text-slate-900 text-[11.5px] leading-tight">Enviar com Aula/PDF</p>
-                          <p className="text-[10px] text-slate-500 truncate">No Gemini ou ChatGPT</p>
+                          <p className="font-bold text-slate-900 text-[10.5px] sm:text-[11.5px] leading-tight truncate">Gerar na IA</p>
+                          <p className="text-[9px] sm:text-[10px] text-slate-500 truncate hidden xs:block sm:block">Envie sua aula</p>
                         </div>
                       </div>
-                      <div className="p-2.5 rounded-xl bg-white/90 border border-slate-200/80 text-slate-700 flex items-center gap-2.5 shadow-2xs">
-                        <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-extrabold text-[11px] flex items-center justify-center shrink-0">3</span>
+                      <div className="p-1.5 sm:p-2.5 rounded-xl bg-white/90 border border-slate-200/80 text-slate-700 flex items-center gap-1.5 sm:gap-2.5 shadow-2xs min-w-0">
+                        <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-blue-100 text-blue-700 font-extrabold text-[10px] sm:text-[11px] flex items-center justify-center shrink-0">3</span>
                         <div className="min-w-0">
-                          <p className="font-bold text-slate-900 text-[11.5px] leading-tight">Colar o JSON</p>
-                          <p className="text-[10px] text-slate-500 truncate">No campo abaixo e salvar</p>
+                          <p className="font-bold text-slate-900 text-[10.5px] sm:text-[11.5px] leading-tight truncate">Colar JSON</p>
+                          <p className="text-[9px] sm:text-[10px] text-slate-500 truncate hidden xs:block sm:block">No campo abaixo</p>
                         </div>
                       </div>
                     </div>
@@ -1555,14 +1561,14 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setVerPromptDetalhado(!verPromptDetalhado)}
-                        className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+                        className="text-[11px] sm:text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
-                        <span>{verPromptDetalhado ? 'Ocultar diretrizes do prompt' : `Ver texto completo do prompt (${FOCOS_INSTITUCIONAIS[focoInstitucional].sigla} • ${quantidadePrompt} cards)`}</span>
-                        {verPromptDetalhado ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        <span className="truncate">{verPromptDetalhado ? 'Ocultar diretrizes do prompt' : `Ver texto completo do prompt (${FOCOS_INSTITUCIONAIS[focoInstitucional].sigla} • ${quantidadePrompt} cards)`}</span>
+                        {verPromptDetalhado ? <ChevronUp className="w-3.5 h-3.5 shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 shrink-0" />}
                       </button>
 
                       {verPromptDetalhado && (
-                        <div className="mt-2.5 p-3.5 bg-slate-950 text-slate-200 rounded-2xl border border-slate-800 text-[11px] font-mono max-h-56 overflow-y-auto whitespace-pre-wrap leading-relaxed shadow-inner selection:bg-blue-600 selection:text-white">
+                        <div className="mt-2.5 p-3 sm:p-3.5 bg-slate-950 text-slate-200 rounded-xl sm:rounded-2xl border border-slate-800 text-[10.5px] sm:text-[11px] font-mono max-h-56 overflow-y-auto whitespace-pre-wrap leading-relaxed shadow-inner selection:bg-blue-600 selection:text-white">
                           {gerarPromptCompleto(focoInstitucional, quantidadePrompt)}
                         </div>
                       )}
@@ -1573,16 +1579,16 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                   {renderDestinoFlashcards()}
 
                   {/* Textarea do JSON Espaçosa e Clean */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-1 sm:space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <label className="text-[11px] sm:text-xs font-bold text-slate-800 flex items-center gap-1.5">
                         <span>Cole o JSON gerado pela IA:</span>
                       </label>
                       {textoColado.trim() && (
                         <button
                           type="button"
                           onClick={() => setTextoColado('')}
-                          className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600 font-semibold transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 text-[11px] sm:text-xs text-slate-400 hover:text-rose-600 font-semibold transition-colors cursor-pointer"
                           title="Limpar texto colado"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1593,15 +1599,15 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
 
                     <div className="relative">
                       <textarea
-                        rows={8}
+                        rows={6}
                         value={textoColado}
                         onChange={e => setTextoColado(e.target.value)}
                         placeholder='Cole aqui o JSON gerado... (ex: [{"tipoCard": "conceito", "titulo": "...", "topico": "..."}, ...])'
-                        className="w-full min-h-[190px] sm:min-h-[220px] p-3.5 sm:p-4 rounded-2xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 text-xs sm:text-[12.5px] font-mono bg-slate-50/50 focus:bg-white transition-all resize-y shadow-inner text-slate-800 placeholder:text-slate-400 leading-relaxed"
+                        className="w-full min-h-[140px] sm:min-h-[220px] p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 text-xs sm:text-[12.5px] font-mono bg-slate-50/50 focus:bg-white transition-all resize-y shadow-inner text-slate-800 placeholder:text-slate-400 leading-relaxed"
                       />
                       {analisandoTexto && (
-                        <div className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-blue-50/95 border border-blue-200 text-blue-700 text-[11px] font-bold flex items-center gap-1.5 shadow-2xs animate-pulse">
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <div className="absolute top-2.5 right-2.5 px-2 py-1 rounded-lg bg-blue-50/95 border border-blue-200 text-blue-700 text-[10px] sm:text-[11px] font-bold flex items-center gap-1.5 shadow-2xs animate-pulse">
+                          <RefreshCw className="w-3 h-3 animate-spin" />
                           <span>Identificando cards...</span>
                         </div>
                       )}
@@ -1777,34 +1783,34 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
 
                   {/* Destino Confirmado Ribbon (Confirmação Dinâmica e Clara para evitar importação no eixo errado) */}
                   {analiseTextoColado && analiseTextoColado.valido && (
-                    <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-md shadow-blue-600/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center font-bold text-white shrink-0 border border-white/20">
-                          <CheckCircle2 className="w-5 h-5" />
+                    <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-md shadow-blue-600/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 animate-in fade-in slide-in-from-bottom-2">
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center font-bold text-white shrink-0 border border-white/20">
+                          <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-blue-200">
+                            <span className="text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider text-blue-200">
                               Destino Confirmado
                             </span>
-                            <span className="text-[9.5px] font-black px-1.5 py-0.2 rounded bg-white/20 text-white">
+                            <span className="text-[9px] sm:text-[9.5px] font-black px-1.5 py-0.2 rounded bg-white/20 text-white truncate">
                               {destinoCalculado.eixoOrigemTexto === 'auto' ? '✨ Auto-identificado' : '🎯 Selecionado'}
                             </span>
                           </div>
                           <p className="text-xs sm:text-sm font-black text-white truncate mt-0.5">
                             <span>{destinoCalculado.eixoFinalNome}</span>
-                            <span className="text-blue-200 font-normal mx-1.5">➔</span>
+                            <span className="text-blue-200 font-normal mx-1 sm:mx-1.5">➔</span>
                             <span className="text-blue-100 font-extrabold">{destinoCalculado.topicoFinalNome}</span>
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between sm:justify-end gap-2 text-right shrink-0 border-t sm:border-t-0 border-white/10 pt-2 sm:pt-0">
+                      <div className="flex items-center justify-between sm:justify-end gap-2 text-right shrink-0 border-t sm:border-t-0 border-white/10 pt-1.5 sm:pt-0">
                         <div>
                           <span className="text-xs font-black text-white block">
                             {idsSelecionados.size} de {cardsPrevia.length} cards
                           </span>
-                          <span className="text-[10px] text-blue-200 font-medium">prontos para salvar</span>
+                          <span className="text-[9.5px] sm:text-[10px] text-blue-200 font-medium">prontos para salvar</span>
                         </div>
                       </div>
                     </div>
@@ -1815,13 +1821,18 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                     type="button"
                     onClick={handleProcessarTextoColado}
                     disabled={processando || !textoColado.trim() || (cardsPrevia.length > 0 && idsSelecionados.size === 0)}
-                    className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:opacity-50 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-600/25 transition-all cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl sm:rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:opacity-50 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-600/25 transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <Sparkles className="w-4 h-4" />
+                    <Sparkles className="w-4 h-4 shrink-0" />
                     <span>
-                      {cardsPrevia.length > 0 && idsSelecionados.size > 0
-                        ? `Salvar ${idsSelecionados.size} Flashcard${idsSelecionados.size > 1 ? 's' : ''} em "${destinoCalculado.eixoFinalNome}"`
-                        : 'Adicionar Flashcards ao MedCards'}
+                      {cardsPrevia.length > 0 && idsSelecionados.size > 0 ? (
+                        <>
+                          <span className="sm:hidden">Salvar {idsSelecionados.size} Flashcard{idsSelecionados.size > 1 ? 's' : ''}</span>
+                          <span className="hidden sm:inline">Salvar {idsSelecionados.size} Flashcard{idsSelecionados.size > 1 ? 's' : ''} em "{destinoCalculado.eixoFinalNome}"</span>
+                        </>
+                      ) : (
+                        'Adicionar Flashcards ao MedCards'
+                      )}
                     </span>
                   </button>
                 </div>
@@ -1853,13 +1864,13 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                 <span className="text-xs font-bold text-slate-700 block mb-1.5">
                   Selecione o que deseja exportar:
                 </span>
-                <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-2xl">
+                <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-xl sm:rounded-2xl">
                   <button
                     type="button"
                     onClick={() => setModoExportacao('eixo')}
-                    className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer truncate ${
+                    className={`py-1.5 px-1.5 sm:px-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer truncate ${
                       modoExportacao === 'eixo'
-                        ? 'bg-white text-blue-700 shadow-2xs'
+                        ? 'bg-white text-blue-700 shadow-2xs font-black'
                         : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
@@ -1870,22 +1881,23 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setModoExportacao('conjunto')}
-                    className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer truncate ${
+                    className={`py-1.5 px-1.5 sm:px-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer truncate ${
                       modoExportacao === 'conjunto'
-                        ? 'bg-white text-blue-700 shadow-2xs'
+                        ? 'bg-white text-blue-700 shadow-2xs font-black'
                         : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
                     <Package className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">Coleção Completa</span>
+                    <span className="sm:hidden">Completo</span>
+                    <span className="hidden sm:inline">Coleção Completa</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setModoExportacao('individual')}
-                    className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer truncate ${
+                    className={`py-1.5 px-1.5 sm:px-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer truncate ${
                       modoExportacao === 'individual'
-                        ? 'bg-white text-blue-700 shadow-2xs'
+                        ? 'bg-white text-blue-700 shadow-2xs font-black'
                         : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
