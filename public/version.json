@@ -1,6 +1,6 @@
 {
-  "version": "2.4.4",
-  "buildTime": "2026-09-25T11:05:28.176Z",
-  "buildDateFormatted": "25/09/2026, 08:05:28",
-  "releaseNotes": "MedCards v2.4.4: Otimização responsiva completa da Central de Integração para telas de celular — resolução do atochamento visual com tipografia fluida, eliminação de quebras de linha duplas em botões/pills, opções enxutas em selects para evitar reticências cortadas (...), cabeçalho de destino compacto em linha única e guia em 3 passos horizontal ultra-clean."
+  "version": "2.4.5",
+  "buildTime": "2026-09-25T11:23:40.354Z",
+  "buildDateFormatted": "25/09/2026, 08:23:40",
+  "releaseNotes": "MedCards v2.4.5: Fim definitivo de textos cortados por reticências no Flashcard Complexo (Modo Trilha) e renovação completa dos cartões no Modo Claro (Light Theme) — fundo branco puro em canvas contrastante, badges clínicos temáticos de alta legibilidade, botão de ação em azul cirúrgico, títulos e descrições sem truncamento e rótulos de ramos com quebra natural de linha."
 }

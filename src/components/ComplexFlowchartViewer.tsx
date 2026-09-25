@@ -1027,8 +1027,8 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
             )}
           </div>
 
-          {/* Centro: Título da Afecção Médica */}
-          <div className="flex-1 min-w-0 px-1 text-center">
+          {/* Centro: Título da Afecção Médica (visível em telas sm+, oculto no mobile estreito para não truncar como 'Es...') */}
+          <div className="hidden sm:block flex-1 min-w-0 px-2 text-center">
             <h4 
               title={tituloContexto || fluxograma.titulo || 'Árvore de Decisão'}
               className="text-xs sm:text-sm font-bold truncate leading-tight text-slate-800 dark:text-slate-100"
@@ -1235,15 +1235,15 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
       {/* CENÁRIO & DÚVIDA CLÍNICA (COMPACTO E ULTRA-DISCRETO)                */}
       {/* =================================================================== */}
       {textoPerguntaFormatado && (
-        <div className={`px-3 py-1.5 rounded-xl border text-[11px] sm:text-xs font-semibold flex items-center justify-between gap-2 shrink-0 transition-all ${
+        <div className={`px-3 py-2 rounded-xl border text-[11px] sm:text-xs font-semibold flex items-center justify-between gap-2 shrink-0 transition-all ${
           currentTheme.id === 'light'
             ? 'bg-emerald-50/90 border-emerald-200/90 text-slate-800 shadow-3xs'
             : currentTheme.id === 'blueprint'
             ? 'bg-sky-950/80 border-sky-800 text-sky-100 shadow-md'
             : 'bg-slate-900/90 border-slate-700 text-slate-100 shadow-md'
         }`}>
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className={`text-[9px] font-black uppercase px-1.5 py-0.2 rounded shrink-0 flex items-center gap-1 ${
+          <div className="flex items-start sm:items-center gap-2 min-w-0 flex-1">
+            <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded shrink-0 flex items-center gap-1 mt-0.5 sm:mt-0 ${
               currentTheme.id === 'light'
                 ? 'bg-emerald-200/90 text-emerald-950'
                 : 'bg-emerald-900/70 text-emerald-300'
@@ -1251,7 +1251,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
               <Stethoscope className="w-3 h-3" />
               <span>Desafio</span>
             </span>
-            <span className={bannerPerguntaRecolhido ? "truncate" : "line-clamp-2 leading-tight"}>
+            <span className={`leading-snug break-words ${bannerPerguntaRecolhido ? "truncate" : ""}`}>
               {textoPerguntaFormatado}
             </span>
           </div>
@@ -1321,7 +1321,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
           ref={trilhaScrollRef}
           className={`flex-1 w-full min-h-0 overflow-y-scroll px-2 sm:px-4 pt-2.5 sm:pt-3.5 pb-36 space-y-3 sm:space-y-4 select-text ${
             currentTheme.id === 'light'
-              ? 'bg-slate-50/70 text-slate-900'
+              ? 'bg-slate-100/90 text-slate-900'
               : currentTheme.id === 'blueprint'
               ? 'bg-sky-950/40 text-sky-100'
               : 'bg-slate-900/60 text-slate-100'
@@ -1378,7 +1378,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                       densidadeTrilha === 'compacto' ? 'p-2.5 sm:p-3.5' : 'p-3.5 sm:p-4'
                     } rounded-xl sm:rounded-2xl border sm:border-2 transition-colors cursor-pointer shadow-xs ${
                       !isRevelado
-                        ? `${currentTheme.hiddenCardBgClass} border-dashed ${currentTheme.hiddenCardBorderClass} shadow-md hover:border-amber-400`
+                        ? `${currentTheme.hiddenCardBgClass} border-dashed ${currentTheme.hiddenCardBorderClass} shadow-md`
                         : `${currentTheme.cardBgClass} ${
                             isSelecionado
                               ? 'border-emerald-500 ring-2 ring-emerald-500/30 shadow-lg'
@@ -1393,23 +1393,33 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                         <span className={`text-[8.5px] sm:text-[9.5px] font-black uppercase px-2 py-0.5 rounded-md ${
                           isInicial
                             ? 'bg-amber-400 text-slate-950 font-black'
-                            : no.tipo === 'inicio' ? 'bg-blue-900/80 text-blue-300' :
-                              no.tipo === 'alerta' ? 'bg-rose-900/80 text-rose-300' :
-                              no.tipo === 'decisao' ? 'bg-amber-900/80 text-amber-300' :
-                              no.tipo === 'diagnostico' ? 'bg-purple-900/80 text-purple-300' :
-                              'bg-emerald-900/80 text-emerald-300'
+                            : currentTheme.id === 'light'
+                              ? no.tipo === 'inicio' ? 'bg-blue-100 text-blue-900 border border-blue-200' :
+                                no.tipo === 'alerta' ? 'bg-rose-100 text-rose-900 border border-rose-200' :
+                                no.tipo === 'decisao' ? 'bg-amber-100 text-amber-900 border border-amber-200' :
+                                no.tipo === 'diagnostico' ? 'bg-purple-100 text-purple-900 border border-purple-200' :
+                                'bg-emerald-100 text-emerald-900 border border-emerald-200'
+                              : no.tipo === 'inicio' ? 'bg-blue-900/80 text-blue-300' :
+                                no.tipo === 'alerta' ? 'bg-rose-900/80 text-rose-300' :
+                                no.tipo === 'decisao' ? 'bg-amber-900/80 text-amber-300' :
+                                no.tipo === 'diagnostico' ? 'bg-purple-900/80 text-purple-300' :
+                                'bg-emerald-900/80 text-emerald-300'
                         }`}>
                           {isInicial ? '★ Bloco Originário' : (numeroPasso ? `Passo ${numeroPasso} • ${no.tipo}` : no.tipo)}
                         </span>
                       </div>
 
                       {!isRevelado ? (
-                        <span className="flex items-center gap-1 text-[8.5px] sm:text-[9.5px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30 animate-pulse">
+                        <span className={`flex items-center gap-1 text-[8.5px] sm:text-[9.5px] font-bold px-2 py-0.5 rounded-full border animate-pulse ${
+                          currentTheme.id === 'light'
+                            ? 'text-blue-700 bg-blue-50 border-blue-200'
+                            : 'text-amber-500 bg-amber-500/10 border-amber-500/30'
+                        }`}>
                           <HelpCircle className="w-3 h-3" />
                           Ocluso
                         </span>
                       ) : (
-                        <span className="text-[8.5px] sm:text-[9.5px] text-emerald-500 font-bold flex items-center gap-1">
+                        <span className="text-[8.5px] sm:text-[9.5px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3" /> Revelado
                         </span>
                       )}
@@ -1426,20 +1436,18 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                             e.stopPropagation();
                             handleRevelarNo(no.id);
                           }}
-                          className={`px-3 py-1.5 rounded-lg ${currentTheme.hiddenCardButtonClass} font-black text-xs shadow-sm cursor-pointer`}
+                          className={`px-3 py-1.5 rounded-lg ${currentTheme.hiddenCardButtonClass} font-black text-xs shadow-sm cursor-pointer active:scale-95 transition-all`}
                         >
                           Toque para Revelar
                         </button>
                       </div>
                     ) : (
                       <div className="pt-1.5 sm:pt-2 space-y-1 sm:space-y-1.5 text-left">
-                        <h5 className={`text-xs sm:text-[13px] font-bold leading-tight ${currentTheme.cardTitleClass}`}>
+                        <h5 className={`text-xs sm:text-[13px] font-bold leading-snug break-words ${currentTheme.cardTitleClass}`}>
                           {no.titulo || '(Etapa sem título)'}
                         </h5>
                         {no.descricao && (
-                          <div className={`text-[10px] sm:text-xs leading-snug sm:leading-relaxed ${
-                            densidadeTrilha === 'compacto' ? 'line-clamp-3 sm:line-clamp-none' : ''
-                          } ${currentTheme.cardDescClass}`}>
+                          <div className={`text-[10px] sm:text-xs leading-snug sm:leading-relaxed break-words ${currentTheme.cardDescClass}`}>
                             <FormattedClinicalText text={no.descricao} />
                           </div>
                         )}
@@ -1452,7 +1460,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                             {no.ramos.map(r => (
                               <span 
                                 key={r.id} 
-                                className="px-1.5 py-0.5 rounded-md font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 max-w-full truncate"
+                                className="px-2 py-0.5 rounded-md font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 max-w-full break-words leading-tight"
                                 title={r.rotulo}
                               >
                                 ➔ {r.rotulo}
@@ -1508,7 +1516,9 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                         className={`px-2.5 py-1 rounded-xl text-[11px] sm:text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
                           filtroRamoId === 'todos'
                             ? 'bg-slate-900 text-white shadow-sm ring-2 ring-emerald-500/60 dark:bg-emerald-600 border-transparent'
-                            : 'bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                            : currentTheme.id === 'light'
+                            ? 'bg-white text-slate-800 border-slate-200 hover:bg-slate-50 shadow-3xs'
+                            : 'bg-slate-800/90 text-slate-300 border-slate-700 hover:bg-slate-700'
                         }`}
                       >
                         <GitFork className="w-3 h-3" />
@@ -1526,11 +1536,13 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                             className={`px-2.5 py-1 rounded-xl text-[11px] sm:text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
                               isAtivo
                                 ? `${estilo.pillAtivo}`
-                                : `bg-white/90 dark:bg-slate-800/90 ${estilo.pillInativo}`
+                                : currentTheme.id === 'light'
+                                ? 'bg-white text-slate-800 border-slate-200 hover:bg-slate-50 shadow-3xs'
+                                : `bg-slate-800/90 ${estilo.pillInativo}`
                             }`}
                           >
                             <span className={`w-1.5 h-1.5 rounded-full ${estilo.dot}`} />
-                            <span className="truncate max-w-[180px] sm:max-w-[210px]">Ramo {idx + 1}: {c.rotulo}</span>
+                            <span className="whitespace-nowrap">Ramo {idx + 1}: {c.rotulo}</span>
                           </button>
                         );
                       })}
@@ -1564,15 +1576,19 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                       return (
                         <div 
                           key={caminho.id} 
-                          className={`flex flex-col items-center w-[85vw] max-w-[340px] sm:w-full shrink-0 snap-center space-y-2 sm:space-y-3 p-2.5 sm:p-3.5 rounded-2xl border ${estilo.headerBorder} bg-white/75 dark:bg-slate-800/60 shadow-xs backdrop-blur-xs`}
+                          className={`flex flex-col items-center w-[85vw] max-w-[340px] sm:w-full shrink-0 snap-center space-y-2 sm:space-y-3 p-2.5 sm:p-3.5 rounded-2xl border ${estilo.headerBorder} ${
+                            currentTheme.id === 'light'
+                              ? 'bg-white/90 border-slate-200 shadow-sm'
+                              : 'bg-slate-800/60 shadow-xs'
+                          } backdrop-blur-xs`}
                         >
                           {/* Cabeçalho Embelezado do Ramo */}
                           <div className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl border ${estilo.headerBorder} ${estilo.headerBg} shadow-3xs`}>
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${estilo.badge}`}>
+                            <div className="flex items-start sm:items-center gap-1.5 min-w-0 flex-1">
+                              <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider shrink-0 ${estilo.badge}`}>
                                 Ramo {cIdx + 1}
                               </span>
-                              <h6 className="text-[11px] sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate" title={caminho.rotulo}>
+                              <h6 className={`text-[11px] sm:text-[13px] font-bold leading-snug break-words ${currentTheme.id === 'light' ? 'text-slate-900' : 'text-slate-100'}`} title={caminho.rotulo}>
                                 {caminho.rotulo}
                               </h6>
                             </div>
@@ -1605,19 +1621,19 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                       const estilo = obterEstiloRamo(cIdx >= 0 ? cIdx : 0);
                       return (
                         <>
-                          <div className={`flex items-center justify-between p-2 rounded-xl border ${estilo.headerBorder} ${estilo.headerBg} text-xs shadow-2xs`}>
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${estilo.badge}`}>
+                          <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 p-2 rounded-xl border ${estilo.headerBorder} ${estilo.headerBg} text-xs shadow-2xs`}>
+                            <div className="flex items-start sm:items-center gap-1.5 min-w-0 flex-1">
+                              <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider shrink-0 ${estilo.badge}`}>
                                 Ramo {cIdx + 1}
                               </span>
-                              <span className="font-bold text-slate-800 dark:text-slate-100 truncate" title={caminhoAtivo?.rotulo}>
+                              <span className={`font-bold leading-snug break-words ${currentTheme.id === 'light' ? 'text-slate-900' : 'text-slate-100'}`} title={caminhoAtivo?.rotulo}>
                                 {caminhoAtivo?.rotulo}
                               </span>
                             </div>
                             <button
                               type="button"
                               onClick={() => setFiltroRamoId('todos')}
-                              className="text-[10px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline shrink-0 cursor-pointer ml-2"
+                              className="text-[10px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline shrink-0 cursor-pointer self-end sm:self-center ml-2"
                             >
                               Ver todos os ramos
                             </button>
@@ -2157,7 +2173,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
         }`}>
           <div className="flex items-center gap-1.5 min-w-0 text-xs">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-            <span className="truncate text-slate-800 dark:text-slate-200 text-[11px] sm:text-xs">
+            <span className="whitespace-nowrap text-slate-800 dark:text-slate-200 text-[11px] sm:text-xs">
               <span className="hidden sm:inline">Desvende os </span><strong>{totalNos - nosReveladosCount}</strong> nós pendentes
             </span>
           </div>
