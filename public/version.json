@@ -1,6 +1,6 @@
 {
-  "version": "2.3.6",
-  "buildTime": "2026-09-24T23:53:55.980Z",
-  "buildDateFormatted": "24/09/2026, 20:53:55",
-  "releaseNotes": "MedCards v2.3.6: Setas de voltar e pular na sessão de estudos, prompt mestre com ensino completo de cores e seletor de quantidade de cards"
+  "version": "2.3.7",
+  "buildTime": "2026-09-25T00:12:17.846Z",
+  "buildDateFormatted": "24/09/2026, 21:12:17",
+  "releaseNotes": "MedCards v2.3.7: Ancoragem pixel-perfect de oclusão de imagem, eliminação de letterbox mobile/desktop e controles de arrastar, redimensionar e ajuste fino de máscaras"
 }

@@ -572,8 +572,14 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
 
             <button
               type="button"
-              onClick={handleOpenQuickEdit}
-              title="Edição rápida deste flashcard"
+              onClick={() => {
+                if (isImageOcclusion && onEditarCard) {
+                  onEditarCard(cardAtual, indiceAtual);
+                } else {
+                  handleOpenQuickEdit();
+                }
+              }}
+              title="Editar este flashcard"
               className="flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg border border-slate-200 hover:border-blue-400 bg-white hover:bg-blue-50/50 text-slate-700 hover:text-blue-700 transition-all cursor-pointer shadow-3xs active:scale-95"
             >
               <FilePenLine className="w-3.5 h-3.5 text-blue-600" />
@@ -749,92 +755,97 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                 {cardAtual.perguntaGatilho || 'Identifique as estruturas ocluídas na imagem:'}
               </p>
 
-              <div className="relative w-full rounded-2xl overflow-hidden border border-slate-300 bg-slate-950 select-none shadow-inner">
-                <img
-                  src={cardAtual.imagemUrl}
-                  alt={cardAtual.titulo}
-                  className="w-full h-auto object-contain block mx-auto max-h-[300px]"
-                  referrerPolicy="no-referrer"
-                />
-
-                {/* Camada SVG para Máscaras Livres com Polígonos */}
-                <svg 
-                  className="absolute inset-0 w-full h-full pointer-events-none" 
-                  viewBox="0 0 100 100" 
-                  preserveAspectRatio="none"
+              <div className="relative w-full rounded-2xl overflow-hidden border border-slate-300 dark:border-slate-800 bg-slate-950 flex items-center justify-center p-1 sm:p-2 select-none shadow-inner">
+                <div 
+                  className="relative inline-block max-w-full select-none"
+                  style={{ lineHeight: 0 }}
                 >
+                  <img
+                    src={cardAtual.imagemUrl}
+                    alt={cardAtual.titulo}
+                    className="block max-w-full h-auto max-h-[60vh] sm:max-h-[480px] w-auto mx-auto select-none pointer-events-none"
+                    referrerPolicy="no-referrer"
+                  />
+
+                  {/* Camada SVG para Máscaras Livres com Polígonos */}
+                  <svg 
+                    className="absolute inset-0 w-full h-full pointer-events-none" 
+                    viewBox="0 0 100 100" 
+                    preserveAspectRatio="none"
+                  >
+                    {(cardAtual.mascarasImagem || [])
+                      .filter(m => m.tipoForma === 'livre' && m.pontos && m.pontos.length > 2)
+                      .map((m) => {
+                        const revelado = mascarasReveladas[m.id];
+                        const pontosString = m.pontos!.map(p => `${p.x},${p.y}`).join(' ');
+
+                        return (
+                          <g
+                            key={m.id}
+                            className="pointer-events-auto cursor-pointer"
+                            onClick={() => toggleMascaraOclusao(m.id)}
+                          >
+                            <polygon
+                              points={pontosString}
+                              fill={revelado ? 'transparent' : '#4f46e5'}
+                              fillOpacity={revelado ? 0 : 1}
+                              stroke={revelado ? 'rgba(16, 185, 129, 0.7)' : '#c7d2fe'}
+                              strokeWidth={revelado ? '1' : '1.2'}
+                              strokeDasharray={revelado ? '2,2' : undefined}
+                              className="transition-all hover:brightness-110 active:scale-98"
+                            />
+                            {!revelado && (
+                              <text
+                                x={m.x + m.largura / 2}
+                                y={m.y + m.altura / 2}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                fill="#ffffff"
+                                fontSize="3.8"
+                                fontWeight="bold"
+                                className="select-none pointer-events-none drop-shadow-sm"
+                              >
+                                [ #{m.numero} ]
+                              </text>
+                            )}
+                          </g>
+                        );
+                      })}
+                  </svg>
+
+                  {/* Máscaras Retangulares */}
                   {(cardAtual.mascarasImagem || [])
-                    .filter(m => m.tipoForma === 'livre' && m.pontos && m.pontos.length > 2)
+                    .filter(m => m.tipoForma !== 'livre' || !m.pontos || m.pontos.length <= 2)
                     .map((m) => {
                       const revelado = mascarasReveladas[m.id];
-                      const pontosString = m.pontos!.map(p => `${p.x},${p.y}`).join(' ');
 
                       return (
-                        <g
+                        <div
                           key={m.id}
-                          className="pointer-events-auto cursor-pointer"
                           onClick={() => toggleMascaraOclusao(m.id)}
+                          className={`absolute rounded-md transition-all flex items-center justify-center text-center p-1 text-xs cursor-pointer select-none active:scale-95 ${
+                            revelado
+                              ? 'bg-transparent border-2 border-dashed border-emerald-500/70 hover:bg-emerald-500/10'
+                              : 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold border border-indigo-300 shadow-md hover:scale-[1.02] opacity-100'
+                          }`}
+                          style={{
+                            left: `${m.x}%`,
+                            top: `${m.y}%`,
+                            width: `${m.largura}%`,
+                            height: `${m.altura}%`,
+                            opacity: revelado ? undefined : 1,
+                          }}
+                          title={revelado ? `Estrutura revelada: ${m.textoOculto} (toque para ocultar)` : `Toque para revelar estrutura #${m.numero}`}
                         >
-                          <polygon
-                            points={pontosString}
-                            fill={revelado ? 'transparent' : '#4f46e5'}
-                            fillOpacity={revelado ? 0 : 1}
-                            stroke={revelado ? 'rgba(16, 185, 129, 0.7)' : '#c7d2fe'}
-                            strokeWidth={revelado ? '1' : '1.2'}
-                            strokeDasharray={revelado ? '2,2' : undefined}
-                            className="transition-all hover:brightness-110 active:scale-98"
-                          />
                           {!revelado && (
-                            <text
-                              x={m.x + m.largura / 2}
-                              y={m.y + m.altura / 2}
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                              fill="#ffffff"
-                              fontSize="3.8"
-                              fontWeight="bold"
-                              className="select-none pointer-events-none drop-shadow-sm"
-                            >
-                              [ #{m.numero} ]
-                            </text>
+                            <span className="text-[10px] font-black bg-white/20 px-1 py-0.2 rounded-sm">
+                              #{m.numero}
+                            </span>
                           )}
-                        </g>
+                        </div>
                       );
                     })}
-                </svg>
-
-                {/* Máscaras Retangulares */}
-                {(cardAtual.mascarasImagem || [])
-                  .filter(m => m.tipoForma !== 'livre' || !m.pontos || m.pontos.length <= 2)
-                  .map((m) => {
-                    const revelado = mascarasReveladas[m.id];
-
-                    return (
-                      <div
-                        key={m.id}
-                        onClick={() => toggleMascaraOclusao(m.id)}
-                        className={`absolute rounded-md transition-all flex items-center justify-center text-center p-1 text-xs cursor-pointer select-none active:scale-95 ${
-                          revelado
-                            ? 'bg-transparent border-2 border-dashed border-emerald-500/70 hover:bg-emerald-500/10'
-                            : 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold border border-indigo-300 shadow-md hover:scale-[1.02] opacity-100'
-                        }`}
-                        style={{
-                          left: `${m.x}%`,
-                          top: `${m.y}%`,
-                          width: `${m.largura}%`,
-                          height: `${m.altura}%`,
-                          opacity: revelado ? undefined : 1,
-                        }}
-                        title={revelado ? `Estrutura revelada: ${m.textoOculto} (toque para ocultar)` : `Toque para revelar estrutura #${m.numero}`}
-                      >
-                        {!revelado && (
-                          <span className="text-[10px] font-black bg-white/20 px-1 py-0.2 rounded-sm">
-                            #{m.numero}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
+                </div>
               </div>
 
               {/* Botões de Ação e Status */}

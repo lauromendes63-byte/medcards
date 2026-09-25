@@ -471,102 +471,107 @@ export const VisualOcclusionModal: React.FC<VisualOcclusionModalProps> = ({
           ) : isImageOcclusion ? (
             /* MODO 2: OCLUSÃO DE IMAGEM REAL */
             <div className="space-y-3">
-              <div className="relative w-full rounded-2xl overflow-hidden border border-slate-300 bg-slate-950 select-none shadow-inner">
-                <img
-                  src={card.imagemUrl}
-                  alt={card.titulo}
-                  className="w-full h-auto object-contain block mx-auto max-h-[420px]"
-                  referrerPolicy="no-referrer"
-                />
-
-                {/* SVG Overlay para Máscaras Livres */}
-                <svg 
-                  className="absolute inset-0 w-full h-full pointer-events-none" 
-                  viewBox="0 0 100 100" 
-                  preserveAspectRatio="none"
+              <div className="relative w-full rounded-2xl overflow-hidden border border-slate-300 dark:border-slate-800 bg-slate-950 flex items-center justify-center p-1 sm:p-2 select-none shadow-inner">
+                <div 
+                  className="relative inline-block max-w-full select-none"
+                  style={{ lineHeight: 0 }}
                 >
-                  {mascaras.filter(m => m.tipoForma === 'livre' && m.pontos && m.pontos.length > 2).map((m) => {
+                  <img
+                    src={card.imagemUrl}
+                    alt={card.titulo}
+                    className="block max-w-full h-auto max-h-[60vh] sm:max-h-[480px] w-auto mx-auto select-none pointer-events-none"
+                    referrerPolicy="no-referrer"
+                  />
+
+                  {/* SVG Overlay para Máscaras Livres */}
+                  <svg 
+                    className="absolute inset-0 w-full h-full pointer-events-none" 
+                    viewBox="0 0 100 100" 
+                    preserveAspectRatio="none"
+                  >
+                    {mascaras.filter(m => m.tipoForma === 'livre' && m.pontos && m.pontos.length > 2).map((m) => {
+                      const revelado = blocosRevelados[m.id];
+                      const selecionado = mascaraAtivaId === m.id;
+                      const pontosString = m.pontos!.map(p => `${p.x},${p.y}`).join(' ');
+
+                      return (
+                        <g
+                          key={m.id}
+                          className="pointer-events-auto cursor-pointer"
+                          onClick={() => toggleMascara(m.id)}
+                        >
+                          <polygon
+                            points={pontosString}
+                            fill={revelado 
+                              ? 'transparent' 
+                              : (selecionado ? '#2563eb' : '#4f46e5')
+                            }
+                            fillOpacity={revelado ? 0 : 1}
+                            stroke={revelado ? 'rgba(16, 185, 129, 0.75)' : (selecionado ? '#ffffff' : '#e0e7ff')}
+                            strokeWidth={selecionado ? '1.5' : '1'}
+                            strokeDasharray={revelado ? '2,2' : undefined}
+                            className="transition-all hover:brightness-110 active:scale-98"
+                          />
+                          {!revelado && (
+                            <text
+                              x={m.x + m.largura / 2}
+                              y={m.y + m.altura / 2}
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                              fill="#ffffff"
+                              fontSize="3.6"
+                              fontWeight="bold"
+                              className="select-none pointer-events-none drop-shadow-sm"
+                            >
+                              [ #{m.numero} ]
+                            </text>
+                          )}
+                        </g>
+                      );
+                    })}
+                  </svg>
+
+                  {/* Máscaras Retangulares Interativas sobre a Imagem */}
+                  {mascaras.filter(m => !m.tipoForma || m.tipoForma === 'retangulo').map((m) => {
                     const revelado = blocosRevelados[m.id];
                     const selecionado = mascaraAtivaId === m.id;
-                    const pontosString = m.pontos!.map(p => `${p.x},${p.y}`).join(' ');
 
                     return (
-                      <g
+                      <div
                         key={m.id}
-                        className="pointer-events-auto cursor-pointer"
                         onClick={() => toggleMascara(m.id)}
+                        className={`absolute rounded-lg transition-all flex items-center justify-center text-center p-1 text-xs cursor-pointer select-none active:scale-95 ${
+                          revelado
+                            ? 'bg-transparent border-2 border-dashed border-emerald-500/70 hover:bg-emerald-500/10 shadow-2xs animate-in fade-in'
+                            : selecionado
+                            ? 'bg-blue-600 text-white font-bold border-2 border-white ring-2 ring-blue-400 shadow-md opacity-100'
+                            : 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold border-2 border-indigo-300 shadow-md hover:scale-[1.02] opacity-100'
+                        }`}
+                        style={{
+                          left: `${m.x}%`,
+                          top: `${m.y}%`,
+                          width: `${m.largura}%`,
+                          height: `${m.altura}%`,
+                          opacity: revelado ? undefined : 1,
+                        }}
+                        title={revelado ? `Estrutura revelada: ${m.textoOculto}` : `Estrutura #${m.numero}`}
                       >
-                        <polygon
-                          points={pontosString}
-                          fill={revelado 
-                            ? 'transparent' 
-                            : (selecionado ? '#2563eb' : '#4f46e5')
-                          }
-                          fillOpacity={revelado ? 0 : 1}
-                          stroke={revelado ? 'rgba(16, 185, 129, 0.75)' : (selecionado ? '#ffffff' : '#e0e7ff')}
-                          strokeWidth={selecionado ? '1.5' : '1'}
-                          strokeDasharray={revelado ? '2,2' : undefined}
-                          className="transition-all hover:brightness-110 active:scale-98"
-                        />
                         {!revelado && (
-                          <text
-                            x={m.x + m.largura / 2}
-                            y={m.y + m.altura / 2}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                            fill="#ffffff"
-                            fontSize="3.6"
-                            fontWeight="bold"
-                            className="select-none pointer-events-none drop-shadow-sm"
-                          >
-                            [ #{m.numero} ]
-                          </text>
+                          <div className="flex flex-col items-center justify-center">
+                            <span className="text-xs font-black tracking-wider bg-white/20 px-1.5 py-0.5 rounded-sm">
+                              #{m.numero}
+                            </span>
+                            {exibirDicas && m.dica && (
+                              <span className="text-[9px] opacity-80 mt-0.5 truncate max-w-full">
+                                {m.dica}
+                              </span>
+                            )}
+                          </div>
                         )}
-                      </g>
+                      </div>
                     );
                   })}
-                </svg>
-
-                {/* Máscaras Retangulares Interativas sobre a Imagem */}
-                {mascaras.filter(m => !m.tipoForma || m.tipoForma === 'retangulo').map((m) => {
-                  const revelado = blocosRevelados[m.id];
-                  const selecionado = mascaraAtivaId === m.id;
-
-                  return (
-                    <div
-                      key={m.id}
-                      onClick={() => toggleMascara(m.id)}
-                      className={`absolute rounded-lg transition-all flex items-center justify-center text-center p-1 text-xs cursor-pointer select-none active:scale-95 ${
-                        revelado
-                          ? 'bg-transparent border-2 border-dashed border-emerald-500/70 hover:bg-emerald-500/10 shadow-2xs animate-in fade-in'
-                          : selecionado
-                          ? 'bg-blue-600 text-white font-bold border-2 border-white ring-2 ring-blue-400 shadow-md opacity-100'
-                          : 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold border-2 border-indigo-300 shadow-md hover:scale-[1.02] opacity-100'
-                      }`}
-                      style={{
-                        left: `${m.x}%`,
-                        top: `${m.y}%`,
-                        width: `${m.largura}%`,
-                        height: `${m.altura}%`,
-                        opacity: revelado ? undefined : 1,
-                      }}
-                      title={revelado ? `Estrutura revelada: ${m.textoOculto}` : `Estrutura #${m.numero}`}
-                    >
-                      {!revelado && (
-                        <div className="flex flex-col items-center justify-center">
-                          <span className="text-xs font-black tracking-wider bg-white/20 px-1.5 py-0.5 rounded-sm">
-                            #{m.numero}
-                          </span>
-                          {exibirDicas && m.dica && (
-                            <span className="text-[9px] opacity-80 mt-0.5 truncate max-w-full">
-                              {m.dica}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                </div>
               </div>
 
               {/* Quadrados a parte com os nomes/respostas de cada estrutura abaixo da imagem */}

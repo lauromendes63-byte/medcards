@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.3.6',
+        version: '2.3.7',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: 'MedCards v2.3.6: Setas de voltar e pular na sessão de estudos, prompt mestre com ensino completo de cores e seletor de quantidade de cards'
+        releaseNotes: 'MedCards v2.3.7: Ancoragem pixel-perfect de oclusão de imagem, eliminação de letterbox mobile/desktop e controles de arrastar, redimensionar e ajuste fino de máscaras'
       };
       this.emitFile({
         type: 'asset',
