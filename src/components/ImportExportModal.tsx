@@ -146,7 +146,11 @@ REGRAS DE FORMATAÇÃO E TIPOGRAFIA MÉDICA:
    - NUNCA crie micro-tópicos fragmentados para cada pergunta ou flashcard (como "Fisiopatologia da osteomielite", "Tratamento da osteomielite", "Classificação de Gustilo"). Todos os cards gerados a partir do mesmo material devem pertencer ao MESMO "topico".
    - Se o material contiver mais de um grande tema bem distinto (exemplo: aula conjunta com "Dengue", "Chikungunya" e "Malária"), faça o split em no máximo 2 ou 3 tópicos bem delimitados. Jamais disperse os cards em dezenas de tópicos picados que poluem e desorganizam o app!
 
-4. FORMULAÇÃO CLÍNICA NATURAL DAS PERGUNTAS (SEM PROLIXIDADE ROBÓTICA):
+4. REGRA DE OURO DO CAMPO "especialidade" (EIXO CLÍNICO PRINCIPAL):
+   - O campo "especialidade" deve ser OBRIGATORIAMENTE preenchido com a grande área ou especialidade médica exata do tema (ex: "Cardiologia", "Infectologia", "Ortopedia", "Pediatria", "Ginecologia e Obstetrícia", "Cirurgia Geral", "Neurologia", "Pneumologia", "Nefrologia", "Gastroenterologia", "Hematologia", "Reumatologia", "Endocrinologia", "Psiquiatria", "Dermatologia", "Medicina de Emergência", "Medicina Preventiva", etc.).
+   - Mantenha a mesma especialidade para todos os flashcards do mesmo lote para organização e detecção precisa no MedCards.
+
+5. FORMULAÇÃO CLÍNICA NATURAL DAS PERGUNTAS (SEM PROLIXIDADE ROBÓTICA):
    - NUNCA formule perguntas robóticas, artificiais, prolixas ou pedantes.
    ❌ EVITE formulações artificiais e excessivamente acadêmicas como:
       - "Como se divide a taxonomia da Leptospira na classificação sorológica clássica e nos subclados genômicos modernos?"
@@ -314,6 +318,53 @@ MATERIAL / AULA / DIRETRIZ / PRINT PARA CONVERTER:
 [COLE AQUI SEU TEXTO, RESUMO OU TRANSCRIÇÃO]`;
 };
 
+export const normalizarTextoBusca = (txt: string): string => {
+  return (txt || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, ' ')
+    .trim();
+};
+
+export const encontrarEixoCorrespondente = (
+  termoDetectado: string,
+  listaEixos: EixoClinico[]
+): EixoClinico | null => {
+  if (!termoDetectado || !listaEixos.length) return null;
+  const termoNorm = normalizarTextoBusca(termoDetectado);
+  if (!termoNorm) return null;
+
+  // 1. Busca exata por especialidade ou título
+  const matchExato = listaEixos.find(e => {
+    const espNorm = normalizarTextoBusca(e.especialidade);
+    const titNorm = normalizarTextoBusca(e.titulo);
+    return espNorm === termoNorm || titNorm === termoNorm;
+  });
+  if (matchExato) return matchExato;
+
+  // 2. Busca por contenção direta
+  const matchInclusao = listaEixos.find(e => {
+    const titNorm = normalizarTextoBusca(e.titulo);
+    const espNorm = normalizarTextoBusca(e.especialidade);
+    return titNorm.includes(termoNorm) || termoNorm.includes(titNorm) || espNorm.includes(termoNorm) || termoNorm.includes(espNorm);
+  });
+  if (matchInclusao) return matchInclusao;
+
+  // 3. Palavras-chave significativas (>= 4 caracteres)
+  const palavras = termoNorm.split(/\s+/).filter(p => p.length >= 4);
+  if (palavras.length > 0) {
+    const matchPalavra = listaEixos.find(e => {
+      const titNorm = normalizarTextoBusca(e.titulo);
+      const espNorm = normalizarTextoBusca(e.especialidade);
+      return palavras.some(p => titNorm.includes(p) || espNorm.includes(p));
+    });
+    if (matchPalavra) return matchPalavra;
+  }
+
+  return null;
+};
+
 export const ImportExportModal: React.FC<ImportExportModalProps> = ({
   cards,
   eixos,
@@ -339,11 +390,18 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
   const [jsonEixoCopiado, setJsonEixoCopiado] = useState(false);
   const [jsonColecaoCopiado, setJsonColecaoCopiado] = useState(false);
   
-  // Eixo selecionado para importar/exportar
+  // Eixo selecionado para importar (padrão '__auto__' para auto-detecção inteligente pelo JSON)
   const [eixoDestinoId, setEixoDestinoId] = useState<string>(
     initialEixoId && eixos.some(e => e.id === initialEixoId) 
       ? initialEixoId 
-      : (eixos[0]?.id || '__novo_eixo__')
+      : '__auto__'
+  );
+
+  // Eixo selecionado para exportar na aba Exportar
+  const [eixoExportarId, setEixoExportarId] = useState<string>(
+    initialEixoId && eixos.some(e => e.id === initialEixoId)
+      ? initialEixoId
+      : (eixos[0]?.id || '')
   );
 
   // Criar novo eixo inline na importação
@@ -417,7 +475,9 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
 
     const timer = setTimeout(async () => {
       try {
-        const targetEixo = eixoDestinoId && eixoDestinoId !== '__novo_eixo__' ? eixoDestinoId : (eixos[0]?.id || 'eixo-1');
+        const targetEixo = (eixoDestinoId && eixoDestinoId !== '__novo_eixo__' && eixoDestinoId !== '__auto__')
+          ? eixoDestinoId
+          : ((initialEixoId && eixos.some(e => e.id === initialEixoId)) ? initialEixoId : (eixos[0]?.id || 'eixo-1'));
         // Processamento 100% local e assíncrono (fatiado em lotes de 15 cards, mantendo 60fps)
         const res = await AnkiService.processarTextoAssincrono(raw, targetEixo, 'Gemini / MedCards');
 
@@ -433,6 +493,8 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
             image_occlusion: 0,
           };
           const topicosDetectados = new Set<string>();
+          const especialidadesDetectadas = new Set<string>();
+          const eixosDetectados = new Set<string>();
 
           res.cardsImportados.forEach(c => {
             tiposContagem[c.tipoCard] = (tiposContagem[c.tipoCard] || 0) + 1;
@@ -440,7 +502,27 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
             if (top && typeof top === 'string' && top.trim()) {
               topicosDetectados.add(top.trim());
             }
+            const esp = c.especialidade || (c as any).especialidadeMedica;
+            if (esp && typeof esp === 'string' && esp.trim() && esp.trim().toLowerCase() !== 'geral / outros') {
+              especialidadesDetectadas.add(esp.trim());
+            }
+            const ex = (c as any).eixo;
+            if (ex && typeof ex === 'string' && ex.trim()) {
+              eixosDetectados.add(ex.trim());
+            }
           });
+
+          let especialidadeDetectada = Array.from(especialidadesDetectadas)[0] || Array.from(eixosDetectados)[0] || '';
+          if (!especialidadeDetectada) {
+            const matchEsp = raw.match(/"(?:especialidade|eixo|area|grandeArea)"\s*:\s*"([^"]+)"/i);
+            if (matchEsp && matchEsp[1]) {
+              especialidadeDetectada = matchEsp[1].trim();
+            }
+          }
+
+          const eixoCorrespondente = especialidadeDetectada
+            ? encontrarEixoCorrespondente(especialidadeDetectada, eixos)
+            : null;
 
           setAnaliseTextoColado({
             valido: true,
@@ -448,6 +530,9 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
             totalCards: res.cardsImportados.length,
             tiposContagem,
             topicos: Array.from(topicosDetectados),
+            especialidades: Array.from(especialidadesDetectadas),
+            especialidadeDetectada,
+            eixoCorrespondente,
             eixosCount: res.eixosCriados.length,
           });
           setCardsPrevia(res.cardsImportados);
@@ -486,7 +571,67 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
       isCancelled = true;
       clearTimeout(timer);
     };
-  }, [textoColado, eixoDestinoId, eixos]);
+  }, [textoColado, eixoDestinoId, eixos, initialEixoId]);
+
+  // Destino unificado calculado dinamicamente para visualização e confirmação antes de salvar
+  const destinoCalculado = useMemo(() => {
+    let eixoFinalNome = '';
+    let eixoFinalId = eixoDestinoId;
+    let eixoOrigemTexto: 'auto' | 'manual' | 'novo' = 'manual';
+    let topicoFinalNome = '';
+    let topicoOrigemTexto: 'auto' | 'manual' | 'novo' = 'manual';
+
+    // 1. Resolver Eixo
+    if (eixoDestinoId === '__auto__') {
+      eixoOrigemTexto = 'auto';
+      if (analiseTextoColado?.eixoCorrespondente) {
+        eixoFinalId = analiseTextoColado.eixoCorrespondente.id;
+        eixoFinalNome = analiseTextoColado.eixoCorrespondente.titulo;
+      } else if (analiseTextoColado?.especialidadeDetectada) {
+        eixoFinalNome = analiseTextoColado.especialidadeDetectada;
+      } else if (initialEixoId && eixos.some(e => e.id === initialEixoId)) {
+        const eInit = eixos.find(e => e.id === initialEixoId);
+        eixoFinalId = eInit!.id;
+        eixoFinalNome = eInit!.titulo;
+      } else if (eixos[0]) {
+        eixoFinalId = eixos[0].id;
+        eixoFinalNome = eixos[0].titulo;
+      } else {
+        eixoFinalNome = 'Clínica Médica';
+      }
+    } else if (eixoDestinoId === '__novo_eixo__') {
+      eixoOrigemTexto = 'novo';
+      eixoFinalNome = novoEixoTitulo.trim() || 'Novo Eixo Clínico';
+    } else {
+      const eixoObj = eixos.find(e => e.id === eixoDestinoId);
+      eixoFinalNome = eixoObj ? eixoObj.titulo : 'Eixo Selecionado';
+    }
+
+    // 2. Resolver Tópico
+    if (topicoSelecionadoModo === '__auto__') {
+      topicoOrigemTexto = 'auto';
+      if (analiseTextoColado?.topicos && analiseTextoColado.topicos.length > 0) {
+        topicoFinalNome = analiseTextoColado.topicos[0];
+      } else {
+        topicoFinalNome = 'Conceitos Gerais (Auto)';
+      }
+    } else if (topicoSelecionadoModo === '__novo_topico__') {
+      topicoOrigemTexto = 'novo';
+      topicoFinalNome = novoTopicoTitulo.trim() || 'Novo Tópico';
+    } else {
+      const targetEixoObj = eixos.find(e => e.id === (eixoFinalId !== '__auto__' ? eixoFinalId : eixos[0]?.id));
+      const topObj = targetEixoObj?.topicos?.find(t => t.id === topicoSelecionadoModo);
+      topicoFinalNome = topObj?.titulo || 'Tópico Selecionado';
+    }
+
+    return {
+      eixoFinalId,
+      eixoFinalNome,
+      eixoOrigemTexto,
+      topicoFinalNome,
+      topicoOrigemTexto,
+    };
+  }, [eixoDestinoId, topicoSelecionadoModo, analiseTextoColado, eixos, initialEixoId, novoEixoTitulo, novoTopicoTitulo]);
 
   // =========================================================================
   // PROCESSAMENTO DE IMPORTAÇÃO COM DESTINO ROBUSTO E POP-UP DE SUCESSO
@@ -497,6 +642,9 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
 
     try {
       let finalEixoId = eixoDestinoId;
+      if (eixoDestinoId === '__auto__') {
+        finalEixoId = (initialEixoId && eixos.find(e => e.id === initialEixoId))?.id || eixos[0]?.id || 'eixo-1';
+      }
       const res = await AnkiService.importarArquivo(file, finalEixoId, eixos);
       onImportarConcluido(res);
 
@@ -616,8 +764,63 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
         let finalTopicoId: string | undefined = undefined;
         let finalTopicoNome: string | undefined = undefined;
 
-        // 2. Caso: Novo Eixo Clínico
-        if (eixoDestinoId === '__novo_eixo__') {
+        // 2. Resolução do Eixo Clínico de Destino (Auto vs Novo vs Existente)
+        if (eixoDestinoId === '__auto__') {
+          const detectadoNome = analiseTextoColado?.especialidadeDetectada || '';
+          const match = detectadoNome ? encontrarEixoCorrespondente(detectadoNome, eixos) : null;
+          if (match) {
+            finalEixoId = match.id;
+            finalEixoTitulo = match.titulo;
+            finalEixoEspecialidade = match.especialidade;
+          } else if (detectadoNome) {
+            // Se o eixo correspondente ainda não existir, cria o novo eixo clínico automaticamente
+            const novoId = `eixo-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+            const espValida = (TODAS_ESPECIALIDADES_MEDICAS as readonly string[]).includes(detectadoNome)
+              ? (detectadoNome as EspecialidadeMedica)
+              : 'Clínica Médica';
+            const novoEixo: EixoClinico = {
+              id: novoId,
+              titulo: detectadoNome,
+              subtitulo: 'Tópicos essenciais de alto rendimento',
+              especialidade: espValida,
+              descricao: 'Criado automaticamente via IA / MedCards',
+              icone: 'Stethoscope',
+              corTema: CORES_DISPONIVEIS[eixos.length % CORES_DISPONIVEIS.length],
+              totalCards: 0,
+              cardsDominados: 0,
+              pendentesHoje: 0,
+              ultimaAtividade: 'Agora',
+              topicos: [],
+            };
+            StorageService.adicionarEixo(novoEixo);
+            if (onEixoCriado) onEixoCriado(novoEixo);
+            finalEixoId = novoId;
+            finalEixoTitulo = novoEixo.titulo;
+            finalEixoEspecialidade = novoEixo.especialidade;
+          } else {
+            const fallbackEixo = (initialEixoId && eixos.find(e => e.id === initialEixoId)) || eixos[0];
+            if (fallbackEixo) {
+              finalEixoId = fallbackEixo.id;
+              finalEixoTitulo = fallbackEixo.titulo;
+              finalEixoEspecialidade = fallbackEixo.especialidade;
+            } else {
+              finalEixoId = 'eixo-1';
+              finalEixoTitulo = 'Clínica Médica';
+              finalEixoEspecialidade = 'Clínica Médica';
+            }
+          }
+
+          if (topicoSelecionadoModo === '__novo_topico__' && novoTopicoTitulo.trim()) {
+            finalTopicoId = `top-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+            finalTopicoNome = novoTopicoTitulo.trim();
+            StorageService.adicionarTopico(finalEixoId, finalTopicoNome, undefined, finalTopicoId);
+          } else if (topicoSelecionadoModo !== '__auto__' && topicoSelecionadoModo) {
+            const eixoAlvo = eixos.find(e => e.id === finalEixoId);
+            const topObj = eixoAlvo?.topicos?.find(t => t.id === topicoSelecionadoModo);
+            finalTopicoId = topicoSelecionadoModo;
+            finalTopicoNome = topObj?.titulo || 'Tópico Selecionado';
+          }
+        } else if (eixoDestinoId === '__novo_eixo__') {
           finalEixoTitulo = novoEixoTitulo.trim() || 'Novo Eixo Clínico';
           finalEixoId = `eixo-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
           finalEixoEspecialidade = novoEixoEspecialidade;
@@ -781,7 +984,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
   // =========================================================================
   // EXPORTAÇÕES
   // =========================================================================
-  const eixoExportar = eixos.find(e => e.id === eixoDestinoId) || eixos[0];
+  const eixoExportar = eixos.find(e => e.id === eixoExportarId) || eixos[0];
   const cardsDoEixoExportar = cards.filter(c => c.eixoId === (eixoExportar?.id || ''));
   const cardIndividualExportar = cards.find(c => c.id === cardSelecionadoId) || cards[0];
 
@@ -849,6 +1052,230 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
     const q = filtroBuscaCard.toLowerCase();
     return c.titulo.toLowerCase().includes(q) || c.especialidade.toLowerCase().includes(q);
   });
+
+  const renderDestinoFlashcards = () => {
+    const eixoSelecionadoObj = eixoDestinoId === '__auto__'
+      ? (analiseTextoColado?.eixoCorrespondente || (initialEixoId ? eixos.find(e => e.id === initialEixoId) : null))
+      : eixos.find(e => e.id === eixoDestinoId);
+
+    return (
+      <div className="relative overflow-hidden p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-blue-50/50 via-white to-slate-50/70 border border-blue-200/80 shadow-xs space-y-3.5 transition-all">
+        {/* Luz ambiente sutil decorativa */}
+        <div className="absolute -top-10 -right-10 w-36 h-36 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+
+        {/* Cabeçalho do Card */}
+        <div className="flex items-center justify-between gap-3 relative z-10">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xs shadow-blue-500/25 shrink-0">
+              <Layers className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5">
+                <span>Destino dos Flashcards</span>
+              </h4>
+              <p className="text-[10.5px] text-slate-500 font-medium">
+                Eixo clínico e tópico onde seus cartões serão organizados
+              </p>
+            </div>
+          </div>
+
+          <div className="shrink-0">
+            {eixoDestinoId === '__auto__' ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-200/80 shadow-3xs">
+                <Sparkles className="w-3 h-3 text-blue-600" />
+                <span>Auto-detecção Ativa</span>
+              </span>
+            ) : eixoDestinoId === '__novo_eixo__' ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200/80 shadow-3xs">
+                <Plus className="w-3 h-3 text-amber-600" />
+                <span>Novo Eixo</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-100 text-slate-700 border border-slate-200/80 shadow-3xs">
+                <Stethoscope className="w-3 h-3 text-slate-500" />
+                <span>Eixo Manual</span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Grid de Seleção Eixo & Tópico */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 relative z-10">
+          {/* Coluna 1: Eixo Clínico */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
+                <span>Eixo Clínico:</span>
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium">
+                {eixoDestinoId === '__auto__' ? 'Automático por IA' : 'Destino fixo'}
+              </span>
+            </label>
+
+            <div className="relative">
+              <select
+                value={eixoDestinoId}
+                onChange={e => setEixoDestinoId(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:ring-2 focus:ring-blue-600/25 focus:border-blue-600 bg-white text-slate-900 shadow-3xs transition-all cursor-pointer"
+              >
+                <option value="__auto__">✨ Detectar automaticamente do JSON (Recomendado)</option>
+                <option disabled value="">──────── Eixos Existentes ────────</option>
+                {eixos.map(ex => (
+                  <option key={ex.id} value={ex.id}>
+                    📁 {ex.titulo} ({ex.especialidade})
+                  </option>
+                ))}
+                <option disabled value="">────────────────────────────</option>
+                <option value="__novo_eixo__">➕ Criar Novo Eixo Clínico...</option>
+              </select>
+            </div>
+
+            {/* Feedback contextual de auto-detecção do Eixo */}
+            {eixoDestinoId === '__auto__' && (
+              analiseTextoColado?.especialidadeDetectada ? (
+                <div className="p-2 rounded-xl bg-blue-50/90 border border-blue-200/80 text-[11px] font-bold text-blue-900 flex items-center gap-1.5 shadow-3xs">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <div className="min-w-0 truncate">
+                    <span>IA detectou: </span>
+                    <strong className="text-blue-700">{analiseTextoColado.especialidadeDetectada}</strong>
+                    {analiseTextoColado.eixoCorrespondente ? (
+                      <span className="text-slate-600 font-medium ml-1">
+                        ➔ "{analiseTextoColado.eixoCorrespondente.titulo}"
+                      </span>
+                    ) : (
+                      <span className="text-emerald-700 font-medium ml-1">
+                        ➔ Criará novo eixo
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10.5px] text-slate-500 font-medium flex items-center gap-1 pt-0.5">
+                  <span>💡</span>
+                  <span>O MedCards identifica o eixo diretamente pela especialidade no JSON</span>
+                </p>
+              )
+            )}
+          </div>
+
+          {/* Coluna 2: Tópico / Aula */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Tópico / Aula:</span>
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium">
+                (Agrupamento)
+              </span>
+            </label>
+
+            {eixoDestinoId !== '__novo_eixo__' ? (
+              <div className="space-y-2">
+                <div className="relative">
+                  <select
+                    value={topicoSelecionadoModo}
+                    onChange={e => setTopicoSelecionadoModo(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:ring-2 focus:ring-blue-600/25 focus:border-blue-600 bg-white text-slate-900 shadow-3xs transition-all cursor-pointer"
+                  >
+                    <option value="__auto__">✨ Detectar automaticamente do JSON ou manter Geral</option>
+                    {eixoSelecionadoObj?.topicos && eixoSelecionadoObj.topicos.length > 0 && (
+                      <>
+                        <option disabled value="">── Tópicos em {eixoSelecionadoObj.titulo} ──</option>
+                        {eixoSelecionadoObj.topicos.map(top => (
+                          <option key={top.id} value={top.id}>
+                            📚 {top.titulo}
+                          </option>
+                        ))}
+                      </>
+                    )}
+                    <option disabled value="">────────────────────────────</option>
+                    <option value="__novo_topico__">➕ Criar Novo Tópico...</option>
+                  </select>
+                </div>
+
+                {topicoSelecionadoModo === '__novo_topico__' && (
+                  <input
+                    type="text"
+                    value={novoTopicoTitulo}
+                    onChange={e => setNovoTopicoTitulo(e.target.value)}
+                    placeholder="Nome do novo tópico (ex: Manejo de Sepse)"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
+                  />
+                )}
+
+                {topicoSelecionadoModo === '__auto__' && (
+                  analiseTextoColado?.topicos && analiseTextoColado.topicos.length > 0 ? (
+                    <div className="p-2 rounded-xl bg-indigo-50/90 border border-indigo-200/80 text-[11px] font-bold text-indigo-900 flex items-center gap-1.5 shadow-3xs truncate">
+                      <BookOpen className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <span className="truncate">
+                        Tópico detectado: <strong className="text-indigo-700">{analiseTextoColado.topicos[0]}</strong>
+                        {analiseTextoColado.topicos.length > 1 && ` (+${analiseTextoColado.topicos.length - 1})`}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-[10.5px] text-slate-500 font-medium flex items-center gap-1 pt-0.5">
+                      <span>📌</span>
+                      <span>Agrupa os cartões pelo nome da aula ("topico" no JSON)</span>
+                    </p>
+                  )
+                )}
+              </div>
+            ) : (
+              <div>
+                <input
+                  type="text"
+                  value={novoTopicoTitulo}
+                  onChange={e => setNovoTopicoTitulo(e.target.value)}
+                  placeholder="Nome do Tópico inicial (ex: Manejo de Sepse)"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs bg-white font-medium focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Formulário Inline se for Novo Eixo */}
+        {eixoDestinoId === '__novo_eixo__' && (
+          <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-2 mt-2 relative z-10">
+            <span className="text-[11px] font-black text-amber-900 flex items-center gap-1.5">
+              <Plus className="w-3.5 h-3.5 text-amber-600" />
+              Configurar Novo Eixo Clínico:
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-bold text-slate-600 block mb-1">
+                  Título do Novo Eixo:
+                </label>
+                <input
+                  type="text"
+                  value={novoEixoTitulo}
+                  onChange={e => setNovoEixoTitulo(e.target.value)}
+                  placeholder="Ex: Infectologia & Antimicrobianos"
+                  className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs bg-white font-medium focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-600 block mb-1">
+                  Especialidade Médica:
+                </label>
+                <select
+                  value={novoEixoEspecialidade}
+                  onChange={e => setNovoEixoEspecialidade(e.target.value as EspecialidadeMedica)}
+                  className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs bg-white font-semibold focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
+                >
+                  {TODAS_ESPECIALIDADES_MEDICAS.map(esp => (
+                    <option key={esp} value={esp}>{esp}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
@@ -929,129 +1356,14 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
         <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
           {tabAtiva === 'importar' ? (
             <div className="space-y-3.5">
-              
-              {/* Seletor de Destino dos Flashcards */}
-              <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/70 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5 text-blue-600" />
-                    Destino dos Flashcards
-                  </span>
-                  <span className="text-[10.5px] text-slate-400 font-medium">
-                    Organização automática
-                  </span>
-                </div>
-
-                {/* Seleção do Eixo */}
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                    Eixo Clínico:
-                  </label>
-                  <select
-                    value={eixoDestinoId}
-                    onChange={e => setEixoDestinoId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 bg-white"
-                  >
-                    {eixos.map(ex => (
-                      <option key={ex.id} value={ex.id}>
-                        {ex.titulo} ({ex.especialidade})
-                      </option>
-                    ))}
-                    <option value="__novo_eixo__">➕ Criar Novo Eixo Clínico...</option>
-                  </select>
-                </div>
-
-                {/* Se for Novo Eixo: Título + Especialidade */}
-                {eixoDestinoId === '__novo_eixo__' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-200/60">
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-600 block mb-1">
-                        Título do Novo Eixo:
-                      </label>
-                      <input
-                        type="text"
-                        value={novoEixoTitulo}
-                        onChange={e => setNovoEixoTitulo(e.target.value)}
-                        placeholder="Ex: Infectologia & Antimicrobianos"
-                        className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-600 block mb-1">
-                        Especialidade Médica:
-                      </label>
-                      <select
-                        value={novoEixoEspecialidade}
-                        onChange={e => setNovoEixoEspecialidade(e.target.value as EspecialidadeMedica)}
-                        className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
-                      >
-                        {TODAS_ESPECIALIDADES_MEDICAS.map(esp => (
-                          <option key={esp} value={esp}>
-                            {esp}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                {/* Seleção do Tópico / Aula */}
-                <div className="pt-1">
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1 flex items-center justify-between">
-                    <span>Tópico / Aula:</span>
-                    <span className="text-[10px] text-slate-400 font-normal">
-                      (Agrupamento temático)
-                    </span>
-                  </label>
-
-                  {eixoDestinoId !== '__novo_eixo__' ? (
-                    <div className="space-y-2">
-                      <select
-                        value={topicoSelecionadoModo}
-                        onChange={e => setTopicoSelecionadoModo(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 bg-white"
-                      >
-                        <option value="__auto__">✨ Detectar automaticamente do JSON ou manter Geral</option>
-                        {eixos.find(e => e.id === eixoDestinoId)?.topicos?.map(top => (
-                          <option key={top.id} value={top.id}>
-                            📚 {top.titulo}
-                          </option>
-                        ))}
-                        <option value="__novo_topico__">➕ Criar Novo Tópico neste Eixo...</option>
-                      </select>
-
-                      {topicoSelecionadoModo === '__novo_topico__' && (
-                        <input
-                          type="text"
-                          value={novoTopicoTitulo}
-                          onChange={e => setNovoTopicoTitulo(e.target.value)}
-                          placeholder="Digite o nome do novo tópico (ex: Insuficiência Cardíaca Aguda)"
-                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
-                        />
-                      )}
-                    </div>
-                  ) : (
-                    <div>
-                      <input
-                        type="text"
-                        value={novoTopicoTitulo}
-                        onChange={e => setNovoTopicoTitulo(e.target.value)}
-                        placeholder="Nome do Tópico inicial (ex: Manejo de Sepse)"
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-
               {/* Alternador de Modo: Colar do Gemini vs Arquivo */}
               <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-2xl">
                 <button
                   type="button"
                   onClick={() => setModoImportacao('texto')}
-                  className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                     modoImportacao === 'texto'
-                      ? 'bg-white text-blue-700 shadow-2xs'
+                      ? 'bg-white text-blue-700 shadow-2xs font-black'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
@@ -1061,9 +1373,9 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setModoImportacao('arquivo')}
-                  className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                     modoImportacao === 'arquivo'
-                      ? 'bg-white text-slate-900 shadow-2xs'
+                      ? 'bg-white text-slate-900 shadow-2xs font-black'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
@@ -1073,7 +1385,9 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
               </div>
 
               {modoImportacao === 'arquivo' ? (
-                <>
+                <div className="space-y-3.5">
+                  {/* Seletor de Destino dos Flashcards Repaginado */}
+                  {renderDestinoFlashcards()}
                   <div
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -1104,9 +1418,9 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                     accept=".apkg,.colpkg,.zip,.json,.txt,.tsv,.csv"
                     className="hidden"
                   />
-                </>
+                </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3.5">
                   {/* Card Executivo do Prompt Mestre com Seletor de Foco Institucional */}
                   <div className="p-4 sm:p-5 bg-gradient-to-b from-slate-50 to-slate-100/70 border border-slate-200/90 rounded-3xl space-y-4 shadow-xs">
                     
@@ -1254,6 +1568,9 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                       )}
                     </div>
                   </div>
+
+                  {/* Seletor de Destino dos Flashcards Repaginado posicionado logo abaixo do Prompt Mestre */}
+                  {renderDestinoFlashcards()}
 
                   {/* Textarea do JSON Espaçosa e Clean */}
                   <div className="space-y-1.5">
@@ -1458,17 +1775,52 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                     </div>
                   )}
 
-                  {/* Botão de Confirmação */}
+                  {/* Destino Confirmado Ribbon (Confirmação Dinâmica e Clara para evitar importação no eixo errado) */}
+                  {analiseTextoColado && analiseTextoColado.valido && (
+                    <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-md shadow-blue-600/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center font-bold text-white shrink-0 border border-white/20">
+                          <CheckCircle2 className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-blue-200">
+                              Destino Confirmado
+                            </span>
+                            <span className="text-[9.5px] font-black px-1.5 py-0.2 rounded bg-white/20 text-white">
+                              {destinoCalculado.eixoOrigemTexto === 'auto' ? '✨ Auto-identificado' : '🎯 Selecionado'}
+                            </span>
+                          </div>
+                          <p className="text-xs sm:text-sm font-black text-white truncate mt-0.5">
+                            <span>{destinoCalculado.eixoFinalNome}</span>
+                            <span className="text-blue-200 font-normal mx-1.5">➔</span>
+                            <span className="text-blue-100 font-extrabold">{destinoCalculado.topicoFinalNome}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between sm:justify-end gap-2 text-right shrink-0 border-t sm:border-t-0 border-white/10 pt-2 sm:pt-0">
+                        <div>
+                          <span className="text-xs font-black text-white block">
+                            {idsSelecionados.size} de {cardsPrevia.length} cards
+                          </span>
+                          <span className="text-[10px] text-blue-200 font-medium">prontos para salvar</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Botão de Confirmação com Destino em Destaque */}
                   <button
                     type="button"
                     onClick={handleProcessarTextoColado}
                     disabled={processando || !textoColado.trim() || (cardsPrevia.length > 0 && idsSelecionados.size === 0)}
-                    className="w-full py-2.5 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:opacity-50 text-white font-extrabold text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:opacity-50 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-600/25 transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
                     <Sparkles className="w-4 h-4" />
                     <span>
                       {cardsPrevia.length > 0 && idsSelecionados.size > 0
-                        ? `Adicionar ${idsSelecionados.size} Flashcard${idsSelecionados.size > 1 ? 's' : ''} ao MedCards`
+                        ? `Salvar ${idsSelecionados.size} Flashcard${idsSelecionados.size > 1 ? 's' : ''} em "${destinoCalculado.eixoFinalNome}"`
                         : 'Adicionar Flashcards ao MedCards'}
                     </span>
                   </button>
@@ -1551,8 +1903,8 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                       Escolha o Eixo Clínico:
                     </label>
                     <select
-                      value={eixoDestinoId}
-                      onChange={e => setEixoDestinoId(e.target.value)}
+                      value={eixoExportarId}
+                      onChange={e => setEixoExportarId(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 bg-white"
                     >
                       {eixos.map(ex => (
