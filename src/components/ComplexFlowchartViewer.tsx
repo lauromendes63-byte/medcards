@@ -46,6 +46,58 @@ import {
   setStoredFlowchartTheme 
 } from '../utils/flowchartCurves';
 
+// Paleta cromática médica rica para distinguir os caminhos e ramificações na Trilha
+export const CORES_PALETA_RAMOS = [
+  {
+    corKey: 'emerald',
+    badge: 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30',
+    headerBg: 'bg-gradient-to-r from-emerald-500/15 via-emerald-500/5 to-transparent',
+    headerBorder: 'border-emerald-400/50 dark:border-emerald-600/50',
+    dot: 'bg-emerald-500',
+    pillAtivo: 'bg-emerald-600 text-white ring-2 ring-emerald-400/60 shadow-xs border-emerald-600',
+    pillInativo: 'border-emerald-400/40 hover:bg-emerald-50/60 dark:hover:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200',
+    cardBorder: 'border-emerald-400/60 dark:border-emerald-700',
+    lineColor: '#10b981',
+  },
+  {
+    corKey: 'sky',
+    badge: 'bg-sky-500/15 text-sky-800 dark:text-sky-300 border border-sky-500/30',
+    headerBg: 'bg-gradient-to-r from-sky-500/15 via-sky-500/5 to-transparent',
+    headerBorder: 'border-sky-400/50 dark:border-sky-600/50',
+    dot: 'bg-sky-500',
+    pillAtivo: 'bg-sky-600 text-white ring-2 ring-sky-400/60 shadow-xs border-sky-600',
+    pillInativo: 'border-sky-400/40 hover:bg-sky-50/60 dark:hover:bg-sky-950/40 text-sky-900 dark:text-sky-200',
+    cardBorder: 'border-sky-400/60 dark:border-sky-700',
+    lineColor: '#0284c7',
+  },
+  {
+    corKey: 'amber',
+    badge: 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30',
+    headerBg: 'bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent',
+    headerBorder: 'border-amber-400/50 dark:border-amber-600/50',
+    dot: 'bg-amber-500',
+    pillAtivo: 'bg-amber-600 text-white ring-2 ring-amber-400/60 shadow-xs border-amber-600',
+    pillInativo: 'border-amber-400/40 hover:bg-amber-50/60 dark:hover:bg-amber-950/40 text-amber-900 dark:text-amber-200',
+    cardBorder: 'border-amber-400/60 dark:border-amber-700',
+    lineColor: '#d97706',
+  },
+  {
+    corKey: 'purple',
+    badge: 'bg-purple-500/15 text-purple-800 dark:text-purple-300 border border-purple-500/30',
+    headerBg: 'bg-gradient-to-r from-purple-500/15 via-purple-500/5 to-transparent',
+    headerBorder: 'border-purple-400/50 dark:border-purple-600/50',
+    dot: 'bg-purple-500',
+    pillAtivo: 'bg-purple-600 text-white ring-2 ring-purple-400/60 shadow-xs border-purple-600',
+    pillInativo: 'border-purple-400/40 hover:bg-purple-50/60 dark:hover:bg-purple-950/40 text-purple-900 dark:text-purple-200',
+    cardBorder: 'border-purple-400/60 dark:border-purple-700',
+    lineColor: '#9333ea',
+  },
+];
+
+export const obterEstiloRamo = (idx: number) => {
+  return CORES_PALETA_RAMOS[idx % CORES_PALETA_RAMOS.length];
+};
+
 interface ComplexFlowchartViewerProps {
   fluxograma: FluxogramaComplexoDados;
   onRegistrarConclusao?: () => void;
@@ -123,6 +175,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
   const [arrastandoCanvas, setArrastandoCanvas] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const trilhaScrollRef = useRef<HTMLDivElement>(null);
 
   // Refs síncronas para handlers de alta frequência (evitam closure desatualizado)
   const zoomRef = useRef(zoom);
@@ -295,7 +348,62 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
     setMenuMaisAcoesAberto(false);
     concluiuRef.current = false;
     jaCentralizouInicialmente.current = false;
+    if (trilhaScrollRef.current) {
+      trilhaScrollRef.current.scrollTop = 0;
+    }
   }, [fluxograma?.id, fluxograma?.noInicialId]);
+
+  // Redefinir topo da rolagem ao alternar para o modo Trilha
+  useEffect(() => {
+    if (modoExibicao === 'lista' && trilhaScrollRef.current) {
+      trilhaScrollRef.current.scrollTop = 0;
+    }
+  }, [modoExibicao]);
+
+  // Listener ativo para garantir que gestos de deslizar (swipe/scroll) no mobile funcionem sem qualquer congelamento
+  useEffect(() => {
+    if (modoExibicao !== 'lista') return;
+    const el = trilhaScrollRef.current;
+    if (!el) return;
+
+    let touchStartY = 0;
+    let touchStartScrollTop = 0;
+    let isTrackingTouch = false;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        touchStartY = e.touches[0].clientY;
+        touchStartScrollTop = el.scrollTop;
+        isTrackingTouch = true;
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isTrackingTouch || e.touches.length !== 1) return;
+      const currentY = e.touches[0].clientY;
+      const deltaY = touchStartY - currentY;
+      // Garante que o scroll do elemento acompanhe o dedo mesmo em webviews ou aparelhos onde o compositor bloqueia
+      if (Math.abs(deltaY) > 2) {
+        el.scrollTop = touchStartScrollTop + deltaY;
+      }
+    };
+
+    const onTouchEnd = () => {
+      isTrackingTouch = false;
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: true });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    el.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [modoExibicao]);
 
   // Trilha ativa de decisões médicas (Pathfinder breadcrumb)
   const trilhaDecisao = useMemo(() => {
@@ -1149,12 +1257,13 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
       {/* =================================================================== */}
       {modoExibicao === 'lista' ? (
         <div 
-          className={`flex-1 w-full min-h-0 overflow-y-auto overscroll-y-contain px-2.5 sm:px-4 py-2 space-y-4 pb-48 select-text ${
+          ref={trilhaScrollRef}
+          className={`flex-1 w-full min-h-0 overflow-y-scroll px-2.5 sm:px-4 pt-3.5 pb-36 space-y-4 select-text ${
             currentTheme.id === 'light'
-              ? 'bg-slate-50/70 border-slate-200 text-slate-900'
+              ? 'bg-slate-50/70 text-slate-900'
               : currentTheme.id === 'blueprint'
-              ? 'bg-sky-950/40 border-sky-900 text-sky-100'
-              : 'bg-slate-900/60 border-slate-800 text-slate-100'
+              ? 'bg-sky-950/40 text-sky-100'
+              : 'bg-slate-900/60 text-slate-100'
           }`}
           style={{
             WebkitOverflowScrolling: 'touch',
@@ -1174,8 +1283,8 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
               const corRamo = ramoEntrada?.cor ? (CORES_RAMO.find(c => c.id === ramoEntrada.cor)?.hex || '#10b981') : '#10b981';
 
               return (
-                <div key={no.id} className="w-full flex flex-col items-center">
-                  {/* Seta e Rótulo da Condição que chega neste nó */}
+                <div key={no.id} className="w-full flex flex-col items-center" style={{ touchAction: 'pan-y' }}>
+                  {/* Seta e Rótulo da Condição que chega neste nó (apenas se for relevante e não duplicado) */}
                   {ramoEntrada && (
                     <div className="flex flex-col items-center my-1.5 w-full max-w-md pointer-events-none">
                       <div className="w-0.5 h-3" style={{ backgroundColor: corRamo }} />
@@ -1193,7 +1302,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                     </div>
                   )}
 
-                  {/* Cartão Clínico */}
+                  {/* Cartão Clínico Interativo com touch-pan-y explícito */}
                   <div
                     onClick={() => {
                       if (!isRevelado) {
@@ -1203,7 +1312,8 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                         setMostrarGavetaDetalhes(true);
                       }
                     }}
-                    className={`w-full max-w-lg mx-auto p-3.5 sm:p-4 rounded-2xl border-2 transition-all cursor-pointer shadow-xs ${
+                    style={{ touchAction: 'pan-y' }}
+                    className={`w-full max-w-lg mx-auto p-3.5 sm:p-4 rounded-2xl border-2 transition-colors cursor-pointer shadow-xs ${
                       !isRevelado
                         ? `${currentTheme.hiddenCardBgClass} border-dashed ${currentTheme.hiddenCardBorderClass} shadow-md hover:border-amber-400`
                         : `${currentTheme.cardBgClass} ${
@@ -1253,7 +1363,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                             e.stopPropagation();
                             handleRevelarNo(no.id);
                           }}
-                          className={`px-3 py-1 rounded-lg ${currentTheme.hiddenCardButtonClass} font-black text-xs shadow-sm cursor-pointer active:scale-95`}
+                          className={`px-3 py-1.5 rounded-lg ${currentTheme.hiddenCardButtonClass} font-black text-xs shadow-sm cursor-pointer`}
                         >
                           Toque para Revelar
                         </button>
@@ -1296,89 +1406,138 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                 {/* 1. Nó Raiz (Bloco Originário) */}
                 {raiz && renderCardTrilha(raiz, undefined, true)}
 
-                {/* 2. Divisor de Ramificações / Seletor de Caminhos */}
+                {/* 2. Divisor de Ramificações / Seletor de Caminhos Elegante */}
                 {temRamificacoes && (
-                  <div className="w-full flex flex-col items-center my-2 space-y-2">
+                  <div className="w-full flex flex-col items-center my-3 space-y-2.5">
+                    {/* Indicador de Bifurcação */}
                     <div className="flex flex-col items-center pointer-events-none">
-                      <div className="w-0.5 h-3 bg-emerald-500/50" />
+                      <div className="w-0.5 h-3.5 bg-emerald-500/60" />
                       <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100/90 dark:bg-emerald-950/90 border border-emerald-300 dark:border-emerald-700 text-[10.5px] font-bold text-emerald-900 dark:text-emerald-300 shadow-2xs">
                         <GitFork className="w-3.5 h-3.5 rotate-180 text-emerald-600 dark:text-emerald-400" />
-                        <span>Bifurcação: {arvoreTrilha.caminhos.length} caminhos clínicos</span>
+                        <span>Bifurcação Clínica: {arvoreTrilha.caminhos.length} caminhos</span>
                       </div>
-                      <div className="w-0.5 h-3 bg-emerald-500/50" />
+                      <div className="w-0.5 h-3.5 bg-emerald-500/60" />
                     </div>
 
-                    {/* Tabs / Pílulas de Filtro de Caminho */}
-                    <div className="flex items-center justify-center gap-1.5 flex-wrap px-2">
+                    {/* Barra de Filtro de Ramos: 1 linha limpa com rolagem horizontal suave no celular */}
+                    <div className="w-full max-w-2xl px-1 overflow-x-auto no-scrollbar flex items-center justify-start sm:justify-center gap-1.5 touch-pan-x py-1">
                       <button
                         type="button"
                         onClick={() => setFiltroRamoId('todos')}
-                        className={`px-3 py-1 rounded-xl text-[10.5px] font-bold transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
                           filtroRamoId === 'todos'
-                            ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-400/40'
-                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                            ? 'bg-slate-900 text-white shadow-sm ring-2 ring-emerald-500/60 dark:bg-emerald-600 border-transparent'
+                            : 'bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                         }`}
                       >
-                        Todos os Caminhos ({arvoreTrilha.caminhos.length})
+                        <GitFork className="w-3.5 h-3.5" />
+                        <span>Todos os Ramos ({arvoreTrilha.caminhos.length})</span>
                       </button>
 
-                      {arvoreTrilha.caminhos.map((c, idx) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => setFiltroRamoId(c.id)}
-                          className={`px-3 py-1 rounded-xl text-[10.5px] font-bold transition-all cursor-pointer truncate max-w-[200px] ${
-                            filtroRamoId === c.id
-                              ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-400/40'
-                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-                          }`}
-                        >
-                          Caminho {idx + 1}: {c.rotulo}
-                        </button>
-                      ))}
+                      {arvoreTrilha.caminhos.map((c, idx) => {
+                        const estilo = obterEstiloRamo(idx);
+                        const isAtivo = filtroRamoId === c.id;
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => setFiltroRamoId(c.id)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
+                              isAtivo
+                                ? `${estilo.pillAtivo}`
+                                : `bg-white/90 dark:bg-slate-800/90 ${estilo.pillInativo}`
+                            }`}
+                          >
+                            <span className={`w-2 h-2 rounded-full ${estilo.dot}`} />
+                            <span className="truncate max-w-[210px]">Ramo {idx + 1}: {c.rotulo}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
-                {/* 3. Renderização dos Caminhos / Ramificações */}
+                {/* 3. Renderização dos Caminhos / Ramificações Embelezadas */}
                 {temRamificacoes && filtroRamoId === 'todos' ? (
-                  /* Modo Grid / Colunas Paralelas para Desktop e Bloco Separado para Mobile */
-                  <div className={`w-full grid grid-cols-1 ${arvoreTrilha.caminhos.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'} gap-4 items-start`}>
-                    {caminhosFiltrados.map((caminho, cIdx) => (
-                      <div 
-                        key={caminho.id} 
-                        className="flex flex-col items-center w-full space-y-3 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-800/40 shadow-xs"
-                      >
-                        <div className="w-full text-center pb-2 border-b border-slate-200/80 dark:border-slate-700/80">
-                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
-                            Caminho {cIdx + 1}
-                          </span>
-                          <h6 className="text-xs font-bold mt-1 text-slate-800 dark:text-slate-200 line-clamp-2">
-                            {caminho.rotulo}
-                          </h6>
-                        </div>
+                  /* Modo Grid / Colunas Paralelas para Desktop e Blocos Suaves no Celular */
+                  <div className={`w-full grid grid-cols-1 ${arvoreTrilha.caminhos.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'} gap-4 sm:gap-6 items-start`}>
+                    {caminhosFiltrados.map((caminho, cIdx) => {
+                      const estilo = obterEstiloRamo(cIdx);
+                      return (
+                        <div 
+                          key={caminho.id} 
+                          className={`flex flex-col items-center w-full space-y-3 p-3 sm:p-3.5 rounded-2xl border ${estilo.headerBorder} bg-white/75 dark:bg-slate-800/60 shadow-xs backdrop-blur-xs`}
+                        >
+                          {/* Cabeçalho Embelezado do Ramo */}
+                          <div className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border ${estilo.headerBorder} ${estilo.headerBg} shadow-3xs`}>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${estilo.badge}`}>
+                                Ramo {cIdx + 1}
+                              </span>
+                              <h6 className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate">
+                                {caminho.rotulo}
+                              </h6>
+                            </div>
+                            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 shrink-0">
+                              {caminho.passos.length} {caminho.passos.length === 1 ? 'passo' : 'passos'}
+                            </span>
+                          </div>
 
-                        {caminho.passos.map((p, pIdx) => renderCardTrilha(p.no, p.ramoEntrada, false, pIdx + 2))}
-                      </div>
-                    ))}
+                          {/* Passos Clínicos do Ramo (sem repetição de rótulo no passo 1) */}
+                          {caminho.passos.map((p, pIdx) => (
+                            <React.Fragment key={p.no.id}>
+                              {renderCardTrilha(
+                                p.no, 
+                                pIdx === 0 && p.ramoEntrada?.rotulo === caminho.rotulo ? undefined : p.ramoEntrada, 
+                                false, 
+                                pIdx + 2
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : temRamificacoes ? (
                   /* Modo Foco em 1 Único Caminho Selecionado */
                   <div className="w-full max-w-lg space-y-3">
-                    <div className="flex items-center justify-between p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-xs">
-                      <span className="font-bold text-emerald-900 dark:text-emerald-200 truncate">
-                        Visualizando: {caminhosFiltrados[0]?.rotulo}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setFiltroRamoId('todos')}
-                        className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 hover:underline shrink-0 cursor-pointer"
-                      >
-                        Ver todos
-                      </button>
-                    </div>
+                    {(() => {
+                      const caminhoAtivo = caminhosFiltrados[0];
+                      const cIdx = arvoreTrilha.caminhos.findIndex(c => c.id === caminhoAtivo?.id);
+                      const estilo = obterEstiloRamo(cIdx >= 0 ? cIdx : 0);
+                      return (
+                        <>
+                          <div className={`flex items-center justify-between p-2.5 rounded-xl border ${estilo.headerBorder} ${estilo.headerBg} text-xs shadow-2xs`}>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${estilo.badge}`}>
+                                Ramo {cIdx + 1}
+                              </span>
+                              <span className="font-bold text-slate-800 dark:text-slate-100 truncate">
+                                {caminhoAtivo?.rotulo}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setFiltroRamoId('todos')}
+                              className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline shrink-0 cursor-pointer ml-2"
+                            >
+                              Ver todos os ramos
+                            </button>
+                          </div>
 
-                    {caminhosFiltrados[0]?.passos.map((p, pIdx) => renderCardTrilha(p.no, p.ramoEntrada, false, pIdx + 2))}
+                          {caminhoAtivo?.passos.map((p, pIdx) => (
+                            <React.Fragment key={p.no.id}>
+                              {renderCardTrilha(
+                                p.no, 
+                                pIdx === 0 && p.ramoEntrada?.rotulo === caminhoAtivo.rotulo ? undefined : p.ramoEntrada, 
+                                false, 
+                                pIdx + 2
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </>
+                      );
+                    })()}
                   </div>
                 ) : (
                   /* Caminho Linear Simples (Sem Bifurcação) */
@@ -1808,21 +1967,21 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
       {/* BARRA DE AVALIAÇÃO FSRS: SOMENTE APÓS EXPLORAR/REVELAR TODO O FLUXO */}
       {/* =================================================================== */}
       {onAvaliarRevisao && todosCompletos && (
-        <div className={`w-full max-w-4xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl border shadow-xl backdrop-blur-md shrink-0 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 z-20 transition-all mt-1.5 ${
+        <div className={`w-full max-w-4xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border shadow-xl backdrop-blur-md shrink-0 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-1.5 sm:gap-2.5 z-20 transition-all mt-1 ${
           currentTheme.id === 'light'
             ? 'bg-white/95 border-slate-200 text-slate-900 shadow-slate-300/40'
             : currentTheme.id === 'blueprint'
             ? 'bg-sky-950/95 border-sky-800 text-sky-100 shadow-sky-950/80'
             : 'bg-slate-900/95 border-slate-800 text-slate-100 shadow-black/60'
         }`}>
-          {/* Lado Esquerdo: Nota Clínica de Alto Contraste (Substituindo Pérola Clínica) */}
-          <div className="flex-1 min-w-0 w-full">
+          {/* Lado Esquerdo: Apenas no Desktop (no mobile o Desafio já está visível no topo, economizando 120px de tela) */}
+          <div className="hidden md:block flex-1 min-w-0 w-full">
             {exibirDicas && perolaClinica ? (
-              <div className="flex items-start gap-2.5 p-2.5 sm:px-3 sm:py-2.5 rounded-xl bg-amber-100/95 border-2 border-amber-300/95 text-slate-950 text-xs sm:text-[12.5px] leading-relaxed font-medium shadow-2xs">
+              <div className="flex items-start gap-2.5 p-2 sm:px-3 sm:py-2 rounded-xl bg-amber-100/95 border-2 border-amber-300/95 text-slate-950 text-xs sm:text-[12.5px] leading-relaxed font-medium shadow-2xs">
                 <Lightbulb className="w-4 h-4 shrink-0 text-amber-700 mt-0.5" />
                 <div className="flex-1 min-w-0 whitespace-normal break-words">
                   <span className="font-black uppercase text-[10px] tracking-wider text-amber-900 block mb-0.5">
-                    Dica:
+                    Dica Clínica:
                   </span>
                   <span className="text-slate-900 font-semibold leading-relaxed">
                     {perolaClinica}
@@ -1830,13 +1989,13 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                 </div>
               </div>
             ) : perguntaGatilho ? (
-              <div className="flex items-start gap-2 p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-[11px] sm:text-xs leading-relaxed font-medium">
-                <HelpCircle className="w-4 h-4 shrink-0 text-blue-500 mt-0.5" />
+              <div className="flex items-start gap-2 p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-[11px] leading-relaxed font-medium">
+                <HelpCircle className="w-3.5 h-3.5 shrink-0 text-blue-500 mt-0.5" />
                 <div className="flex-1 min-w-0 whitespace-normal break-words text-slate-800 dark:text-slate-200">
-                  <span className="font-black uppercase text-[9.5px] tracking-wider text-blue-600 dark:text-blue-400 block mb-0.5">
+                  <span className="font-black uppercase text-[9px] tracking-wider text-blue-600 dark:text-blue-400 block mb-0.5">
                     Pergunta Gatilho:
                   </span>
-                  {perguntaGatilho}
+                  <span className="line-clamp-2">{perguntaGatilho}</span>
                 </div>
               </div>
             ) : (
@@ -1848,7 +2007,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
             )}
           </div>
 
-          {/* Lado Direito: Os 4 Botões FSRS de Fixação com Timers Configuráveis */}
+          {/* Lado Direito: Os 4 Botões FSRS de Fixação (Compactos e Ergonômicos no Celular) */}
           <div className="grid grid-cols-4 gap-1.5 sm:gap-2 w-full md:w-auto shrink-0">
             <button
               type="button"

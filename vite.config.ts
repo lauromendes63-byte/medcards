@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.4.0',
+        version: '2.4.1',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: 'MedCards v2.4.0: Modo Trilha com ramificações estruturadas (bifurcações clínicas em colunas e seletor de caminhos), scroll suave 100% nativo no mobile sem travas, e barra superior ultra-despoluída e compacta para celular'
+        releaseNotes: 'MedCards v2.4.1: Correção definitiva de deslize e rolagem no Modo Trilha (touch dragging nativo + fallback de swipe no mobile), embelezamento das bifurcações com paleta cromática clínica e seletor deslizável em 1 linha, e barra FSRS compacta no celular (+120px de área livre)'
       };
       this.emitFile({
         type: 'asset',
