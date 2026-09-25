@@ -580,11 +580,11 @@ export const ComplexFlowchartBuilder: React.FC<ComplexFlowchartBuilderProps> = (
   const handleOrganizarArvoreAuto = () => {
     const rootId = dados.noInicialId || dados.nos[0]?.id || '';
     const nosOrganizados = calcularLayoutHierarquicoFluxograma(dados.nos, rootId, {
-      cardWidth: 250,
-      cardHeight: 120,
-      rankSep: 130,
-      nodeSep: 110,
-      startX: 500,
+      cardWidth: 260,
+      cardHeight: 160,
+      rankSep: 110,
+      nodeSep: 100,
+      startX: 520,
       startY: 50,
     });
     onChange({
@@ -1508,8 +1508,8 @@ Retorne APENAS um objeto JSON no formato:
                       oy,
                       dx,
                       dy,
-                      240,
-                      125,
+                      260,
+                      160,
                       ramoIdx,
                       origem.ramos.length,
                       entradaIdx >= 0 ? entradaIdx : 0,
@@ -1598,7 +1598,8 @@ Retorne APENAS um objeto JSON no formato:
                     style={{
                       left: `${no.posicaoX ?? 50}px`,
                       top: `${no.posicaoY ?? 50}px`,
-                      width: '240px',
+                      width: '260px',
+                      minHeight: '145px',
                     }}
                     className={`absolute p-3 rounded-xl ${currentTheme.cardBgClass} border-2 transition-shadow ${currentTheme.cardShadowClass} cursor-grab active:cursor-grabbing select-none ${
                       isInicial ? 'ring-2 ring-amber-400 shadow-amber-500/20' : ''

@@ -214,7 +214,13 @@ GRANDE TUTORIAL DOS FORMATOS DO MEDCARDS:
    - Estrutura: "tipoCard": "conceito", "titulo", "topico", "especialidade", "perguntaGatilho", "resposta", "dica" (ou "perolaClinica").
 
 2. FLUXOGRAMA COMPLEXO / ÁRVORE DE DECISÃO RAMIFICADA (tipoCard: "fluxograma_complexo"):
-   - ⚠️ ATENÇÃO MANDATÓRIA: Um fluxograma complexo DEVE conter OBRIGATORIAMENTE um CENÁRIO CLÍNICO / PERGUNTA GATILHO ("perguntaGatilho") que orienta o estudante pelo dilema do paciente! Sem pergunta, o aluno não sabe o que o algoritmo está decidindo.
+   - ⚠️ ATENÇÃO MANDATÓRIA AO "perguntaGatilho": 
+     • ❌ PROIBIDO USAR COMANDOS META-ROBÓTICOS PROLIXOS como: "Reconstrua o algoritmo de decisão propedêutica...", "Navegue pelo algoritmo...", "Complete os passos do fluxograma...", "Percorra a árvore...". Isso NÃO é uma pergunta e polui a interface!
+     • ✅ OBRIGATÓRIO FORMULAR UMA PERGUNTA CLÍNICA DIRETA, CONCISA E DESAFIADORA (1 a 2 frases no máximo), como um médico preceptor perguntando no plantão:
+       Exemplos excelentes:
+       - "Suspeita de Osteomielite no PS: qual o exame inicial e qual a conduta se o RX for normal?"
+       - "Dor torácica com Supra de ST no ECG: qual a conduta imediata e o tempo-limite para angioplastia primária vs trombólise?"
+       - "Cetoacidose Diabética: qual o valor de corte do K+ sérico para autorizar o início da insulinoterapia?"
    - Cada nó deve ter seu tipo ("inicio" | "decisao" | "alerta" | "conduta" | "diagnostico"), "oculto": true (exceto o inicial), e uma "dica" curta que dá a pista para deduzir a conduta daquela etapa.
    - Os ramos ("ramos") DEVEM conter o "rotulo" da condição clínica de transição (ex: "Se Wells > 4 (Alta probabilidade)", "Se D-Dímero normal (< 500 ng/mL)", "Se instabilidade hemodinâmica") e a "cor": "verde"|"vermelho"|"azul"|"amber"|"roxo".
    - Estrutura do objeto: "tipoCard": "fluxograma_complexo", "titulo", "topico", "especialidade", "perguntaGatilho", com "fluxogramaComplexo" contendo "noInicialId", "nos" (com "id", "titulo", "descricao", "tipo", "oculto", "dica", "ramos").
@@ -258,7 +264,7 @@ ESTRUTURA JSON EXATA (Retorne APENAS o JSON válido sem nenhum texto explicativo
     "topico": "Síndrome Coronariana Aguda",
     "titulo": "Algoritmo de Decisão de Reperfusão no IAM com Supra de ST",
     "especialidade": "Cardiologia",
-    "perguntaGatilho": "Paciente com dor torácica típica e Supra de ST no ECG: percorra o algoritmo de decisão de reperfusão imediata, delta-T até angioplastia primária versus fibrinólise química e critérios de resgate.",
+    "perguntaGatilho": "Dor torácica com Supra de ST no ECG: qual a conduta imediata e o tempo-limite para angioplastia primária vs trombólise química?",
     "fluxogramaComplexo": {
       "id": "fluxo-iamcsst",
       "titulo": "Algoritmo de Reperfusão no IAMCSST",

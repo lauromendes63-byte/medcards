@@ -153,8 +153,8 @@ export function calcularConexaoDinamica(
   let midY = 0;
 
   // Parâmetro t e offset perpendicular para evitar sobreposição de rótulos/pílulas de texto
-  const tLabel = totalRamos > 1 ? 0.35 + 0.30 * (ramoIndex / (totalRamos - 1)) : 0.5;
-  const labelShiftOffset = totalRamos > 1 ? (ramoIndex - (totalRamos - 1) / 2) * 14 : 0;
+  const tLabel = 0.5;
+  const labelShiftOffset = totalRamos > 1 ? (ramoIndex - (totalRamos - 1) / 2) * 12 : 0;
 
   if (saida.dir === 'RIGHT' && entrada.dir === 'LEFT') {
     const hDist = endX - x1;
@@ -166,9 +166,8 @@ export function calcularConexaoDinamica(
       const c2y = endY;
       pathData = `M ${Math.round(x1)} ${Math.round(y1)} C ${Math.round(c1x)} ${Math.round(c1y)}, ${Math.round(c2x)} ${Math.round(c2y)}, ${Math.round(endX)} ${Math.round(endY)}`;
       
-      const invT = 1 - tLabel;
-      midX = Math.round(invT * invT * invT * x1 + 3 * invT * invT * tLabel * c1x + 3 * invT * tLabel * tLabel * c2x + tLabel * tLabel * tLabel * endX);
-      midY = Math.round(invT * invT * invT * y1 + 3 * invT * invT * tLabel * c1y + 3 * invT * tLabel * tLabel * c2y + tLabel * tLabel * tLabel * endY) + labelShiftOffset;
+      midX = Math.round((x1 + endX) / 2);
+      midY = Math.round((y1 + endY) / 2) + labelShiftOffset;
     } else {
       const escapeY = cy2 >= cy1 
         ? Math.max(oy + alturaCard, dy + alturaCard) + OFFSET + Math.abs(labelShiftOffset)
@@ -189,9 +188,8 @@ export function calcularConexaoDinamica(
       const c2y = endY;
       pathData = `M ${Math.round(x1)} ${Math.round(y1)} C ${Math.round(c1x)} ${Math.round(c1y)}, ${Math.round(c2x)} ${Math.round(c2y)}, ${Math.round(endX)} ${Math.round(endY)}`;
       
-      const invT = 1 - tLabel;
-      midX = Math.round(invT * invT * invT * x1 + 3 * invT * invT * tLabel * c1x + 3 * invT * tLabel * tLabel * c2x + tLabel * tLabel * tLabel * endX);
-      midY = Math.round(invT * invT * invT * y1 + 3 * invT * invT * tLabel * c1y + 3 * invT * tLabel * tLabel * c2y + tLabel * tLabel * tLabel * endY) + labelShiftOffset;
+      midX = Math.round((x1 + endX) / 2);
+      midY = Math.round((y1 + endY) / 2) + labelShiftOffset;
     } else {
       const escapeY = cy2 >= cy1 
         ? Math.max(oy + alturaCard, dy + alturaCard) + OFFSET + Math.abs(labelShiftOffset)
@@ -212,16 +210,22 @@ export function calcularConexaoDinamica(
       const c2y = controlMidY;
       pathData = `M ${Math.round(x1)} ${Math.round(y1)} C ${Math.round(c1x)} ${Math.round(c1y)}, ${Math.round(c2x)} ${Math.round(c2y)}, ${Math.round(endX)} ${Math.round(endY)}`;
       
-      const invT = 1 - tLabel;
-      midX = Math.round(invT * invT * invT * x1 + 3 * invT * invT * tLabel * c1x + 3 * invT * tLabel * tLabel * c2x + tLabel * tLabel * tLabel * endX) + labelShiftOffset;
-      midY = Math.round(invT * invT * invT * y1 + 3 * invT * invT * tLabel * c1y + 3 * invT * tLabel * tLabel * c2y + tLabel * tLabel * tLabel * endY);
+      midX = Math.round((x1 + endX) / 2) + labelShiftOffset;
+      const centroVaoY = Math.round((y1 + endY) / 2);
+      const safeMinY = y1 + 22;
+      const safeMaxY = endY - 22;
+      if (safeMaxY > safeMinY) {
+        midY = Math.max(safeMinY, Math.min(safeMaxY, centroVaoY));
+      } else {
+        midY = centroVaoY;
+      }
     } else {
       const escapeX = cx2 >= cx1
         ? Math.max(ox + larguraCard, dx + larguraCard) + OFFSET + Math.abs(labelShiftOffset)
         : Math.min(ox, dx) - OFFSET - Math.abs(labelShiftOffset);
       const p1y = y1 + OFFSET;
       const p2y = endY - OFFSET;
-      pathData = `M ${Math.round(x1)} ${Math.round(y1)} C ${Math.round(x1)} ${Math.round(p1y)}, ${Math.round(escapeX)} ${Math.round(p1y)}, ${Math.round(escapeX)} ${Math.round((p1y + p2y) / 2)} C ${Math.round(escapeX)} ${Math.round(p2y)}, ${Math.round(endX)} ${Math.round(p2y)}, ${Math.round(endX)} ${Math.round(endY)}`;
+      pathData = `M ${Math.round(x1)} ${Math.round(y1)} C ${Math.round(x1)} ${Math.round(p1y)}, ${Math.round(escapeX)} ${Math.round(p1y)}, ${Math.round((p1y + p2y) / 2)} C ${Math.round(escapeX)} ${Math.round(p2y)}, ${Math.round(endX)} ${Math.round(p2y)}, ${Math.round(endX)} ${Math.round(endY)}`;
       midX = Math.round(escapeX);
       midY = Math.round((p1y + p2y) / 2) + labelShiftOffset;
     }
@@ -235,16 +239,22 @@ export function calcularConexaoDinamica(
       const c2y = controlMidY;
       pathData = `M ${Math.round(x1)} ${Math.round(y1)} C ${Math.round(c1x)} ${Math.round(c1y)}, ${Math.round(c2x)} ${Math.round(c2y)}, ${Math.round(endX)} ${Math.round(endY)}`;
       
-      const invT = 1 - tLabel;
-      midX = Math.round(invT * invT * invT * x1 + 3 * invT * invT * tLabel * c1x + 3 * invT * tLabel * tLabel * c2x + tLabel * tLabel * tLabel * endX) + labelShiftOffset;
-      midY = Math.round(invT * invT * invT * y1 + 3 * invT * invT * tLabel * c1y + 3 * invT * tLabel * tLabel * c2y + tLabel * tLabel * tLabel * endY);
+      midX = Math.round((x1 + endX) / 2) + labelShiftOffset;
+      const centroVaoY = Math.round((y1 + endY) / 2);
+      const safeMinY = endY + 22;
+      const safeMaxY = y1 - 22;
+      if (safeMaxY > safeMinY) {
+        midY = Math.max(safeMinY, Math.min(safeMaxY, centroVaoY));
+      } else {
+        midY = centroVaoY;
+      }
     } else {
       const escapeX = cx2 >= cx1
         ? Math.max(ox + larguraCard, dx + larguraCard) + OFFSET + Math.abs(labelShiftOffset)
         : Math.min(ox, dx) - OFFSET - Math.abs(labelShiftOffset);
       const p1y = y1 - OFFSET;
       const p2y = endY + OFFSET;
-      pathData = `M ${Math.round(x1)} ${Math.round(y1)} C ${Math.round(x1)} ${Math.round(p1y)}, ${Math.round(escapeX)} ${Math.round(p1y)}, ${Math.round(escapeX)} ${Math.round((p1y + p2y) / 2)} C ${Math.round(escapeX)} ${Math.round(p2y)}, ${Math.round(endX)} ${Math.round(p2y)}, ${Math.round(endX)} ${Math.round(endY)}`;
+      pathData = `M ${Math.round(x1)} ${Math.round(y1)} C ${Math.round(x1)} ${Math.round(p1y)}, ${Math.round(escapeX)} ${Math.round(p1y)}, ${Math.round((p1y + p2y) / 2)} C ${Math.round(escapeX)} ${Math.round(p2y)}, ${Math.round(endX)} ${Math.round(p2y)}, ${Math.round(endX)} ${Math.round(endY)}`;
       midX = Math.round(escapeX);
       midY = Math.round((p1y + p2y) / 2) + labelShiftOffset;
     }
@@ -326,12 +336,12 @@ export function calcularLayoutHierarquicoFluxograma(
     return [{ ...nosOriginais[0], posicaoX: options.startX ?? 550, posicaoY: options.startY ?? 60 }];
   }
 
-  const cardWidth = options.cardWidth ?? 250;
-  const cardHeight = options.cardHeight ?? 120;
-  const rankSep = options.rankSep ?? 130;
-  const nodeSep = options.nodeSep ?? 110;
-  const startX = options.startX ?? 600;
-  const startY = options.startY ?? 60;
+  const cardWidth = options.cardWidth ?? 260;
+  const cardHeight = options.cardHeight ?? 160;
+  const rankSep = options.rankSep ?? 110;
+  const nodeSep = options.nodeSep ?? 100;
+  const startX = options.startX ?? 520;
+  const startY = options.startY ?? 50;
 
   // Mapa de nós e dependências
   const noMap = new Map<string, NoFluxogramaComplexo>();

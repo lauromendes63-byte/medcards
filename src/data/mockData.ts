@@ -220,7 +220,7 @@ export const INITIAL_CARDS: CardClinico[] = [
     topicoNome: 'Trauma Ortopédico & Síndrome Compartimental',
     especialidade: 'Ortopedia e Traumatologia',
     titulo: 'Árvore de Decisão: Suspeita de Síndrome Compartimental Aguda',
-    perguntaGatilho: 'Navegue pela árvore de decisão para definir a investigação e indicação de fasciotomia descompressiva na suspeita de síndrome compartimental aguda pós-fratura:',
+    perguntaGatilho: 'Suspeita de Síndrome Compartimental pós-fratura: qual a conduta imediata com imobilizações e o valor de Delta P que indica fasciotomia de urgência?',
     resposta: 'Na suspeita de síndrome compartimental em membro: 1. Abertura completa e bivalvação imediata de qualquer gesso, atadura ou curativo constritivo e manter o membro ao nível do coração (nunca elevar). 2. Se dor desproporcional e tensão persistirem, aferir pressão intracompartimental por cateter/manômetro. 3. Se Delta P (Pressão Diastólica - Pressão Compartimental) ≤ 30 mmHg ou quadro clínico evidente: Fasciotomia descompressiva de urgência de todos os 4 compartimentos da perna. Se Delta P > 30 mmHg: Monitorização contínua e reavaliação a cada 2h.',
     perolaClinica: 'A elevação do membro na suspeita de síndrome compartimental é CONTRAINDICADA, pois reduz a pressão arterial de perfusão nos leitos capilares e agrava a isquemia tecidual profunda!',
     diretrizReferencia: 'Orthopaedic Trauma Association (OTA) & AAOS Guidelines',

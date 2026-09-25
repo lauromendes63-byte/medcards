@@ -99,42 +99,19 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
   const nosOriginais = Array.isArray(fluxograma?.nos) ? fluxograma.nos : [];
   const noInicialId = fluxograma?.noInicialId || nosOriginais[0]?.id || '';
 
-  // Alternância de layout hierárquico estruturado (Dagre/Sugiyama anti-colisão)
-  const [usarLayoutAuto, setUsarLayoutAuto] = useState(false);
-
-  // FIX #15: Collision detection O(n) com Set de chaves de coordenadas (antes era O(n²) com .slice().some())
+  // O layout estruturado anti-colisão fica SEMPRE ATIVO por padrão (sem necessidade de ativar manualmente)
   const nos = useMemo(() => {
     if (!nosOriginais || nosOriginais.length === 0) return [];
 
-    // Detecta nós sem coordenadas definidas
-    const temCoordenadaFaltando = nosOriginais.some(n => n.posicaoX === undefined || n.posicaoY === undefined);
-
-    // Detecta colisões com Set de células de grade (O(n) ao invés de O(n²))
-    const gridKeys = new Set<string>();
-    const CELL_W = 230;
-    const CELL_H = 110;
-    const temColisao = !temCoordenadaFaltando && nosOriginais.some(n => {
-      const cellX = Math.floor((n.posicaoX ?? 0) / CELL_W);
-      const cellY = Math.floor((n.posicaoY ?? 0) / CELL_H);
-      const key = `${cellX},${cellY}`;
-      if (gridKeys.has(key)) return true;
-      gridKeys.add(key);
-      return false;
+    return calcularLayoutHierarquicoFluxograma(nosOriginais, noInicialId, {
+      cardWidth: 260,
+      cardHeight: 160,
+      rankSep: 110,
+      nodeSep: 100,
+      startX: 520,
+      startY: 50,
     });
-
-    if (usarLayoutAuto || temCoordenadaFaltando || temColisao) {
-      return calcularLayoutHierarquicoFluxograma(nosOriginais, noInicialId, {
-        cardWidth: 250,
-        cardHeight: 120,
-        rankSep: 130,
-        nodeSep: 110,
-        startX: 500,
-        startY: 50,
-      });
-    }
-
-    return nosOriginais;
-  }, [nosOriginais, noInicialId, usarLayoutAuto]);
+  }, [nosOriginais, noInicialId]);
 
   // Estado de tela cheia (ocupa viewport total para máxima imersão)
   const [isFullScreen, setIsFullScreen] = useState(initialFullScreen);
@@ -228,6 +205,14 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
     if (fluxograma?.descricao && fluxograma.descricao.trim()) return fluxograma.descricao.trim();
     return 'Deduza o algoritmo clínico e determine os desdobramentos e condutas a cada etapa:';
   }, [perguntaGatilho, card, fluxograma?.descricao]);
+
+  // Sanitiza o texto da pergunta removendo jargões robóticos e comandos prolixos
+  const textoPerguntaFormatado = useMemo(() => {
+    let txt = textoPerguntaResolvido.trim();
+    txt = txt.replace(/^(reconstrua|determine|analise|navegue pelo|complete|identifique)\s+o\s+algoritmo\s+(de\s+decisão\s+)?(propedêutica\s+)?(clínica\s+)?(por\s+imagem\s+)?frente\s+a\s+(um\s+)?paciente\s+com\s+/i, 'Paciente com ');
+    txt = txt.replace(/^(reconstrua|navegue pelo|deduza|determine)\s+o\s+algoritmo\s+(clínico\s+e\s+determine\s+os\s+desdobramentos.*?:?)/i, 'Qual a conduta e desdobramento clínico indicado a cada etapa?');
+    return txt;
+  }, [textoPerguntaResolvido]);
 
   // Lista ordenada topologicamente a partir do noInicial para o modo Trilha Cascata
   const nosOrdenadosTrilha = useMemo(() => {
@@ -929,26 +914,6 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
             )}
           </button>
 
-          {/* Botão de Auto-Layout Hierárquico Anti-Colisão */}
-          <button
-            type="button"
-            onClick={() => {
-              setUsarLayoutAuto(prev => !prev);
-              setTimeout(() => centralizarNoOrigem(), 60);
-            }}
-            title={usarLayoutAuto ? "Layout hierárquico ativado. Clique para alternar." : "Auto-organizar layout em camadas anti-colisão"}
-            className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg font-bold text-[10.5px] cursor-pointer active:scale-95 transition-all shrink-0 ${
-              usarLayoutAuto
-                ? 'bg-blue-600 text-white shadow-xs ring-1 ring-blue-400'
-                : currentTheme.id === 'light'
-                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-            }`}
-          >
-            <LayoutGrid className="w-3 h-3" />
-            <span className="hidden md:inline">Auto-Layout</span>
-          </button>
-
           {/* Próximo Passo */}
           {!todosCompletos && (
             <button
@@ -1089,43 +1054,33 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
       {/* =================================================================== */}
       {/* BANNER CLÍNICO: CENÁRIO & PERGUNTA GATILHO                          */}
       {/* =================================================================== */}
-      <div className={`w-full rounded-xl sm:rounded-2xl border transition-all shrink-0 ${
+      {/* =================================================================== */}
+      {/* BANNER CLÍNICO COMPACTO: CENÁRIO & DESAFIO (SEM POLUIÇÃO VISUAL)    */}
+      {/* =================================================================== */}
+      <div className={`w-full rounded-xl sm:rounded-2xl border transition-all shrink-0 px-2.5 py-1.5 sm:px-3 sm:py-2 ${
         currentTheme.id === 'light'
-          ? 'bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 border-emerald-200/90 text-slate-900 shadow-2xs'
+          ? 'bg-emerald-50/90 border-emerald-200/90 text-slate-900 shadow-3xs'
           : currentTheme.id === 'blueprint'
-          ? 'bg-gradient-to-r from-sky-950/90 via-blue-950/90 to-slate-950/90 border-sky-800 text-sky-100 shadow-lg'
-          : 'bg-gradient-to-r from-slate-900/95 via-slate-900/90 to-slate-800/90 border-slate-700 text-slate-100 shadow-lg'
+          ? 'bg-sky-950/80 border-sky-800 text-sky-100 shadow-md'
+          : 'bg-slate-900/90 border-slate-700 text-slate-100 shadow-md'
       }`}>
-        <div className="p-2.5 sm:p-3 flex items-start justify-between gap-2.5">
-          <div className="flex items-start gap-2.5 min-w-0 flex-1">
-            <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
-              currentTheme.id === 'light' ? 'bg-emerald-600 text-white shadow-3xs' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md shrink-0 flex items-center gap-1 ${
+              currentTheme.id === 'light'
+                ? 'bg-emerald-200/90 text-emerald-950'
+                : 'bg-emerald-900/70 text-emerald-300'
             }`}>
-              <Stethoscope className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span className={`text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                  currentTheme.id === 'light'
-                    ? 'bg-emerald-200/80 text-emerald-950 font-black'
-                    : 'bg-emerald-900/60 text-emerald-300 border border-emerald-800/60'
-                }`}>
-                  🎯 Desafio Clínico
-                </span>
-                {(tituloContexto || fluxograma.titulo) && (
-                  <span className={`text-[11px] font-bold truncate opacity-85 ${
-                    currentTheme.id === 'light' ? 'text-slate-700' : 'text-slate-300'
-                  }`}>
-                    {tituloContexto || fluxograma.titulo}
-                  </span>
-                )}
-              </div>
-              {!bannerPerguntaRecolhido && (
-                <div className={`text-xs sm:text-[13px] font-semibold leading-relaxed break-words ${
-                  currentTheme.id === 'light' ? 'text-slate-900' : 'text-slate-100'
-                }`}>
-                  <FormattedClinicalText text={textoPerguntaResolvido} />
-                </div>
+              <Stethoscope className="w-3 h-3" />
+              <span>Desafio</span>
+            </span>
+            <div className={`text-[11.5px] sm:text-xs font-semibold truncate flex-1 ${
+              currentTheme.id === 'light' ? 'text-slate-800' : 'text-slate-200'
+            }`}>
+              {bannerPerguntaRecolhido ? (
+                <span className="truncate">{tituloContexto || fluxograma.titulo || textoPerguntaFormatado}</span>
+              ) : (
+                <span className="line-clamp-1 sm:line-clamp-2 leading-snug">{textoPerguntaFormatado}</span>
               )}
             </div>
           </div>
@@ -1133,30 +1088,26 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
           <button
             type="button"
             onClick={() => setBannerPerguntaRecolhido(prev => !prev)}
-            title={bannerPerguntaRecolhido ? "Expandir pergunta clínica" : "Minimizar para ganhar espaço"}
-            className={`p-1 rounded-lg transition-colors cursor-pointer shrink-0 mt-0.5 ${
-              currentTheme.id === 'light'
-                ? 'hover:bg-slate-200/70 text-slate-600'
-                : 'hover:bg-slate-800 text-slate-400'
-            }`}
+            title={bannerPerguntaRecolhido ? "Expandir pergunta clínica" : "Recolher"}
+            className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer shrink-0"
           >
-            {bannerPerguntaRecolhido ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+            {bannerPerguntaRecolhido ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>
 
-      {/* TRILHA DECISÓRIA ATIVA (PATHFINDER BREADCRUMBS) */}
-      {trilhaDecisao.length > 0 && (
-        <div className={`px-3 py-1.5 rounded-xl border text-[11px] flex items-center gap-1.5 overflow-x-auto whitespace-nowrap shadow-3xs shrink-0 ${
+      {/* TRILHA DECISÓRIA ATIVA (SOMENTE NO CANVAS - EVITA POLUIÇÃO NO MODO TRILHA) */}
+      {modoExibicao === 'canvas' && trilhaDecisao.length > 0 && (
+        <div className={`px-3 py-1 rounded-xl border text-[10.5px] flex items-center gap-1.5 overflow-x-auto whitespace-nowrap shadow-3xs shrink-0 ${
           currentTheme.id === 'dark'
             ? 'bg-slate-900/90 border-slate-800 text-slate-300'
             : currentTheme.id === 'blueprint'
             ? 'bg-sky-950/90 border-sky-900 text-sky-200'
             : 'bg-white/95 border-slate-200 text-slate-700 shadow-2xs'
         }`}>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 shrink-0">
+          <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 shrink-0">
             <Sparkles className="w-3 h-3 text-emerald-500" />
-            <span>Trilha da Decisão:</span>
+            <span>Trilha:</span>
           </span>
 
           <div className="flex items-center gap-1 min-w-0 flex-1 overflow-x-auto">
@@ -1165,7 +1116,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
               return (
                 <React.Fragment key={step.no.id}>
                   {step.ramoEntrada && (
-                    <span className="text-[9.5px] font-black px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 shrink-0">
+                    <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 shrink-0">
                       {step.ramoEntrada.rotulo} →
                     </span>
                   )}
@@ -1175,7 +1126,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                       setNoSelecionadoDetalheId(step.no.id);
                       if (!nosRevelados[step.no.id]) handleRevelarNo(step.no.id);
                     }}
-                    className={`px-2 py-0.5 rounded-lg font-bold text-[10.5px] transition-all cursor-pointer truncate max-w-[170px] shrink-0 ${
+                    className={`px-2 py-0.5 rounded-lg font-bold text-[10px] transition-all cursor-pointer truncate max-w-[150px] shrink-0 ${
                       ehUltimo
                         ? 'bg-emerald-600 text-white shadow-2xs font-black ring-1 ring-emerald-400'
                         : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'
@@ -1194,15 +1145,19 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
       {/* VISUALIZAÇÃO CONDICIONAL: MODO TRILHA CASCATA OU CANVAS 2D          */}
       {/* =================================================================== */}
       {modoExibicao === 'lista' ? (
-        <div className={`w-full rounded-xl sm:rounded-2xl border p-3 sm:p-5 space-y-3 overflow-y-auto ${
-          isFullScreen ? 'flex-1 min-h-0' : 'max-h-[540px] sm:max-h-[640px]'
-        } ${
-          currentTheme.id === 'light'
-            ? 'bg-slate-50/70 border-slate-200 text-slate-900'
-            : currentTheme.id === 'blueprint'
-            ? 'bg-sky-950/40 border-sky-900 text-sky-100'
-            : 'bg-slate-900/60 border-slate-800 text-slate-100'
-        }`}>
+        <div 
+          className={`flex-1 w-full min-h-0 overflow-y-auto overscroll-contain p-2 sm:p-4 space-y-3 pb-36 touch-pan-y ${
+            currentTheme.id === 'light'
+              ? 'bg-slate-50/70 border-slate-200 text-slate-900'
+              : currentTheme.id === 'blueprint'
+              ? 'bg-sky-950/40 border-sky-900 text-sky-100'
+              : 'bg-slate-900/60 border-slate-800 text-slate-100'
+          }`}
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-y',
+          }}
+        >
           {nosOrdenadosTrilha.map((no, idx) => {
             const isInicial = no.id === noInicialId;
             const isRevelado = !!nosRevelados[no.id];
@@ -1212,11 +1167,11 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
             const ramosEntrada = nos.flatMap(n => n.ramos).filter(r => r.destinoNoId === no.id);
 
             return (
-              <div key={no.id} className="relative flex flex-col items-center">
+              <div key={no.id} className="relative flex flex-col items-center w-full" style={{ touchAction: 'pan-y' }}>
                 {/* Conector e Critério vindo do passo anterior */}
                 {idx > 0 && (
-                  <div className="flex flex-col items-center my-1 w-full max-w-md">
-                    <div className="w-0.5 h-3 bg-emerald-500/40" />
+                  <div className="flex flex-col items-center my-1 w-full max-w-md pointer-events-none">
+                    <div className="w-0.5 h-2.5 bg-emerald-500/40" />
                     {ramosEntrada.length > 0 ? (
                       <div className="flex flex-wrap gap-1 justify-center py-0.5">
                         {ramosEntrada.map(r => (
@@ -1231,7 +1186,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                     ) : (
                       <span className="text-[10px] font-bold text-slate-400">↓ Próxima Etapa</span>
                     )}
-                    <div className="w-0.5 h-3 bg-emerald-500/40" />
+                    <div className="w-0.5 h-2.5 bg-emerald-500/40" />
                   </div>
                 )}
 
@@ -1244,7 +1199,8 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                       setNoSelecionadoDetalheId(no.id);
                     }
                   }}
-                  className={`w-full max-w-xl p-3.5 rounded-2xl border-2 transition-all cursor-pointer ${
+                  style={{ touchAction: 'pan-y' }}
+                  className={`w-full max-w-lg p-3 sm:p-4 rounded-2xl border-2 transition-all cursor-pointer shadow-xs ${
                     !isRevelado
                       ? `${currentTheme.hiddenCardBgClass} border-dashed ${currentTheme.hiddenCardBorderClass} shadow-md active:scale-98`
                       : `${currentTheme.cardBgClass} ${
@@ -1409,8 +1365,8 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                   oy,
                   dx,
                   dy,
-                  240,
-                  125,
+                  260,
+                  160,
                   ramoIdx,
                   origem.ramos.length,
                   entradaIdx >= 0 ? entradaIdx : 0,
@@ -1462,8 +1418,8 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                 oy,
                 dx,
                 dy,
-                240,
-                125,
+                260,
+                160,
                 ramoIdx,
                 origem.ramos.length,
                 entradaIdx >= 0 ? entradaIdx : 0,
@@ -1528,7 +1484,8 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                 style={{
                   left: `${no.posicaoX ?? 50}px`,
                   top: `${no.posicaoY ?? 50}px`,
-                  width: '240px',
+                  width: '260px',
+                  minHeight: '145px',
                 }}
                 className={`absolute p-3.5 rounded-2xl transition-all cursor-pointer select-none ${
                   !isRevelado
