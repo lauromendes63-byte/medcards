@@ -26,7 +26,8 @@ import {
   FilePenLine,
   ListTree,
   Stethoscope,
-  Layers
+  Layers,
+  MoreVertical
 } from 'lucide-react';
 import { FluxogramaComplexoDados, NoFluxogramaComplexo, RamoFluxogramaComplexo, CardClinico, TopicoClinico } from '../types';
 import { StorageService } from '../services/storage';
@@ -194,6 +195,8 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
 
   const [bannerPerguntaRecolhido, setBannerPerguntaRecolhido] = useState(false);
   const [modoExibicao, setModoExibicao] = useState<'canvas' | 'lista'>('canvas');
+  const [filtroRamoId, setFiltroRamoId] = useState<string>('todos');
+  const [menuMaisAcoesAberto, setMenuMaisAcoesAberto] = useState(false);
 
   // Resolução da pergunta gatilho clínica (garante que NUNCA fique vazio ou sem pergunta)
   const textoPerguntaResolvido = useMemo(() => {
@@ -209,45 +212,67 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
   // Sanitiza o texto da pergunta removendo jargões robóticos e comandos prolixos
   const textoPerguntaFormatado = useMemo(() => {
     let txt = textoPerguntaResolvido.trim();
-    txt = txt.replace(/^(reconstrua|determine|analise|navegue pelo|complete|identifique)\s+o\s+algoritmo\s+(de\s+decisão\s+)?(propedêutica\s+)?(clínica\s+)?(por\s+imagem\s+)?frente\s+a\s+(um\s+)?paciente\s+com\s+/i, 'Paciente com ');
+    txt = txt.replace(/^(reconstrua|determine|analise|navegue pel[ao]|complete|identifique|percorra)\s+(a|o)\s+(árvore|algoritmo|fluxograma)(\s+de\s+decisão)?(\s+diagnóstic[ao]\s+e\s+terapêutic[ao])?(\s+propedêutic[ao])?(\s+clínic[ao])?(\s+por\s+imagem)?\s+(frente\s+a\s+(um\s+)?paciente\s+com\s+|para\s+(estratificar\s+|diferenciação\s+e\s+conduta\s+na\s+)?)/i, '');
     txt = txt.replace(/^(reconstrua|navegue pelo|deduza|determine)\s+o\s+algoritmo\s+(clínico\s+e\s+determine\s+os\s+desdobramentos.*?:?)/i, 'Qual a conduta e desdobramento clínico indicado a cada etapa?');
-    return txt;
+    if (txt) {
+      txt = txt.charAt(0).toUpperCase() + txt.slice(1);
+    }
+    return txt || textoPerguntaResolvido;
   }, [textoPerguntaResolvido]);
 
-  // Lista ordenada topologicamente a partir do noInicial para o modo Trilha Cascata
-  const nosOrdenadosTrilha = useMemo(() => {
-    if (!nos || nos.length === 0) return [];
-    const resultado: NoFluxogramaComplexo[] = [];
+  // Estrutura hierárquica por ramificações para o modo Trilha (preserva árvores e bifurcações clínicas)
+  const arvoreTrilha = useMemo(() => {
+    if (!nos || nos.length === 0) return { raiz: null, caminhos: [], avulsos: [] };
+    const raiz = nos.find(n => n.id === noInicialId) || nos[0];
     const visitados = new Set<string>();
-    const fila: string[] = [];
+    visitados.add(raiz.id);
 
-    if (noInicialId) fila.push(noInicialId);
-    else if (nos[0]) fila.push(nos[0].id);
+    const caminhos: {
+      id: string;
+      rotulo: string;
+      cor: string;
+      passos: { no: NoFluxogramaComplexo; ramoEntrada?: RamoFluxogramaComplexo }[];
+    }[] = [];
 
-    while (fila.length > 0) {
-      const atualId = fila.shift()!;
-      if (visitados.has(atualId)) continue;
-      visitados.add(atualId);
-      const no = nos.find(n => n.id === atualId);
-      if (no) {
-        resultado.push(no);
-        if (Array.isArray(no.ramos)) {
-          for (const ramo of no.ramos) {
-            if (ramo.destinoNoId && !visitados.has(ramo.destinoNoId) && !fila.includes(ramo.destinoNoId)) {
-              fila.push(ramo.destinoNoId);
+    if (Array.isArray(raiz.ramos) && raiz.ramos.length > 0) {
+      raiz.ramos.forEach((ramoRaiz, idx) => {
+        const destinoRaiz = nos.find(n => n.id === ramoRaiz.destinoNoId);
+        if (!destinoRaiz) return;
+
+        const passosDoCaminho: { no: NoFluxogramaComplexo; ramoEntrada?: RamoFluxogramaComplexo }[] = [];
+        const filaCaminho: { no: NoFluxogramaComplexo; ramoEntrada?: RamoFluxogramaComplexo }[] = [
+          { no: destinoRaiz, ramoEntrada: ramoRaiz }
+        ];
+
+        while (filaCaminho.length > 0) {
+          const item = filaCaminho.shift()!;
+          if (visitados.has(item.no.id)) continue;
+          visitados.add(item.no.id);
+          passosDoCaminho.push(item);
+
+          if (Array.isArray(item.no.ramos)) {
+            for (const r of item.no.ramos) {
+              const prox = nos.find(n => n.id === r.destinoNoId);
+              if (prox && !visitados.has(prox.id)) {
+                filaCaminho.push({ no: prox, ramoEntrada: r });
+              }
             }
           }
         }
-      }
+
+        caminhos.push({
+          id: ramoRaiz.id,
+          rotulo: ramoRaiz.rotulo || `Caminho ${idx + 1}`,
+          cor: ramoRaiz.cor || 'verde',
+          passos: passosDoCaminho,
+        });
+      });
     }
 
-    for (const no of nos) {
-      if (!visitados.has(no.id)) {
-        resultado.push(no);
-      }
-    }
+    // Qualquer nó que não tenha sido alcançado pela raiz (ex: nós desconectados)
+    const avulsos = nos.filter(n => !visitados.has(n.id));
 
-    return resultado;
+    return { raiz, caminhos, avulsos };
   }, [nos, noInicialId]);
 
   const handleToggleExibirDicas = () => {
@@ -266,6 +291,8 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
     setNosRevelados(inicial);
     setNoSelecionadoDetalheId(root);
     setMostrarGavetaDetalhes(false);
+    setFiltroRamoId('todos');
+    setMenuMaisAcoesAberto(false);
     concluiuRef.current = false;
     jaCentralizouInicialmente.current = false;
   }, [fluxograma?.id, fluxograma?.noInicialId]);
@@ -760,9 +787,9 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
   return (
     <div 
       ref={containerRef}
-      className={`w-full transition-all select-none ${
+      className={`w-full transition-all ${
         isFullScreen 
-          ? 'fixed inset-0 z-50 w-screen h-screen flex flex-col p-1 sm:p-2.5 overflow-hidden select-none' 
+          ? 'fixed inset-0 z-50 h-[100dvh] max-h-[100dvh] w-full flex flex-col p-1 sm:p-2.5 overflow-hidden' 
           : 'relative space-y-2'
       }`}
       style={{
@@ -770,18 +797,18 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
       }}
     >
       {/* =================================================================== */}
-      {/* BARRA SUPERIOR DE CONTROLES FLUIDOS E DISCRETOS                     */}
+      {/* BARRA SUPERIOR UNIFICADA E DESPOLUIDA                               */}
       {/* =================================================================== */}
-      <div className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border text-xs shadow-xs transition-colors shrink-0 ${
+      <div className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border text-xs shadow-xs transition-colors shrink-0 ${
         currentTheme.id === 'dark'
           ? 'bg-slate-900/95 border-slate-800 text-white'
           : currentTheme.id === 'blueprint'
           ? 'bg-sky-950/95 border-sky-900 text-sky-100'
           : 'bg-white/95 border-slate-200 text-slate-900 shadow-sm'
       }`}>
-        {/* Linha 1: Identificação, progresso e botão fechar se aplicável */}
-        <div className="flex items-center justify-between sm:justify-start gap-2 min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+          {/* Lado Esquerdo: Fechar + Setas de Navegação (se houver) + Contador */}
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 min-w-0">
             {onClose && (
               <button
                 type="button"
@@ -793,280 +820,261 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
               </button>
             )}
 
-            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 flex items-center justify-center shrink-0">
-              <GitFork className="w-3.5 h-3.5" />
-            </div>
-
-            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-              {(onVoltarCard || onPularCard) && (
-                <div className="flex items-center bg-slate-200/70 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-300/80 dark:border-slate-700 shrink-0">
-                  {onVoltarCard && (
-                    <button
-                      type="button"
-                      onClick={onVoltarCard}
-                      disabled={!canVoltar}
-                      title={!canVoltar ? "Primeiro flashcard da sessão" : "Voltar ao flashcard anterior (←)"}
-                      className={`p-1 rounded flex items-center transition-all ${
-                        !canVoltar
-                          ? 'opacity-40 cursor-not-allowed text-slate-400'
-                          : 'text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 active:scale-95 cursor-pointer shadow-3xs'
-                      }`}
-                    >
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  <div className="h-3 w-px bg-slate-300 dark:bg-slate-700 mx-0.5" />
-                  {onPularCard && (
-                    <button
-                      type="button"
-                      onClick={onPularCard}
-                      title="Pular para o próximo flashcard (→)"
-                      className="p-1 rounded flex items-center text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 active:scale-95 cursor-pointer transition-all shadow-3xs"
-                    >
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              )}
-              {progressoTexto && (
-                <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap shrink-0">
-                  {progressoTexto}
-                </span>
-              )}
-              {(badgeEspecialidade || card) && (
-                <EixoEmojiBadge card={card} especialidade={badgeEspecialidade} size="sm" />
-              )}
-              <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                <h4 
-                  title={tituloContexto || fluxograma.titulo || 'Árvore de Decisão'}
-                  className={`text-xs font-bold leading-snug line-clamp-1 sm:line-clamp-2 min-w-0 flex-1 break-words ${currentTheme.id === 'light' ? 'text-slate-900' : 'text-slate-100'}`}
-                >
-                  {tituloContexto || fluxograma.titulo || 'Árvore de Decisão'}
-                </h4>
-              </div>
-            </div>
-          </div>
-
-          {/* Status do lado direito no mobile (Cronômetro + Resolvido) */}
-          <div className="flex items-center gap-1.5 sm:hidden shrink-0">
-            {tempoDecorridoSegundos !== undefined && (
-              <div className="flex items-center gap-1 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                <Clock className="w-2.5 h-2.5" />
-                <span>
-                  {Math.floor(tempoDecorridoSegundos / 60).toString().padStart(2, '0')}:
-                  {(tempoDecorridoSegundos % 60).toString().padStart(2, '0')}
-                </span>
+            {(onVoltarCard || onPularCard) && (
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/80 dark:border-slate-700 shrink-0">
+                {onVoltarCard && (
+                  <button
+                    type="button"
+                    onClick={onVoltarCard}
+                    disabled={!canVoltar}
+                    title={!canVoltar ? "Primeiro flashcard" : "Voltar (←)"}
+                    className={`p-1 rounded flex items-center transition-all ${
+                      !canVoltar
+                        ? 'opacity-30 cursor-not-allowed text-slate-400'
+                        : 'text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 active:scale-95 cursor-pointer shadow-3xs'
+                    }`}
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <div className="h-3 w-px bg-slate-300 dark:bg-slate-700 mx-0.5" />
+                {onPularCard && (
+                  <button
+                    type="button"
+                    onClick={onPularCard}
+                    title="Próximo (→)"
+                    className="p-1 rounded flex items-center text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 active:scale-95 cursor-pointer transition-all shadow-3xs"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             )}
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+
+            {progressoTexto && (
+              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap shrink-0">
+                {progressoTexto}
+              </span>
+            )}
+          </div>
+
+          {/* Centro: Título da Afecção Médica */}
+          <div className="flex-1 min-w-0 px-1 text-center">
+            <h4 
+              title={tituloContexto || fluxograma.titulo || 'Árvore de Decisão'}
+              className="text-xs sm:text-sm font-bold truncate leading-tight text-slate-800 dark:text-slate-100"
+            >
+              {tituloContexto || fluxograma.titulo || 'Árvore de Decisão'}
+            </h4>
+          </div>
+
+          {/* Lado Direito: Ações Principais Essenciais */}
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            {/* Status de nós revelados (discreto) */}
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hidden sm:inline-block">
               {nosReveladosCount}/{totalNos}
             </span>
-          </div>
-        </div>
 
-        {/* Linha 2 (ou Direita): Controles Rápidos compactos e acessíveis */}
-        <div className="flex items-center justify-between sm:justify-end gap-1 sm:gap-1.5 shrink-0 overflow-x-auto py-0.5">
-          {/* Status no desktop */}
-          <div className="hidden sm:flex items-center gap-2 mr-1">
-            <span className={`text-[10px] ${currentTheme.id === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>
-              Resolvido: <strong className="text-emerald-500 font-bold">{nosReveladosCount}</strong>/{totalNos}
-            </span>
-            {tempoDecorridoSegundos !== undefined && (
-              <div className={`flex items-center gap-1 text-[10.5px] font-mono font-bold px-2 py-0.5 rounded-lg border ${
-                currentTheme.id === 'light'
-                  ? 'bg-slate-100 border-slate-200 text-slate-700'
-                  : 'bg-slate-800 border-slate-700 text-slate-300'
-              }`}>
-                <Clock className="w-3 h-3 text-slate-400" />
-                <span>
-                  {Math.floor(tempoDecorridoSegundos / 60).toString().padStart(2, '0')}:
-                  {(tempoDecorridoSegundos % 60).toString().padStart(2, '0')}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Alternância Trilha Linear vs Canvas */}
-          <button
-            type="button"
-            onClick={() => setModoExibicao(prev => prev === 'canvas' ? 'lista' : 'canvas')}
-            title={modoExibicao === 'canvas' ? "Ver em Trilha Sequencial (cascata limpa sem sobreposição)" : "Ver em Canvas Interativo 2D"}
-            className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg font-bold text-[10.5px] cursor-pointer active:scale-95 transition-all shrink-0 ${
-              modoExibicao === 'lista'
-                ? 'bg-emerald-600 text-white shadow-xs ring-1 ring-emerald-400'
-                : currentTheme.id === 'light'
-                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-            }`}
-          >
-            {modoExibicao === 'canvas' ? (
-              <>
-                <ListTree className="w-3 h-3 text-emerald-500" />
-                <span className="hidden sm:inline">Modo Trilha</span>
-                <span className="sm:hidden">Trilha</span>
-              </>
-            ) : (
-              <>
-                <GitFork className="w-3 h-3 text-blue-400" />
-                <span className="hidden sm:inline">Modo Canvas</span>
-                <span className="sm:hidden">Canvas</span>
-              </>
-            )}
-          </button>
-
-          {/* Próximo Passo */}
-          {!todosCompletos && (
+            {/* Alternância Rápida: Canvas vs Trilha */}
             <button
               type="button"
-              onClick={handleRevelarProximoPasso}
-              title="Revelar o próximo passo do algoritmo clínico"
-              className="flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10.5px] cursor-pointer active:scale-95 transition-all shadow-xs shrink-0"
-            >
-              <Sparkles className="w-3 h-3 text-amber-300" />
-              <span>Próximo Passo</span>
-            </button>
-          )}
-
-          {/* Centralizar Início */}
-          <button
-            type="button"
-            onClick={centralizarNoOrigem}
-            title="Focar no Bloco Originário (Início)"
-            className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg font-bold text-[10.5px] cursor-pointer active:scale-95 transition-all shrink-0 ${
-              currentTheme.id === 'light'
-                ? 'bg-slate-100 hover:bg-slate-200 text-blue-700 border border-slate-200'
-                : 'bg-slate-800 hover:bg-slate-700 text-blue-300 border border-slate-700'
-            }`}
-          >
-            <Target className="w-3 h-3 text-blue-500" />
-            <span className="hidden md:inline">Início</span>
-          </button>
-
-          {/* Alternar Revelar Tudo / Reiniciar */}
-          {nosReveladosCount < totalNos ? (
-            <button
-              type="button"
-              onClick={handleRevelarTodos}
-              title="Revelar toda a árvore"
-              className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg font-bold text-[10px] cursor-pointer transition-all shrink-0 ${
-                currentTheme.id === 'light'
-                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+              onClick={() => setModoExibicao(prev => prev === 'canvas' ? 'lista' : 'canvas')}
+              title={modoExibicao === 'canvas' ? "Alternar para Modo Trilha (cascata ramificada com scroll vertical)" : "Alternar para Modo Canvas 2D"}
+              className={`flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-lg font-bold text-[11px] cursor-pointer active:scale-95 transition-all shrink-0 ${
+                modoExibicao === 'lista'
+                  ? 'bg-emerald-600 text-white shadow-xs ring-1 ring-emerald-400'
+                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
               }`}
             >
-              <Eye className="w-3 h-3" />
-              <span className="hidden md:inline">Tudo</span>
+              {modoExibicao === 'canvas' ? (
+                <>
+                  <ListTree className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Trilha</span>
+                </>
+              ) : (
+                <>
+                  <GitFork className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Canvas</span>
+                </>
+              )}
             </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleReiniciarDesafio}
-              title="Reiniciar Desafio"
-              className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg font-bold text-[10px] cursor-pointer transition-all shrink-0 ${
-                currentTheme.id === 'light'
-                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-              }`}
-            >
-              <RotateCcw className="w-3 h-3 text-amber-500" />
-              <span className="hidden md:inline">Reiniciar</span>
-            </button>
-          )}
 
-          {/* Botão de Dicas ON/OFF */}
-          <button
-            type="button"
-            onClick={handleToggleExibirDicas}
-            title={exibirDicas ? "Dicas ativadas (clique para ocultar 100% das dicas)" : "Dicas 100% ocultas (clique para exibir)"}
-            className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg font-bold text-[10px] cursor-pointer transition-all shrink-0 ${
-              exibirDicas
-                ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300'
-                : currentTheme.id === 'light'
-                ? 'bg-slate-100 hover:bg-slate-200 text-slate-500 border border-slate-300 line-through'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-500 border border-slate-700 line-through'
-            }`}
-          >
-            <Lightbulb className={`w-3 h-3 ${exibirDicas ? 'text-amber-500 fill-amber-400' : 'text-slate-500'}`} />
-            <span className="hidden md:inline">{exibirDicas ? 'Dicas: ON' : 'Dicas: OFF'}</span>
-            <span className="md:hidden">{exibirDicas ? 'Dica' : 'S/Dica'}</span>
-          </button>
+            {/* No Desktop: Controles Expandidos */}
+            <div className="hidden sm:flex items-center gap-1 shrink-0">
+              {!todosCompletos && (
+                <button
+                  type="button"
+                  onClick={handleRevelarProximoPasso}
+                  title="Revelar próximo passo"
+                  className="flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10.5px] cursor-pointer active:scale-95 transition-all shadow-xs"
+                >
+                  <Sparkles className="w-3 h-3 text-amber-300" />
+                  <span>Próximo</span>
+                </button>
+              )}
 
-          {/* Botão de Edição Rápida */}
-          {onEditarCard && card && (
-            <button
-              type="button"
-              onClick={() => onEditarCard(card)}
-              title="Editar este flashcard"
-              className="flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-lg font-bold text-[11px] cursor-pointer transition-all shrink-0 active:scale-95 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-900 border border-emerald-200 hover:border-emerald-300 shadow-3xs"
-            >
-              <FilePenLine className="w-3 h-3 text-emerald-600" />
-              <span>Editar</span>
-            </button>
-          )}
+              {modoExibicao === 'canvas' && (
+                <button
+                  type="button"
+                  onClick={centralizarNoOrigem}
+                  title="Focar no Bloco Originário"
+                  className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-blue-600 dark:text-blue-300 border border-slate-200 dark:border-slate-700 cursor-pointer"
+                >
+                  <Target className="w-3.5 h-3.5" />
+                </button>
+              )}
 
-          {/* Ciclar Tema (1 único botão compacto para alternar Claro / Escuro / Blueprint) */}
-          <button
-            type="button"
-            onClick={ciclarTema}
-            title={`Tema: ${themeId}. Toque para alternar`}
-            className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg font-bold text-[10px] cursor-pointer transition-all shrink-0 ${
-              themeId === 'light'
-                ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300'
-                : themeId === 'dark'
-                ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-                : 'bg-sky-900 hover:bg-sky-800 text-sky-200 border border-sky-800'
-            }`}
-          >
-            {themeId === 'light' ? <Sun className="w-3.5 h-3.5 text-amber-500" /> :
-             themeId === 'dark' ? <Moon className="w-3.5 h-3.5 text-indigo-400" /> :
-             <Compass className="w-3.5 h-3.5 text-sky-400" />}
-            <span className="hidden lg:inline capitalize">{themeId}</span>
-          </button>
+              <button
+                type="button"
+                onClick={handleToggleExibirDicas}
+                title={exibirDicas ? "Dicas ativadas" : "Dicas ocultas"}
+                className={`p-1.5 rounded-lg border cursor-pointer transition-all ${
+                  exibirDicas
+                    ? 'bg-amber-50 text-amber-700 border-amber-300'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-300 dark:border-slate-700 line-through'
+                }`}
+              >
+                <Lightbulb className={`w-3.5 h-3.5 ${exibirDicas ? 'text-amber-500 fill-amber-400' : ''}`} />
+              </button>
 
-          {/* Tela Cheia Toggle */}
-          <button
-            type="button"
-            onClick={() => setIsFullScreen(prev => !prev)}
-            title={isFullScreen ? "Restaurar visualização normal (Esc)" : "Expandir para Tela Cheia"}
-            className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg font-bold text-[10.5px] cursor-pointer transition-all active:scale-95 shadow-2xs shrink-0 ${
-              isFullScreen
-                ? 'bg-amber-500 hover:bg-amber-600 text-white ring-2 ring-amber-400/50'
-                : currentTheme.id === 'light'
-                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-            }`}
-          >
-            {isFullScreen ? (
-              <>
-                <Minimize2 className="w-3.5 h-3.5 text-white" />
-                <span className="hidden sm:inline">Restaurar</span>
-              </>
-            ) : (
-              <>
-                <Maximize2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Tela Cheia</span>
-              </>
-            )}
-          </button>
+              {onEditarCard && card && (
+                <button
+                  type="button"
+                  onClick={() => onEditarCard(card)}
+                  title="Editar este flashcard"
+                  className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 cursor-pointer"
+                >
+                  <FilePenLine className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={ciclarTema}
+                title={`Tema: ${themeId}`}
+                className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 cursor-pointer"
+              >
+                {themeId === 'light' ? <Sun className="w-3.5 h-3.5 text-amber-500" /> :
+                 themeId === 'dark' ? <Moon className="w-3.5 h-3.5 text-indigo-400" /> :
+                 <Compass className="w-3.5 h-3.5 text-sky-400" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsFullScreen(prev => !prev)}
+                title={isFullScreen ? "Restaurar" : "Tela Cheia"}
+                className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 cursor-pointer"
+              >
+                {isFullScreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+
+            {/* No Mobile: Botão de Dica Rápida + Menu Dropdown com Todas as Ações Secundárias */}
+            <div className="flex sm:hidden items-center gap-1 relative">
+              <button
+                type="button"
+                onClick={handleToggleExibirDicas}
+                title={exibirDicas ? "Dicas ativadas" : "Dicas ocultas"}
+                className={`p-1.5 rounded-lg border cursor-pointer active:scale-95 ${
+                  exibirDicas
+                    ? 'bg-amber-100 text-amber-900 border-amber-300 shadow-3xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-300 dark:border-slate-700'
+                }`}
+              >
+                <Lightbulb className={`w-3.5 h-3.5 ${exibirDicas ? 'text-amber-600 fill-amber-400' : ''}`} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMenuMaisAcoesAberto(prev => !prev)}
+                className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 active:scale-95 cursor-pointer"
+                title="Mais opções"
+              >
+                <MoreVertical className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Dropdown de Mais Ações no Mobile */}
+              {menuMaisAcoesAberto && (
+                <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-1 z-50 text-xs space-y-0.5 animate-in fade-in zoom-in-95">
+                  {!todosCompletos ? (
+                    <button
+                      type="button"
+                      onClick={() => { handleRevelarTodos(); setMenuMaisAcoesAberto(false); }}
+                      className="w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-blue-500" />
+                      <span>Revelar Tudo</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { handleReiniciarDesafio(); setMenuMaisAcoesAberto(false); }}
+                      className="w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Reiniciar Desafio</span>
+                    </button>
+                  )}
+
+                  {modoExibicao === 'canvas' && (
+                    <button
+                      type="button"
+                      onClick={() => { centralizarNoOrigem(); setMenuMaisAcoesAberto(false); }}
+                      className="w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium"
+                    >
+                      <Target className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Centralizar Início</span>
+                    </button>
+                  )}
+
+                  {onEditarCard && card && (
+                    <button
+                      type="button"
+                      onClick={() => { onEditarCard(card); setMenuMaisAcoesAberto(false); }}
+                      className="w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium"
+                    >
+                      <FilePenLine className="w-3.5 h-3.5 text-indigo-500" />
+                      <span>Editar Flashcard</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => { ciclarTema(); setMenuMaisAcoesAberto(false); }}
+                    className="w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium"
+                  >
+                    <Compass className="w-3.5 h-3.5 text-sky-500" />
+                    <span>Mudar Tema ({themeId})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setIsFullScreen(prev => !prev); setMenuMaisAcoesAberto(false); }}
+                    className="w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium"
+                  >
+                    {isFullScreen ? <Minimize2 className="w-3.5 h-3.5 text-amber-500" /> : <Maximize2 className="w-3.5 h-3.5 text-amber-500" />}
+                    <span>{isFullScreen ? 'Sair de Tela Cheia' : 'Tela Cheia'}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
       {/* =================================================================== */}
-      {/* BANNER CLÍNICO: CENÁRIO & PERGUNTA GATILHO                          */}
+      {/* CENÁRIO & DÚVIDA CLÍNICA (COMPACTO E ULTRA-DISCRETO)                */}
       {/* =================================================================== */}
-      {/* =================================================================== */}
-      {/* BANNER CLÍNICO COMPACTO: CENÁRIO & DESAFIO (SEM POLUIÇÃO VISUAL)    */}
-      {/* =================================================================== */}
-      <div className={`w-full rounded-xl sm:rounded-2xl border transition-all shrink-0 px-2.5 py-1.5 sm:px-3 sm:py-2 ${
-        currentTheme.id === 'light'
-          ? 'bg-emerald-50/90 border-emerald-200/90 text-slate-900 shadow-3xs'
-          : currentTheme.id === 'blueprint'
-          ? 'bg-sky-950/80 border-sky-800 text-sky-100 shadow-md'
-          : 'bg-slate-900/90 border-slate-700 text-slate-100 shadow-md'
-      }`}>
-        <div className="flex items-center justify-between gap-2">
+      {textoPerguntaFormatado && (
+        <div className={`px-3 py-1.5 rounded-xl border text-[11px] sm:text-xs font-semibold flex items-center justify-between gap-2 shrink-0 transition-all ${
+          currentTheme.id === 'light'
+            ? 'bg-emerald-50/90 border-emerald-200/90 text-slate-800 shadow-3xs'
+            : currentTheme.id === 'blueprint'
+            ? 'bg-sky-950/80 border-sky-800 text-sky-100 shadow-md'
+            : 'bg-slate-900/90 border-slate-700 text-slate-100 shadow-md'
+        }`}>
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md shrink-0 flex items-center gap-1 ${
+            <span className={`text-[9px] font-black uppercase px-1.5 py-0.2 rounded shrink-0 flex items-center gap-1 ${
               currentTheme.id === 'light'
                 ? 'bg-emerald-200/90 text-emerald-950'
                 : 'bg-emerald-900/70 text-emerald-300'
@@ -1074,27 +1082,22 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
               <Stethoscope className="w-3 h-3" />
               <span>Desafio</span>
             </span>
-            <div className={`text-[11.5px] sm:text-xs font-semibold truncate flex-1 ${
-              currentTheme.id === 'light' ? 'text-slate-800' : 'text-slate-200'
-            }`}>
-              {bannerPerguntaRecolhido ? (
-                <span className="truncate">{tituloContexto || fluxograma.titulo || textoPerguntaFormatado}</span>
-              ) : (
-                <span className="line-clamp-1 sm:line-clamp-2 leading-snug">{textoPerguntaFormatado}</span>
-              )}
-            </div>
+            <span className={bannerPerguntaRecolhido ? "truncate" : "line-clamp-2 leading-tight"}>
+              {textoPerguntaFormatado}
+            </span>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setBannerPerguntaRecolhido(prev => !prev)}
-            title={bannerPerguntaRecolhido ? "Expandir pergunta clínica" : "Recolher"}
-            className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer shrink-0"
-          >
-            {bannerPerguntaRecolhido ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-          </button>
+          {textoPerguntaFormatado.length > 70 && (
+            <button
+              type="button"
+              onClick={() => setBannerPerguntaRecolhido(prev => !prev)}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 shrink-0 cursor-pointer"
+            >
+              {bannerPerguntaRecolhido ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+            </button>
+          )}
         </div>
-      </div>
+      )}
 
       {/* TRILHA DECISÓRIA ATIVA (SOMENTE NO CANVAS - EVITA POLUIÇÃO NO MODO TRILHA) */}
       {modoExibicao === 'canvas' && trilhaDecisao.length > 0 && (
@@ -1142,11 +1145,11 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
       )}
 
       {/* =================================================================== */}
-      {/* VISUALIZAÇÃO CONDICIONAL: MODO TRILHA CASCATA OU CANVAS 2D          */}
+      {/* VISUALIZAÇÃO CONDICIONAL: MODO TRILHA RAMIFICADA OU CANVAS 2D       */}
       {/* =================================================================== */}
       {modoExibicao === 'lista' ? (
         <div 
-          className={`flex-1 w-full min-h-0 overflow-y-auto overscroll-contain p-2 sm:p-4 space-y-3 pb-36 touch-pan-y ${
+          className={`flex-1 w-full min-h-0 overflow-y-auto overscroll-y-contain px-2.5 sm:px-4 py-2 space-y-4 pb-48 select-text ${
             currentTheme.id === 'light'
               ? 'bg-slate-50/70 border-slate-200 text-slate-900'
               : currentTheme.id === 'blueprint'
@@ -1158,129 +1161,244 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
             touchAction: 'pan-y',
           }}
         >
-          {nosOrdenadosTrilha.map((no, idx) => {
-            const isInicial = no.id === noInicialId;
-            const isRevelado = !!nosRevelados[no.id];
-            const isSelecionado = no.id === noSelecionadoDetalheId;
+          {/* Helper de Renderização de Card Clínico para a Trilha */}
+          {(() => {
+            const renderCardTrilha = (
+              no: NoFluxogramaComplexo,
+              ramoEntrada?: RamoFluxogramaComplexo,
+              isInicial: boolean = false,
+              numeroPasso?: number
+            ) => {
+              const isRevelado = !!nosRevelados[no.id];
+              const isSelecionado = no.id === noSelecionadoDetalheId;
+              const corRamo = ramoEntrada?.cor ? (CORES_RAMO.find(c => c.id === ramoEntrada.cor)?.hex || '#10b981') : '#10b981';
 
-            // Ramos que chegam neste nó
-            const ramosEntrada = nos.flatMap(n => n.ramos).filter(r => r.destinoNoId === no.id);
-
-            return (
-              <div key={no.id} className="relative flex flex-col items-center w-full" style={{ touchAction: 'pan-y' }}>
-                {/* Conector e Critério vindo do passo anterior */}
-                {idx > 0 && (
-                  <div className="flex flex-col items-center my-1 w-full max-w-md pointer-events-none">
-                    <div className="w-0.5 h-2.5 bg-emerald-500/40" />
-                    {ramosEntrada.length > 0 ? (
-                      <div className="flex flex-wrap gap-1 justify-center py-0.5">
-                        {ramosEntrada.map(r => (
-                          <span
-                            key={r.id}
-                            className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-3xs"
-                          >
-                            ↓ {r.rotulo}
-                          </span>
-                        ))}
+              return (
+                <div key={no.id} className="w-full flex flex-col items-center">
+                  {/* Seta e Rótulo da Condição que chega neste nó */}
+                  {ramoEntrada && (
+                    <div className="flex flex-col items-center my-1.5 w-full max-w-md pointer-events-none">
+                      <div className="w-0.5 h-3" style={{ backgroundColor: corRamo }} />
+                      <div 
+                        className="px-3 py-1 rounded-full text-[10px] sm:text-[11px] font-bold shadow-2xs border text-center max-w-[95%] break-words leading-tight"
+                        style={{
+                          backgroundColor: currentTheme.arrowPillFill,
+                          borderColor: corRamo,
+                          color: currentTheme.arrowPillTextFill,
+                        }}
+                      >
+                        ↓ {ramoEntrada.rotulo}
                       </div>
-                    ) : (
-                      <span className="text-[10px] font-bold text-slate-400">↓ Próxima Etapa</span>
-                    )}
-                    <div className="w-0.5 h-2.5 bg-emerald-500/40" />
-                  </div>
-                )}
+                      <div className="w-0.5 h-3" style={{ backgroundColor: corRamo }} />
+                    </div>
+                  )}
 
-                {/* Card do Passo Clínico */}
-                <div
-                  onClick={() => {
-                    if (!isRevelado) {
-                      handleRevelarNo(no.id);
-                    } else {
-                      setNoSelecionadoDetalheId(no.id);
-                    }
-                  }}
-                  style={{ touchAction: 'pan-y' }}
-                  className={`w-full max-w-lg p-3 sm:p-4 rounded-2xl border-2 transition-all cursor-pointer shadow-xs ${
-                    !isRevelado
-                      ? `${currentTheme.hiddenCardBgClass} border-dashed ${currentTheme.hiddenCardBorderClass} shadow-md active:scale-98`
-                      : `${currentTheme.cardBgClass} ${
-                          isSelecionado
-                            ? 'border-emerald-500 ring-2 ring-emerald-500/30 shadow-lg'
-                            : isInicial
-                            ? 'border-amber-400 ring-1 ring-amber-400/30 shadow-md'
-                            : `${currentTheme.cardBorderClass} shadow-xs`
-                        }`
-                  }`}
-                >
-                  <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                        isInicial
-                          ? 'bg-amber-400 text-slate-950 font-black'
-                          : no.tipo === 'inicio' ? 'bg-blue-900/80 text-blue-300' :
-                            no.tipo === 'alerta' ? 'bg-rose-900/80 text-rose-300' :
-                            no.tipo === 'decisao' ? 'bg-amber-900/80 text-amber-300' :
-                            no.tipo === 'diagnostico' ? 'bg-purple-900/80 text-purple-300' :
-                            'bg-emerald-900/80 text-emerald-300'
-                      }`}>
-                        {isInicial ? '★ Bloco Originário' : `Passo ${idx + 1} • ${no.tipo}`}
-                      </span>
+                  {/* Cartão Clínico */}
+                  <div
+                    onClick={() => {
+                      if (!isRevelado) {
+                        handleRevelarNo(no.id);
+                      } else {
+                        setNoSelecionadoDetalheId(no.id);
+                        setMostrarGavetaDetalhes(true);
+                      }
+                    }}
+                    className={`w-full max-w-lg mx-auto p-3.5 sm:p-4 rounded-2xl border-2 transition-all cursor-pointer shadow-xs ${
+                      !isRevelado
+                        ? `${currentTheme.hiddenCardBgClass} border-dashed ${currentTheme.hiddenCardBorderClass} shadow-md hover:border-amber-400`
+                        : `${currentTheme.cardBgClass} ${
+                            isSelecionado
+                              ? 'border-emerald-500 ring-2 ring-emerald-500/30 shadow-lg'
+                              : isInicial
+                              ? 'border-amber-400 ring-1 ring-amber-400/30 shadow-md'
+                              : `${currentTheme.cardBorderClass} shadow-xs hover:border-slate-400`
+                          }`
+                    }`}
+                  >
+                    <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          isInicial
+                            ? 'bg-amber-400 text-slate-950 font-black'
+                            : no.tipo === 'inicio' ? 'bg-blue-900/80 text-blue-300' :
+                              no.tipo === 'alerta' ? 'bg-rose-900/80 text-rose-300' :
+                              no.tipo === 'decisao' ? 'bg-amber-900/80 text-amber-300' :
+                              no.tipo === 'diagnostico' ? 'bg-purple-900/80 text-purple-300' :
+                              'bg-emerald-900/80 text-emerald-300'
+                        }`}>
+                          {isInicial ? '★ Bloco Originário' : (numeroPasso ? `Passo ${numeroPasso} • ${no.tipo}` : no.tipo)}
+                        </span>
+                      </div>
+
+                      {!isRevelado ? (
+                        <span className="flex items-center gap-1 text-[9.5px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30 animate-pulse">
+                          <HelpCircle className="w-3 h-3" />
+                          Ocluso
+                        </span>
+                      ) : (
+                        <span className="text-[9.5px] text-emerald-500 font-bold flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Revelado
+                        </span>
+                      )}
                     </div>
 
                     {!isRevelado ? (
-                      <span className="flex items-center gap-1 text-[9.5px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30 animate-pulse">
-                        <HelpCircle className="w-3 h-3" />
-                        Ocluso
-                      </span>
+                      <div className="pt-2 text-center space-y-1.5">
+                        <p className={`text-xs font-bold ${currentTheme.hiddenCardTitleClass}`}>
+                          {exibirDicas && no.dica ? `Dica: ${no.dica}` : 'Qual a conduta ou evento neste ponto?'}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRevelarNo(no.id);
+                          }}
+                          className={`px-3 py-1 rounded-lg ${currentTheme.hiddenCardButtonClass} font-black text-xs shadow-sm cursor-pointer active:scale-95`}
+                        >
+                          Toque para Revelar
+                        </button>
+                      </div>
                     ) : (
-                      <span className="text-[9.5px] text-emerald-500 font-bold flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Revelado
-                      </span>
+                      <div className="pt-2 space-y-1.5 text-left">
+                        <h5 className={`text-xs sm:text-[13px] font-bold ${currentTheme.cardTitleClass}`}>
+                          {no.titulo || '(Etapa sem título)'}
+                        </h5>
+                        {no.descricao && (
+                          <div className={`text-[11px] sm:text-xs leading-relaxed ${currentTheme.cardDescClass}`}>
+                            <FormattedClinicalText text={no.descricao} />
+                          </div>
+                        )}
+                        {no.ramos.length > 0 && (
+                          <div className="pt-1.5 flex items-center gap-1.5 flex-wrap border-t border-slate-200/60 dark:border-slate-800/60 text-[10px]">
+                            <span className="opacity-70 font-semibold">Desdobramentos:</span>
+                            {no.ramos.map(r => (
+                              <span key={r.id} className="px-2 py-0.5 rounded-full font-bold bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                ➔ {r.rotulo}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
+                </div>
+              );
+            };
 
-                  {!isRevelado ? (
-                    <div className="pt-2 text-center space-y-1.5">
-                      <p className={`text-xs font-bold ${currentTheme.hiddenCardTitleClass}`}>
-                        {exibirDicas && no.dica ? `Dica: ${no.dica}` : 'Qual a conduta ou evento neste ponto?'}
-                      </p>
+            const raiz = arvoreTrilha.raiz;
+            const temRamificacoes = arvoreTrilha.caminhos.length > 1;
+            const caminhosFiltrados = filtroRamoId === 'todos'
+              ? arvoreTrilha.caminhos
+              : arvoreTrilha.caminhos.filter(c => c.id === filtroRamoId);
+
+            return (
+              <div className="w-full flex flex-col items-center space-y-4">
+                {/* 1. Nó Raiz (Bloco Originário) */}
+                {raiz && renderCardTrilha(raiz, undefined, true)}
+
+                {/* 2. Divisor de Ramificações / Seletor de Caminhos */}
+                {temRamificacoes && (
+                  <div className="w-full flex flex-col items-center my-2 space-y-2">
+                    <div className="flex flex-col items-center pointer-events-none">
+                      <div className="w-0.5 h-3 bg-emerald-500/50" />
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100/90 dark:bg-emerald-950/90 border border-emerald-300 dark:border-emerald-700 text-[10.5px] font-bold text-emerald-900 dark:text-emerald-300 shadow-2xs">
+                        <GitFork className="w-3.5 h-3.5 rotate-180 text-emerald-600 dark:text-emerald-400" />
+                        <span>Bifurcação: {arvoreTrilha.caminhos.length} caminhos clínicos</span>
+                      </div>
+                      <div className="w-0.5 h-3 bg-emerald-500/50" />
+                    </div>
+
+                    {/* Tabs / Pílulas de Filtro de Caminho */}
+                    <div className="flex items-center justify-center gap-1.5 flex-wrap px-2">
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRevelarNo(no.id);
-                        }}
-                        className={`px-3 py-1 rounded-lg ${currentTheme.hiddenCardButtonClass} font-black text-xs shadow-sm cursor-pointer active:scale-95`}
+                        onClick={() => setFiltroRamoId('todos')}
+                        className={`px-3 py-1 rounded-xl text-[10.5px] font-bold transition-all cursor-pointer ${
+                          filtroRamoId === 'todos'
+                            ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-400/40'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                        }`}
                       >
-                        Toque para Revelar
+                        Todos os Caminhos ({arvoreTrilha.caminhos.length})
+                      </button>
+
+                      {arvoreTrilha.caminhos.map((c, idx) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setFiltroRamoId(c.id)}
+                          className={`px-3 py-1 rounded-xl text-[10.5px] font-bold transition-all cursor-pointer truncate max-w-[200px] ${
+                            filtroRamoId === c.id
+                              ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-400/40'
+                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          Caminho {idx + 1}: {c.rotulo}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Renderização dos Caminhos / Ramificações */}
+                {temRamificacoes && filtroRamoId === 'todos' ? (
+                  /* Modo Grid / Colunas Paralelas para Desktop e Bloco Separado para Mobile */
+                  <div className={`w-full grid grid-cols-1 ${arvoreTrilha.caminhos.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'} gap-4 items-start`}>
+                    {caminhosFiltrados.map((caminho, cIdx) => (
+                      <div 
+                        key={caminho.id} 
+                        className="flex flex-col items-center w-full space-y-3 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-800/40 shadow-xs"
+                      >
+                        <div className="w-full text-center pb-2 border-b border-slate-200/80 dark:border-slate-700/80">
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                            Caminho {cIdx + 1}
+                          </span>
+                          <h6 className="text-xs font-bold mt-1 text-slate-800 dark:text-slate-200 line-clamp-2">
+                            {caminho.rotulo}
+                          </h6>
+                        </div>
+
+                        {caminho.passos.map((p, pIdx) => renderCardTrilha(p.no, p.ramoEntrada, false, pIdx + 2))}
+                      </div>
+                    ))}
+                  </div>
+                ) : temRamificacoes ? (
+                  /* Modo Foco em 1 Único Caminho Selecionado */
+                  <div className="w-full max-w-lg space-y-3">
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-xs">
+                      <span className="font-bold text-emerald-900 dark:text-emerald-200 truncate">
+                        Visualizando: {caminhosFiltrados[0]?.rotulo}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setFiltroRamoId('todos')}
+                        className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 hover:underline shrink-0 cursor-pointer"
+                      >
+                        Ver todos
                       </button>
                     </div>
-                  ) : (
-                    <div className="pt-2 space-y-1.5 text-left">
-                      <h5 className={`text-xs sm:text-[13px] font-bold ${currentTheme.cardTitleClass}`}>
-                        {no.titulo || '(Etapa sem título)'}
-                      </h5>
-                      {no.descricao && (
-                        <div className={`text-[11px] sm:text-xs leading-relaxed ${currentTheme.cardDescClass}`}>
-                          <FormattedClinicalText text={no.descricao} />
-                        </div>
-                      )}
-                      {no.ramos.length > 0 && (
-                        <div className="pt-1.5 flex items-center gap-1.5 flex-wrap border-t border-slate-200/60 dark:border-slate-800/60 text-[10px]">
-                          <span className="opacity-70 font-semibold">Desdobramentos:</span>
-                          {no.ramos.map(r => (
-                            <span key={r.id} className="px-2 py-0.5 rounded-full font-bold bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                              ➔ {r.rotulo}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+
+                    {caminhosFiltrados[0]?.passos.map((p, pIdx) => renderCardTrilha(p.no, p.ramoEntrada, false, pIdx + 2))}
+                  </div>
+                ) : (
+                  /* Caminho Linear Simples (Sem Bifurcação) */
+                  <div className="w-full max-w-lg space-y-3">
+                    {arvoreTrilha.caminhos[0]?.passos.map((p, pIdx) => renderCardTrilha(p.no, p.ramoEntrada, false, pIdx + 2))}
+                  </div>
+                )}
+
+                {/* 4. Nós Avulsos / Desfechos Desconectados se houver */}
+                {arvoreTrilha.avulsos.length > 0 && (
+                  <div className="w-full max-w-lg space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                    <span className="text-center block text-[10px] font-bold uppercase text-slate-400">
+                      Outros Desfechos do Fluxograma
+                    </span>
+                    {arvoreTrilha.avulsos.map((no, idx) => renderCardTrilha(no, undefined, false, idx + 10))}
+                  </div>
+                )}
               </div>
             );
-          })}
+          })()}
         </div>
       ) : (
         /* CANVAS GRÁFICO INTERATIVO DE RESOLUÇÃO (ULTRASSUAVE A 60/120 FPS) */
@@ -1778,24 +1896,24 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
 
       {/* Barra de Desafio Ativo: enquanto houver nós pendentes a revelar */}
       {onAvaliarRevisao && !todosCompletos && (
-        <div className={`w-full max-w-4xl mx-auto px-3 sm:px-4 py-2 rounded-2xl border shadow-sm backdrop-blur-md shrink-0 flex items-center justify-between gap-2 z-20 transition-all mt-1.5 ${
+        <div className={`w-full max-w-4xl mx-auto px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border shadow-xs backdrop-blur-md shrink-0 flex items-center justify-between gap-2 z-20 transition-all mt-1 ${
           currentTheme.id === 'light'
             ? 'bg-white/95 border-slate-200 text-slate-700'
             : currentTheme.id === 'blueprint'
             ? 'bg-sky-950/95 border-sky-900 text-sky-200'
             : 'bg-slate-900/95 border-slate-800 text-slate-300'
         }`}>
-          <div className="flex items-center gap-2 min-w-0 text-xs">
+          <div className="flex items-center gap-1.5 min-w-0 text-xs">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-            <span className="truncate text-slate-800 dark:text-slate-200">
-              Desvende os <strong>{totalNos - nosReveladosCount}</strong> nós pendentes para concluir o algoritmo
+            <span className="truncate text-slate-800 dark:text-slate-200 text-[11px] sm:text-xs">
+              <span className="hidden sm:inline">Desvende os </span><strong>{totalNos - nosReveladosCount}</strong> nós pendentes
             </span>
           </div>
 
           <button
             type="button"
             onClick={handleRevelarTodos}
-            className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-600 shrink-0 transition-colors cursor-pointer"
+            className="text-[10px] sm:text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-600 shrink-0 transition-colors cursor-pointer active:scale-95"
           >
             Revelar Tudo
           </button>

@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.3.9',
+        version: '2.4.0',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: 'MedCards v2.3.9: Correção definitiva de sobreposições no Fluxograma (centralização precisa no vão vertical seguro entre caixas), auto-layout sempre ativo por padrão, scroll e navegação suave no Modo Trilha sem travas no mobile, cabeçalho de pergunta compacto e refinamento anti-prolixidade no prompt clínico'
+        releaseNotes: 'MedCards v2.4.0: Modo Trilha com ramificações estruturadas (bifurcações clínicas em colunas e seletor de caminhos), scroll suave 100% nativo no mobile sem travas, e barra superior ultra-despoluída e compacta para celular'
       };
       this.emitFile({
         type: 'asset',

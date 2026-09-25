@@ -1,6 +1,6 @@
 {
-  "version": "2.3.9",
-  "buildTime": "2026-09-25T01:11:39.006Z",
-  "buildDateFormatted": "24/09/2026, 22:11:39",
-  "releaseNotes": "MedCards v2.3.9: Correção definitiva de sobreposições no Fluxograma (centralização precisa no vão vertical seguro entre caixas), auto-layout sempre ativo por padrão, scroll e navegação suave no Modo Trilha sem travas no mobile, cabeçalho de pergunta compacto e refinamento anti-prolixidade no prompt clínico"
+  "version": "2.4.0",
+  "buildTime": "2026-09-25T01:38:04.886Z",
+  "buildDateFormatted": "24/09/2026, 22:38:04",
+  "releaseNotes": "MedCards v2.4.0: Modo Trilha com ramificações estruturadas (bifurcações clínicas em colunas e seletor de caminhos), scroll suave 100% nativo no mobile sem travas, e barra superior ultra-despoluída e compacta para celular"
 }
