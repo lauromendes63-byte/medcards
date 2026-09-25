@@ -249,6 +249,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
   const [bannerPerguntaRecolhido, setBannerPerguntaRecolhido] = useState(false);
   const [modoExibicao, setModoExibicao] = useState<'canvas' | 'lista'>('canvas');
   const [filtroRamoId, setFiltroRamoId] = useState<string>('todos');
+  const [densidadeTrilha, setDensidadeTrilha] = useState<'compacto' | 'expandido'>('compacto');
   const [menuMaisAcoesAberto, setMenuMaisAcoesAberto] = useState(false);
 
   // Resolução da pergunta gatilho clínica (garante que NUNCA fique vazio ou sem pergunta)
@@ -273,35 +274,79 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
     return txt || textoPerguntaResolvido;
   }, [textoPerguntaResolvido]);
 
-  // Estrutura hierárquica por ramificações para o modo Trilha (preserva árvores e bifurcações clínicas)
+  // Estrutura hierárquica por ramificações para o modo Trilha (preserva árvores e bifurcações clínicas em qualquer etapa)
   const arvoreTrilha = useMemo(() => {
-    if (!nos || nos.length === 0) return { raiz: null, caminhos: [], avulsos: [] };
+    if (!nos || nos.length === 0) {
+      return { 
+        raiz: null, 
+        troncoComum: [] as { no: NoFluxogramaComplexo; ramoEntrada?: RamoFluxogramaComplexo; numeroPasso: number }[],
+        noBifurcacao: null as NoFluxogramaComplexo | null,
+        caminhos: [] as {
+          id: string;
+          rotulo: string;
+          cor: string;
+          passos: { no: NoFluxogramaComplexo; ramoEntrada?: RamoFluxogramaComplexo; numeroPasso: number }[];
+        }[], 
+        avulsos: [] as NoFluxogramaComplexo[] 
+      };
+    }
+
     const raiz = nos.find(n => n.id === noInicialId) || nos[0];
     const visitados = new Set<string>();
     visitados.add(raiz.id);
 
+    // 1. Percorre o tronco comum inicial (passos sequenciais até encontrar uma bifurcação ou o fim)
+    const troncoComum: { no: NoFluxogramaComplexo; ramoEntrada?: RamoFluxogramaComplexo; numeroPasso: number }[] = [
+      { no: raiz, ramoEntrada: undefined, numeroPasso: 1 }
+    ];
+
+    let noAtual = raiz;
+    let passosContador = 1;
+
+    // Se o nó atual tiver exatamente 1 ramo válido, avançamos pelo tronco comum
+    while (Array.isArray(noAtual.ramos) && noAtual.ramos.length === 1) {
+      const unicoRamo = noAtual.ramos[0];
+      const prox = nos.find(n => n.id === unicoRamo.destinoNoId);
+      if (!prox || visitados.has(prox.id)) break;
+
+      visitados.add(prox.id);
+      passosContador++;
+      troncoComum.push({ no: prox, ramoEntrada: unicoRamo, numeroPasso: passosContador });
+      noAtual = prox;
+    }
+
+    // 2. Se o nó onde o tronco comum parou tiver múltiplos ramos (> 1), ele é o Ponto de Bifurcação Clínica!
+    let noBifurcacao: NoFluxogramaComplexo | null = null;
     const caminhos: {
       id: string;
       rotulo: string;
       cor: string;
-      passos: { no: NoFluxogramaComplexo; ramoEntrada?: RamoFluxogramaComplexo }[];
+      passos: { no: NoFluxogramaComplexo; ramoEntrada?: RamoFluxogramaComplexo; numeroPasso: number }[];
     }[] = [];
 
-    if (Array.isArray(raiz.ramos) && raiz.ramos.length > 0) {
-      raiz.ramos.forEach((ramoRaiz, idx) => {
-        const destinoRaiz = nos.find(n => n.id === ramoRaiz.destinoNoId);
-        if (!destinoRaiz) return;
+    if (Array.isArray(noAtual.ramos) && noAtual.ramos.length > 1) {
+      noBifurcacao = noAtual;
 
-        const passosDoCaminho: { no: NoFluxogramaComplexo; ramoEntrada?: RamoFluxogramaComplexo }[] = [];
+      noAtual.ramos.forEach((ramoBifurcacao, idx) => {
+        const destinoRamo = nos.find(n => n.id === ramoBifurcacao.destinoNoId);
+        if (!destinoRamo) return;
+
+        const passosDoCaminho: { no: NoFluxogramaComplexo; ramoEntrada?: RamoFluxogramaComplexo; numeroPasso: number }[] = [];
         const filaCaminho: { no: NoFluxogramaComplexo; ramoEntrada?: RamoFluxogramaComplexo }[] = [
-          { no: destinoRaiz, ramoEntrada: ramoRaiz }
+          { no: destinoRamo, ramoEntrada: ramoBifurcacao }
         ];
+
+        let passoCaminhoContador = passosContador + 1;
 
         while (filaCaminho.length > 0) {
           const item = filaCaminho.shift()!;
           if (visitados.has(item.no.id)) continue;
           visitados.add(item.no.id);
-          passosDoCaminho.push(item);
+          passosDoCaminho.push({
+            no: item.no,
+            ramoEntrada: item.ramoEntrada,
+            numeroPasso: passoCaminhoContador++,
+          });
 
           if (Array.isArray(item.no.ramos)) {
             for (const r of item.no.ramos) {
@@ -314,18 +359,18 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
         }
 
         caminhos.push({
-          id: ramoRaiz.id,
-          rotulo: ramoRaiz.rotulo || `Caminho ${idx + 1}`,
-          cor: ramoRaiz.cor || 'verde',
+          id: ramoBifurcacao.id,
+          rotulo: ramoBifurcacao.rotulo || `Ramo ${idx + 1}`,
+          cor: ramoBifurcacao.cor || 'verde',
           passos: passosDoCaminho,
         });
       });
     }
 
-    // Qualquer nó que não tenha sido alcançado pela raiz (ex: nós desconectados)
+    // 3. Nós avulsos ou desconectados
     const avulsos = nos.filter(n => !visitados.has(n.id));
 
-    return { raiz, caminhos, avulsos };
+    return { raiz, troncoComum, noBifurcacao, caminhos, avulsos };
   }, [nos, noInicialId]);
 
   const handleToggleExibirDicas = () => {
@@ -361,35 +406,51 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
   }, [modoExibicao]);
 
   // Listener ativo para garantir que gestos de deslizar (swipe/scroll) no mobile funcionem sem qualquer congelamento
+  // e sem conflito entre scroll vertical e o carrossel horizontal de ramos
   useEffect(() => {
     if (modoExibicao !== 'lista') return;
     const el = trilhaScrollRef.current;
     if (!el) return;
 
+    let touchStartX = 0;
     let touchStartY = 0;
     let touchStartScrollTop = 0;
     let isTrackingTouch = false;
+    let isHorizontalGesture = false;
 
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
         touchStartScrollTop = el.scrollTop;
         isTrackingTouch = true;
+        isHorizontalGesture = false;
       }
     };
 
     const onTouchMove = (e: TouchEvent) => {
       if (!isTrackingTouch || e.touches.length !== 1) return;
+      const currentX = e.touches[0].clientX;
       const currentY = e.touches[0].clientY;
+      const deltaX = Math.abs(touchStartX - currentX);
       const deltaY = touchStartY - currentY;
-      // Garante que o scroll do elemento acompanhe o dedo mesmo em webviews ou aparelhos onde o compositor bloqueia
-      if (Math.abs(deltaY) > 2) {
+
+      // Se o usuário estiver deslizando horizontalmente (ex: carrossel de ramos no celular), não força scroll vertical
+      if (!isHorizontalGesture && deltaX > Math.abs(deltaY) && deltaX > 6) {
+        isHorizontalGesture = true;
+        return;
+      }
+
+      if (isHorizontalGesture) return;
+
+      if (Math.abs(deltaY) > 3) {
         el.scrollTop = touchStartScrollTop + deltaY;
       }
     };
 
     const onTouchEnd = () => {
       isTrackingTouch = false;
+      isHorizontalGesture = false;
     };
 
     el.addEventListener('touchstart', onTouchStart, { passive: true });
@@ -1258,7 +1319,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
       {modoExibicao === 'lista' ? (
         <div 
           ref={trilhaScrollRef}
-          className={`flex-1 w-full min-h-0 overflow-y-scroll px-2.5 sm:px-4 pt-3.5 pb-36 space-y-4 select-text ${
+          className={`flex-1 w-full min-h-0 overflow-y-scroll px-2 sm:px-4 pt-2.5 sm:pt-3.5 pb-36 space-y-3 sm:space-y-4 select-text ${
             currentTheme.id === 'light'
               ? 'bg-slate-50/70 text-slate-900'
               : currentTheme.id === 'blueprint'
@@ -1270,7 +1331,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
             touchAction: 'pan-y',
           }}
         >
-          {/* Helper de Renderização de Card Clínico para a Trilha */}
+          {/* Helper de Renderização de Card Clínico para a Trilha (Design de Mapa Mental Compacto) */}
           {(() => {
             const renderCardTrilha = (
               no: NoFluxogramaComplexo,
@@ -1284,12 +1345,12 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
 
               return (
                 <div key={no.id} className="w-full flex flex-col items-center" style={{ touchAction: 'pan-y' }}>
-                  {/* Seta e Rótulo da Condição que chega neste nó (apenas se for relevante e não duplicado) */}
+                  {/* Seta e Rótulo da Condição que chega neste nó (compacto e elegante) */}
                   {ramoEntrada && (
-                    <div className="flex flex-col items-center my-1.5 w-full max-w-md pointer-events-none">
-                      <div className="w-0.5 h-3" style={{ backgroundColor: corRamo }} />
+                    <div className="flex flex-col items-center my-0.5 sm:my-1 w-full max-w-md pointer-events-none">
+                      <div className="w-0.5 h-2 sm:h-2.5" style={{ backgroundColor: corRamo }} />
                       <div 
-                        className="px-3 py-1 rounded-full text-[10px] sm:text-[11px] font-bold shadow-2xs border text-center max-w-[95%] break-words leading-tight"
+                        className="px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold shadow-2xs border text-center max-w-[95%] break-words leading-tight"
                         style={{
                           backgroundColor: currentTheme.arrowPillFill,
                           borderColor: corRamo,
@@ -1298,7 +1359,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                       >
                         ↓ {ramoEntrada.rotulo}
                       </div>
-                      <div className="w-0.5 h-3" style={{ backgroundColor: corRamo }} />
+                      <div className="w-0.5 h-2 sm:h-2.5" style={{ backgroundColor: corRamo }} />
                     </div>
                   )}
 
@@ -1313,7 +1374,9 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                       }
                     }}
                     style={{ touchAction: 'pan-y' }}
-                    className={`w-full max-w-lg mx-auto p-3.5 sm:p-4 rounded-2xl border-2 transition-colors cursor-pointer shadow-xs ${
+                    className={`w-full max-w-lg mx-auto ${
+                      densidadeTrilha === 'compacto' ? 'p-2.5 sm:p-3.5' : 'p-3.5 sm:p-4'
+                    } rounded-xl sm:rounded-2xl border sm:border-2 transition-colors cursor-pointer shadow-xs ${
                       !isRevelado
                         ? `${currentTheme.hiddenCardBgClass} border-dashed ${currentTheme.hiddenCardBorderClass} shadow-md hover:border-amber-400`
                         : `${currentTheme.cardBgClass} ${
@@ -1325,9 +1388,9 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                           }`
                     }`}
                   >
-                    <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center justify-between pb-1 sm:pb-1.5 border-b border-slate-200 dark:border-slate-800">
                       <div className="flex items-center gap-1.5">
-                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                        <span className={`text-[8.5px] sm:text-[9.5px] font-black uppercase px-2 py-0.5 rounded-md ${
                           isInicial
                             ? 'bg-amber-400 text-slate-950 font-black'
                             : no.tipo === 'inicio' ? 'bg-blue-900/80 text-blue-300' :
@@ -1341,12 +1404,12 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                       </div>
 
                       {!isRevelado ? (
-                        <span className="flex items-center gap-1 text-[9.5px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30 animate-pulse">
+                        <span className="flex items-center gap-1 text-[8.5px] sm:text-[9.5px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30 animate-pulse">
                           <HelpCircle className="w-3 h-3" />
                           Ocluso
                         </span>
                       ) : (
-                        <span className="text-[9.5px] text-emerald-500 font-bold flex items-center gap-1">
+                        <span className="text-[8.5px] sm:text-[9.5px] text-emerald-500 font-bold flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3" /> Revelado
                         </span>
                       )}
@@ -1369,20 +1432,29 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                         </button>
                       </div>
                     ) : (
-                      <div className="pt-2 space-y-1.5 text-left">
-                        <h5 className={`text-xs sm:text-[13px] font-bold ${currentTheme.cardTitleClass}`}>
+                      <div className="pt-1.5 sm:pt-2 space-y-1 sm:space-y-1.5 text-left">
+                        <h5 className={`text-xs sm:text-[13px] font-bold leading-tight ${currentTheme.cardTitleClass}`}>
                           {no.titulo || '(Etapa sem título)'}
                         </h5>
                         {no.descricao && (
-                          <div className={`text-[11px] sm:text-xs leading-relaxed ${currentTheme.cardDescClass}`}>
+                          <div className={`text-[10px] sm:text-xs leading-snug sm:leading-relaxed ${
+                            densidadeTrilha === 'compacto' ? 'line-clamp-3 sm:line-clamp-none' : ''
+                          } ${currentTheme.cardDescClass}`}>
                             <FormattedClinicalText text={no.descricao} />
                           </div>
                         )}
                         {no.ramos.length > 0 && (
-                          <div className="pt-1.5 flex items-center gap-1.5 flex-wrap border-t border-slate-200/60 dark:border-slate-800/60 text-[10px]">
-                            <span className="opacity-70 font-semibold">Desdobramentos:</span>
+                          <div className="pt-1 sm:pt-1.5 flex items-center gap-1 sm:gap-1.5 flex-wrap border-t border-slate-200/60 dark:border-slate-800/60 text-[9px] sm:text-[9.5px]">
+                            <span className="opacity-70 font-semibold flex items-center gap-0.5">
+                              {no.ramos.length > 1 && <GitFork className="w-2.5 h-2.5 text-emerald-500" />}
+                              Desdobramentos:
+                            </span>
                             {no.ramos.map(r => (
-                              <span key={r.id} className="px-2 py-0.5 rounded-full font-bold bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                              <span 
+                                key={r.id} 
+                                className="px-1.5 py-0.5 rounded-md font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 max-w-full truncate"
+                                title={r.rotulo}
+                              >
                                 ➔ {r.rotulo}
                               </span>
                             ))}
@@ -1395,42 +1467,51 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
               );
             };
 
-            const raiz = arvoreTrilha.raiz;
+            const troncoComum = arvoreTrilha.troncoComum;
             const temRamificacoes = arvoreTrilha.caminhos.length > 1;
             const caminhosFiltrados = filtroRamoId === 'todos'
               ? arvoreTrilha.caminhos
               : arvoreTrilha.caminhos.filter(c => c.id === filtroRamoId);
 
             return (
-              <div className="w-full flex flex-col items-center space-y-4">
-                {/* 1. Nó Raiz (Bloco Originário) */}
-                {raiz && renderCardTrilha(raiz, undefined, true)}
+              <div className="w-full flex flex-col items-center space-y-3 sm:space-y-4">
+                {/* 1. Tronco Comum Sequencial (do Bloco Originário até o ponto de bifurcação ou desfecho completo) */}
+                {troncoComum.map((passo, pIdx) => (
+                  <React.Fragment key={passo.no.id}>
+                    {renderCardTrilha(
+                      passo.no, 
+                      passo.ramoEntrada, 
+                      pIdx === 0, 
+                      pIdx === 0 ? undefined : passo.numeroPasso
+                    )}
+                  </React.Fragment>
+                ))}
 
                 {/* 2. Divisor de Ramificações / Seletor de Caminhos Elegante */}
                 {temRamificacoes && (
-                  <div className="w-full flex flex-col items-center my-3 space-y-2.5">
+                  <div className="w-full flex flex-col items-center my-2 sm:my-3 space-y-2">
                     {/* Indicador de Bifurcação */}
                     <div className="flex flex-col items-center pointer-events-none">
-                      <div className="w-0.5 h-3.5 bg-emerald-500/60" />
-                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100/90 dark:bg-emerald-950/90 border border-emerald-300 dark:border-emerald-700 text-[10.5px] font-bold text-emerald-900 dark:text-emerald-300 shadow-2xs">
-                        <GitFork className="w-3.5 h-3.5 rotate-180 text-emerald-600 dark:text-emerald-400" />
+                      <div className="w-0.5 h-2.5 sm:h-3.5 bg-emerald-500/60" />
+                      <div className="flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-emerald-100/90 dark:bg-emerald-950/90 border border-emerald-300 dark:border-emerald-700 text-[10px] sm:text-[10.5px] font-bold text-emerald-900 dark:text-emerald-300 shadow-2xs">
+                        <GitFork className="w-3 h-3 sm:w-3.5 sm:h-3.5 rotate-180 text-emerald-600 dark:text-emerald-400" />
                         <span>Bifurcação Clínica: {arvoreTrilha.caminhos.length} caminhos</span>
                       </div>
-                      <div className="w-0.5 h-3.5 bg-emerald-500/60" />
+                      <div className="w-0.5 h-2.5 sm:h-3.5 bg-emerald-500/60" />
                     </div>
 
                     {/* Barra de Filtro de Ramos: 1 linha limpa com rolagem horizontal suave no celular */}
-                    <div className="w-full max-w-2xl px-1 overflow-x-auto no-scrollbar flex items-center justify-start sm:justify-center gap-1.5 touch-pan-x py-1">
+                    <div className="w-full max-w-2xl px-1 overflow-x-auto no-scrollbar flex items-center justify-start sm:justify-center gap-1.5 touch-pan-x py-0.5">
                       <button
                         type="button"
                         onClick={() => setFiltroRamoId('todos')}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
+                        className={`px-2.5 py-1 rounded-xl text-[11px] sm:text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
                           filtroRamoId === 'todos'
                             ? 'bg-slate-900 text-white shadow-sm ring-2 ring-emerald-500/60 dark:bg-emerald-600 border-transparent'
                             : 'bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                         }`}
                       >
-                        <GitFork className="w-3.5 h-3.5" />
+                        <GitFork className="w-3 h-3" />
                         <span>Todos os Ramos ({arvoreTrilha.caminhos.length})</span>
                       </button>
 
@@ -1442,55 +1523,72 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                             key={c.id}
                             type="button"
                             onClick={() => setFiltroRamoId(c.id)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
+                            className={`px-2.5 py-1 rounded-xl text-[11px] sm:text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 border ${
                               isAtivo
                                 ? `${estilo.pillAtivo}`
                                 : `bg-white/90 dark:bg-slate-800/90 ${estilo.pillInativo}`
                             }`}
                           >
-                            <span className={`w-2 h-2 rounded-full ${estilo.dot}`} />
-                            <span className="truncate max-w-[210px]">Ramo {idx + 1}: {c.rotulo}</span>
+                            <span className={`w-1.5 h-1.5 rounded-full ${estilo.dot}`} />
+                            <span className="truncate max-w-[180px] sm:max-w-[210px]">Ramo {idx + 1}: {c.rotulo}</span>
                           </button>
                         );
                       })}
+
+                      {/* Alternador de Densidade para Ajuste Rápido de Zoom Mental */}
+                      <button
+                        type="button"
+                        onClick={() => setDensidadeTrilha(prev => prev === 'compacto' ? 'expandido' : 'compacto')}
+                        className="px-2 py-1 rounded-xl text-[10px] font-bold border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 hover:bg-slate-100 shrink-0 cursor-pointer flex items-center gap-1 shadow-3xs ml-auto"
+                        title="Alternar densidade de visualização dos cards"
+                      >
+                        <span>{densidadeTrilha === 'compacto' ? '🗜️ Compacto' : '📄 Expandido'}</span>
+                      </button>
                     </div>
+
+                    {/* Dica de usabilidade para mobile quando estiver exibindo todos os ramos */}
+                    {filtroRamoId === 'todos' && (
+                      <div className="flex sm:hidden items-center justify-center gap-1 text-[9.5px] font-medium text-slate-400 dark:text-slate-500 pt-0.5">
+                        <span>⇄ Deslize horizontalmente para comparar os ramos</span>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* 3. Renderização dos Caminhos / Ramificações Embelezadas */}
                 {temRamificacoes && filtroRamoId === 'todos' ? (
-                  /* Modo Grid / Colunas Paralelas para Desktop e Blocos Suaves no Celular */
-                  <div className={`w-full grid grid-cols-1 ${arvoreTrilha.caminhos.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'} gap-4 sm:gap-6 items-start`}>
+                  /* Mobile: Carrossel Horizontal Snap (estilo mapa mental lado a lado) | Desktop: Colunas Paralelas Grid */
+                  <div className={`w-full flex sm:grid sm:grid-cols-2 ${arvoreTrilha.caminhos.length > 2 ? 'lg:grid-cols-3' : ''} overflow-x-auto sm:overflow-visible snap-x snap-mandatory gap-2.5 sm:gap-6 pb-2 touch-pan-x no-scrollbar items-start`}>
                     {caminhosFiltrados.map((caminho, cIdx) => {
                       const estilo = obterEstiloRamo(cIdx);
                       return (
                         <div 
                           key={caminho.id} 
-                          className={`flex flex-col items-center w-full space-y-3 p-3 sm:p-3.5 rounded-2xl border ${estilo.headerBorder} bg-white/75 dark:bg-slate-800/60 shadow-xs backdrop-blur-xs`}
+                          className={`flex flex-col items-center w-[85vw] max-w-[340px] sm:w-full shrink-0 snap-center space-y-2 sm:space-y-3 p-2.5 sm:p-3.5 rounded-2xl border ${estilo.headerBorder} bg-white/75 dark:bg-slate-800/60 shadow-xs backdrop-blur-xs`}
                         >
                           {/* Cabeçalho Embelezado do Ramo */}
-                          <div className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border ${estilo.headerBorder} ${estilo.headerBg} shadow-3xs`}>
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${estilo.badge}`}>
+                          <div className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl border ${estilo.headerBorder} ${estilo.headerBg} shadow-3xs`}>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${estilo.badge}`}>
                                 Ramo {cIdx + 1}
                               </span>
-                              <h6 className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate">
+                              <h6 className="text-[11px] sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate" title={caminho.rotulo}>
                                 {caminho.rotulo}
                               </h6>
                             </div>
-                            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 shrink-0">
+                            <span className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-400 shrink-0 ml-1">
                               {caminho.passos.length} {caminho.passos.length === 1 ? 'passo' : 'passos'}
                             </span>
                           </div>
 
-                          {/* Passos Clínicos do Ramo (sem repetição de rótulo no passo 1) */}
+                          {/* Passos Clínicos do Ramo (sem repetição de rótulo no primeiro passo se idêntico ao cabeçalho) */}
                           {caminho.passos.map((p, pIdx) => (
                             <React.Fragment key={p.no.id}>
                               {renderCardTrilha(
                                 p.no, 
                                 pIdx === 0 && p.ramoEntrada?.rotulo === caminho.rotulo ? undefined : p.ramoEntrada, 
                                 false, 
-                                pIdx + 2
+                                p.numeroPasso || (pIdx + troncoComum.length + 1)
                               )}
                             </React.Fragment>
                           ))}
@@ -1500,26 +1598,26 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                   </div>
                 ) : temRamificacoes ? (
                   /* Modo Foco em 1 Único Caminho Selecionado */
-                  <div className="w-full max-w-lg space-y-3">
+                  <div className="w-full max-w-lg space-y-2.5 sm:space-y-3">
                     {(() => {
                       const caminhoAtivo = caminhosFiltrados[0];
                       const cIdx = arvoreTrilha.caminhos.findIndex(c => c.id === caminhoAtivo?.id);
                       const estilo = obterEstiloRamo(cIdx >= 0 ? cIdx : 0);
                       return (
                         <>
-                          <div className={`flex items-center justify-between p-2.5 rounded-xl border ${estilo.headerBorder} ${estilo.headerBg} text-xs shadow-2xs`}>
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${estilo.badge}`}>
+                          <div className={`flex items-center justify-between p-2 rounded-xl border ${estilo.headerBorder} ${estilo.headerBg} text-xs shadow-2xs`}>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${estilo.badge}`}>
                                 Ramo {cIdx + 1}
                               </span>
-                              <span className="font-bold text-slate-800 dark:text-slate-100 truncate">
+                              <span className="font-bold text-slate-800 dark:text-slate-100 truncate" title={caminhoAtivo?.rotulo}>
                                 {caminhoAtivo?.rotulo}
                               </span>
                             </div>
                             <button
                               type="button"
                               onClick={() => setFiltroRamoId('todos')}
-                              className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline shrink-0 cursor-pointer ml-2"
+                              className="text-[10px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline shrink-0 cursor-pointer ml-2"
                             >
                               Ver todos os ramos
                             </button>
@@ -1531,7 +1629,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                                 p.no, 
                                 pIdx === 0 && p.ramoEntrada?.rotulo === caminhoAtivo.rotulo ? undefined : p.ramoEntrada, 
                                 false, 
-                                pIdx + 2
+                                p.numeroPasso || (pIdx + troncoComum.length + 1)
                               )}
                             </React.Fragment>
                           ))}
@@ -1539,17 +1637,12 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
                       );
                     })()}
                   </div>
-                ) : (
-                  /* Caminho Linear Simples (Sem Bifurcação) */
-                  <div className="w-full max-w-lg space-y-3">
-                    {arvoreTrilha.caminhos[0]?.passos.map((p, pIdx) => renderCardTrilha(p.no, p.ramoEntrada, false, pIdx + 2))}
-                  </div>
-                )}
+                ) : null}
 
                 {/* 4. Nós Avulsos / Desfechos Desconectados se houver */}
                 {arvoreTrilha.avulsos.length > 0 && (
-                  <div className="w-full max-w-lg space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-                    <span className="text-center block text-[10px] font-bold uppercase text-slate-400">
+                  <div className="w-full max-w-lg space-y-2.5 sm:space-y-3 pt-3 sm:pt-4 border-t border-slate-200 dark:border-slate-800">
+                    <span className="text-center block text-[9.5px] sm:text-[10px] font-bold uppercase text-slate-400">
                       Outros Desfechos do Fluxograma
                     </span>
                     {arvoreTrilha.avulsos.map((no, idx) => renderCardTrilha(no, undefined, false, idx + 10))}

@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.4.2',
+        version: '2.4.3',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: 'MedCards v2.4.2: Repaginação premium do Destino dos Flashcards na Central de Integração, auto-detecção inteligente de Eixo Clínico diretamente do JSON do Gemini, reordenação de layout abaixo do Prompt Mestre e badge Destino Confirmado em tempo real.'
+        releaseNotes: 'MedCards v2.4.3: Novo layout compacto estilo Mapa Mental para o Modo Trilha no celular com algoritmo de ramificação universal (suporte a bifurcações em qualquer etapa), carrossel horizontal snap para comparação de ramos lado a lado em telas pequenas, chips ultra-compactos de desdobramentos clínicos e alternador de densidade (Compacto / Expandido).'
       };
       this.emitFile({
         type: 'asset',
