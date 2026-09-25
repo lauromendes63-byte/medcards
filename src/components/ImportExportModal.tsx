@@ -141,11 +141,23 @@ REGRAS DE FORMATAÇÃO E TIPOGRAFIA MÉDICA:
    - Evite o uso de parênteses (...) nas perguntas, respostas e justificativas.
    - Use parênteses APENAS quando a situação for estritamente necessária (exemplo: indicar que uma conduta ou droga é opcional, como "(opcional)", ou para unidades de dosagem e siglas médicas indispensáveis). No restante, integre o texto de forma fluida e direta sem poluição de parênteses desnecessários.
 
-3. PREENCHIMENTO OBRIGATÓRIO DO CAMPO "topico":
-   - Em cada flashcard gerado, SEMPRE preencha o campo "topico" com o nome específico do assunto/aula (ex: "topico": "Manejo da Sepse no Idoso" ou "topico": "Semiologia Respiratória").
-   - Isso permite que o MedCards identifique e crie automaticamente os tópicos correspondentes e organize tudo por Eixos e Tópicos no celular e no computador de forma sincronizada.
+3. REGRA DE OURO DO CAMPO "topico" (AGRUPAMENTO POR AULA/TEMA CENTRAL):
+   - O campo "topico" deve ser SEMPRE o NOME DA AULA OU TEMA GERAL (ex: "topico": "Osteomielite e Artrite Séptica", "topico": "Arboviroses e Malária", "topico": "Síndrome Coronariana Aguda").
+   - NUNCA crie micro-tópicos fragmentados para cada pergunta ou flashcard (como "Fisiopatologia da osteomielite", "Tratamento da osteomielite", "Classificação de Gustilo"). Todos os cards gerados a partir do mesmo material devem pertencer ao MESMO "topico".
+   - Se o material contiver mais de um grande tema bem distinto (exemplo: aula conjunta com "Dengue", "Chikungunya" e "Malária"), faça o split em no máximo 2 ou 3 tópicos bem delimitados. Jamais disperse os cards em dezenas de tópicos picados que poluem e desorganizam o app!
 
-4. ARQUITETURA VISUAL, CORES E MARCAÇÕES MÉDICAS (CRÍTICO & MANDATÓRIO):
+4. FORMULAÇÃO CLÍNICA NATURAL DAS PERGUNTAS (SEM PROLIXIDADE ROBÓTICA):
+   - NUNCA formule perguntas robóticas, artificiais, prolixas ou pedantes.
+   ❌ EVITE formulações artificiais e excessivamente acadêmicas como:
+      - "Como se divide a taxonomia da Leptospira na classificação sorológica clássica e nos subclados genômicos modernos?"
+      - "Quais são os sinais clínicos e o achado semiomarcador clássico da fase precoce septicêmica da leptospirose anictérica?"
+   ✅ ADOTE perguntas diretas, objetivas, de alta relevância prática e padrão prova de residência médica:
+      - "Quais são as principais manifestações da fase precoce da leptospirose e o achado semiológico patognomônico nas panturrilhas e olhos?"
+      - "Paciente com suspeita de leptospirose grave (Doença de Weil): qual a tríade clínica clássica e o esquema antimicrobiano parenteral de escolha?"
+      - "Qual a conduta diagnóstica confirmatória de escolha na 1ª semana versus a partir da 2ª semana de sintomas da leptospirose?"
+   - Linguagem médica limpa, ágil, direta, como em discussões clínicas de plantão e questões do Revalida/ENAMED/USP.
+
+5. ARQUITETURA VISUAL, CORES E MARCAÇÕES MÉDICAS (CRÍTICO & MANDATÓRIO):
    O MedCards possui um motor tipográfico clínico proprietário de alto contraste. Para criar uma experiência visual digna de material médico de ponta, você DEVE utilizar ativamente as seguintes marcações nos campos "resposta", "perguntaGatilho", "justificativaDetalhada" e nos nós dos fluxogramas:
 
    🎨 PALETA DE CORES E DESTAQUES CLÍNICOS:
@@ -202,7 +214,10 @@ GRANDE TUTORIAL DOS FORMATOS DO MEDCARDS:
    - Estrutura: "tipoCard": "conceito", "titulo", "topico", "especialidade", "perguntaGatilho", "resposta", "dica" (ou "perolaClinica").
 
 2. FLUXOGRAMA COMPLEXO / ÁRVORE DE DECISÃO RAMIFICADA (tipoCard: "fluxograma_complexo"):
-   - Estrutura: "tipoCard": "fluxograma_complexo", com "fluxogramaComplexo" contendo "noInicialId", "nos" (com "id", "titulo", "descricao", "tipo", "oculto": true, "ramos" apontando para "destinoNoId" com "rotulo" e "cor": "verde"|"vermelho"|"azul"|"amber"|"roxo").
+   - ⚠️ ATENÇÃO MANDATÓRIA: Um fluxograma complexo DEVE conter OBRIGATORIAMENTE um CENÁRIO CLÍNICO / PERGUNTA GATILHO ("perguntaGatilho") que orienta o estudante pelo dilema do paciente! Sem pergunta, o aluno não sabe o que o algoritmo está decidindo.
+   - Cada nó deve ter seu tipo ("inicio" | "decisao" | "alerta" | "conduta" | "diagnostico"), "oculto": true (exceto o inicial), e uma "dica" curta que dá a pista para deduzir a conduta daquela etapa.
+   - Os ramos ("ramos") DEVEM conter o "rotulo" da condição clínica de transição (ex: "Se Wells > 4 (Alta probabilidade)", "Se D-Dímero normal (< 500 ng/mL)", "Se instabilidade hemodinâmica") e a "cor": "verde"|"vermelho"|"azul"|"amber"|"roxo".
+   - Estrutura do objeto: "tipoCard": "fluxograma_complexo", "titulo", "topico", "especialidade", "perguntaGatilho", com "fluxogramaComplexo" contendo "noInicialId", "nos" (com "id", "titulo", "descricao", "tipo", "oculto", "dica", "ramos").
 
 3. FLUXOGRAMA LINEAR PASSO A PASSO (tipoCard: "fluxograma_oclusao"):
    - Estrutura: "tipoCard": "fluxograma_oclusao", com "algoritmoDecisao" contendo "blocos" ordenados (com "id", "titulo", "criterioEntrada", "descricao", "tipo": "inicio"|"conduta"|"decisao"|"alerta").
@@ -220,7 +235,14 @@ DISTRIBUIÇÃO SUGERIDA PARA ESTE TEMA (TOTAL EXATO DE ${qtdTotal} FLASHCARDS):
 - ${qtdCaso} Flashcards "caso_clinico" (casos com história clínica, exame físico e alternativas)
 - ${qtdCloze} Flashcards "cloze" (lacunas estratégicas {{c1::...}})
 
-ESTRUTURA JSON EXATA (Retorne APENAS o JSON válido sem nenhum texto explicativo fora dele):
+QUANTIDADE EXATA & SUGESTÃO DE COMPLEMENTAÇÃO:
+- Você DEVE entregar EXATAMENTE o total solicitado de ${qtdTotal} flashcards no array JSON principal.
+- Caso você (IA) julgue que o material fornecido possui conteúdo relevante adicional que não coube nesta cota de ${qtdTotal} flashcards para ficar 100% coberto:
+  1. Entregue rigorosamente os ${qtdTotal} flashcards no JSON.
+  2. Logo após fechar o array JSON "]", adicione uma nota curta no formato:
+     "💡 SUGESTÃO DE COMPLEMENTAÇÃO: Para cobrir 100% de todos os detalhes desta aula, seria ideal gerar mais [X] flashcards focados em: [listar 2 ou 3 subtemas específicos que ficaram de fora]."
+
+ESTRUTURA JSON EXATA (Retorne APENAS o JSON válido sem nenhum texto explicativo fora dele, exceto a nota de complementação se necessária):
 [
   {
     "tipoCard": "conceito",
@@ -230,6 +252,55 @@ ESTRUTURA JSON EXATA (Retorne APENAS o JSON válido sem nenhum texto explicativo
     "perguntaGatilho": "Quais os critérios eletrocardiográficos do IAMCSST e as metas de tempo para reperfusão imediata?",
     "resposta": "**Critérios de Supra de ST no Ponto J (em 2 ou mais derivações contíguas):**\\n\\n• **Derivações gerais:** ==Elevação ≥ 1 mm== em todas derivações (exceto V2-V3).\\n\\n• <u>Nas derivações V2-V3</u>:\\n  - Homens < 40 anos: **≥ 2,5 mm**\\n  - Homens ≥ 40 anos: **≥ 2,0 mm**\\n  - Mulheres: **≥ 1,5 mm**\\n\\n• **Conduta Imediata:** Iniciar dupla antiagregação com [azul]AAS + Ticagrelor[/azul] e anticoagulação plena com [azul]Enoxaparina[/azul].\\n\\n• **Fluxo de Atendimento:** Dor torácica --> ECG em até ==10 minutos== --> Encaminhar para hemodinâmica.\\n\\n• **Metas Terapêuticas:** [verde]Resolução da dor e queda do supra > 50% em 90 min[/verde].\\n\\n• **Diferencial Obrigatório:** Descartar [roxo]Dissecção Aguda de Aorta[/roxo] antes de qualquer trombólise.\\n\\n• **Atenção Especial:** [laranja]Ajustar dose de Enoxaparina se ClCr < 30 mL/min[/laranja].\\n\\n⚠️ **Red Flag:** ⚠️ [vermelho]Contraindicação formal a nitratos:[/vermelho] Infarto de VD (V3R/V4R), PAS < 90 mmHg ou uso recente de inibidores da 5-PDE (Sildenafila)!\\n\\n⭐ **Regra de Ouro:** Tempo porta-balão meta: ==< 90 minutos== (ou ==< 120 min== se transferido).",
     "perolaClinica": "Tempo porta-agulha para trombólise química com Tenecteplase: meta ==< 30 minutos== se a angioplastia primária não for realizável em até 120 minutos."
+  },
+  {
+    "tipoCard": "fluxograma_complexo",
+    "topico": "Síndrome Coronariana Aguda",
+    "titulo": "Algoritmo de Decisão de Reperfusão no IAM com Supra de ST",
+    "especialidade": "Cardiologia",
+    "perguntaGatilho": "Paciente com dor torácica típica e Supra de ST no ECG: percorra o algoritmo de decisão de reperfusão imediata, delta-T até angioplastia primária versus fibrinólise química e critérios de resgate.",
+    "fluxogramaComplexo": {
+      "id": "fluxo-iamcsst",
+      "titulo": "Algoritmo de Reperfusão no IAMCSST",
+      "descricao": "Estratificação do tempo porta-balão vs porta-agulha e critérios de transferência",
+      "noInicialId": "no-1",
+      "nos": [
+        {
+          "id": "no-1",
+          "titulo": "IAM com Supra de ST Confirmado no ECG (< 10 min)",
+          "descricao": "Iniciar dupla antiagregação imediata (AAS + Clopidogrel/Ticagrelor) e avaliar disponibilidade de laboratório de hemodinâmica.",
+          "tipo": "inicio",
+          "posicaoX": 500,
+          "posicaoY": 50,
+          "ramos": [
+            { "id": "r1", "rotulo": "Tempo previsto até angioplastia < 120 min", "destinoNoId": "no-cate", "cor": "verde" },
+            { "id": "r2", "rotulo": "Tempo previsto até angioplastia > 120 min", "destinoNoId": "no-trombolise", "cor": "amber" }
+          ]
+        },
+        {
+          "id": "no-cate",
+          "titulo": "Angioplastia Primária Imediata (Padrão-Ouro)",
+          "descricao": "Transferência imediata para hemodinâmica. Meta porta-balão ==< 90 minutos== (ou ==< 120 min== se transferido).",
+          "tipo": "conduta",
+          "oculto": true,
+          "dica": "Estratégia mecânica de reperfusão",
+          "posicaoX": 250,
+          "posicaoY": 240,
+          "ramos": []
+        },
+        {
+          "id": "no-trombolise",
+          "titulo": "Fibrinólise Química na Sala de Emergência",
+          "descricao": "Tenecteplase (TNK) ou Alteplase (rtPA) em até ==30 minutos== (porta-agulha). Se falha de reperfusão em 90 min: CATE de resgate.",
+          "tipo": "alerta",
+          "oculto": true,
+          "dica": "Estratégia química quando não há hemodinâmica rápida",
+          "posicaoX": 750,
+          "posicaoY": 240,
+          "ramos": []
+        }
+      ]
+    }
   }
 ]
 

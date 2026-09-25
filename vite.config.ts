@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.3.7',
+        version: '2.3.8',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: 'MedCards v2.3.7: Ancoragem pixel-perfect de oclusão de imagem, eliminação de letterbox mobile/desktop e controles de arrastar, redimensionar e ajuste fino de máscaras'
+        releaseNotes: 'MedCards v2.3.8: Banner clínico de Pergunta Gatilho no Fluxograma Complexo, modo duplo (Canvas 2D vs Trilha Sequencial em Cascata), auto-layout anti-colisão compacto sem sobreposições e prompt mestre aprimorado com agrupamento por aula e perguntas clínicas naturais'
       };
       this.emitFile({
         type: 'asset',

@@ -1,6 +1,6 @@
 {
-  "version": "2.3.7",
-  "buildTime": "2026-09-25T00:12:17.846Z",
-  "buildDateFormatted": "24/09/2026, 21:12:17",
-  "releaseNotes": "MedCards v2.3.7: Ancoragem pixel-perfect de oclusão de imagem, eliminação de letterbox mobile/desktop e controles de arrastar, redimensionar e ajuste fino de máscaras"
+  "version": "2.3.8",
+  "buildTime": "2026-09-25T00:36:09.423Z",
+  "buildDateFormatted": "24/09/2026, 21:36:09",
+  "releaseNotes": "MedCards v2.3.8: Banner clínico de Pergunta Gatilho no Fluxograma Complexo, modo duplo (Canvas 2D vs Trilha Sequencial em Cascata), auto-layout anti-colisão compacto sem sobreposições e prompt mestre aprimorado com agrupamento por aula e perguntas clínicas naturais"
 }

@@ -1450,6 +1450,8 @@ export const SimulationTrainingView: React.FC<SimulationTrainingViewProps> = ({
                     }
                   ]
                 }}
+                perguntaGatilho={questaoAtual.perguntaGatilho || (questaoAtual as any).pergunta}
+                tituloContexto={questaoAtual.titulo}
                 onRegistrarConclusao={() => setRevelouVerso(true)}
               />
             </div>

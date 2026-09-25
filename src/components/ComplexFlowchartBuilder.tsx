@@ -580,17 +580,18 @@ export const ComplexFlowchartBuilder: React.FC<ComplexFlowchartBuilderProps> = (
   const handleOrganizarArvoreAuto = () => {
     const rootId = dados.noInicialId || dados.nos[0]?.id || '';
     const nosOrganizados = calcularLayoutHierarquicoFluxograma(dados.nos, rootId, {
-      cardWidth: 240,
-      cardHeight: 140,
-      rankSep: 220,
-      nodeSep: 160,
-      startX: 520,
-      startY: 60,
+      cardWidth: 250,
+      cardHeight: 120,
+      rankSep: 130,
+      nodeSep: 110,
+      startX: 500,
+      startY: 50,
     });
     onChange({
       ...dados,
       nos: nosOrganizados
     });
+    setTimeout(() => centralizarNoOrigem(nosOrganizados), 60);
   };
 
   // Abrir Modal de Unificação (Conectar nó de origem a um nó existente com cor garantidamente diferente)
@@ -1256,8 +1257,8 @@ Retorne APENAS um objeto JSON no formato:
             {/* Auto-Organizar nós */}
             <button
               type="button"
-              onClick={handleAutoOrganizar}
-              title="Auto-organizar layout das caixas em cascata limpa"
+              onClick={handleOrganizarArvoreAuto}
+              title="Auto-organizar layout das caixas em cascata limpa sem sobreposição"
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:border-indigo-300 dark:hover:border-indigo-700 font-bold text-[11px] shadow-2xs cursor-pointer active:scale-95 transition-all"
             >
               <RotateCcw className="w-3.5 h-3.5 text-indigo-500 shrink-0" />

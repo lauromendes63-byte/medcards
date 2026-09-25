@@ -326,10 +326,10 @@ export function calcularLayoutHierarquicoFluxograma(
     return [{ ...nosOriginais[0], posicaoX: options.startX ?? 550, posicaoY: options.startY ?? 60 }];
   }
 
-  const cardWidth = options.cardWidth ?? 240;
-  const cardHeight = options.cardHeight ?? 130;
-  const rankSep = options.rankSep ?? 240;
-  const nodeSep = options.nodeSep ?? 180;
+  const cardWidth = options.cardWidth ?? 250;
+  const cardHeight = options.cardHeight ?? 120;
+  const rankSep = options.rankSep ?? 130;
+  const nodeSep = options.nodeSep ?? 110;
   const startX = options.startX ?? 600;
   const startY = options.startY ?? 60;
 

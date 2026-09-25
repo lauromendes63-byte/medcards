@@ -23,7 +23,10 @@ import {
   Lightbulb,
   LayoutGrid,
   Pencil,
-  FilePenLine
+  FilePenLine,
+  ListTree,
+  Stethoscope,
+  Layers
 } from 'lucide-react';
 import { FluxogramaComplexoDados, NoFluxogramaComplexo, RamoFluxogramaComplexo, CardClinico, TopicoClinico } from '../types';
 import { StorageService } from '../services/storage';
@@ -121,12 +124,12 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
 
     if (usarLayoutAuto || temCoordenadaFaltando || temColisao) {
       return calcularLayoutHierarquicoFluxograma(nosOriginais, noInicialId, {
-        cardWidth: 240,
-        cardHeight: 130,
-        rankSep: 240,
-        nodeSep: 180,
-        startX: 600,
-        startY: 60,
+        cardWidth: 250,
+        cardHeight: 120,
+        rankSep: 130,
+        nodeSep: 110,
+        startX: 500,
+        startY: 50,
       });
     }
 
@@ -211,6 +214,56 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
   const [noSelecionadoDetalheId, setNoSelecionadoDetalheId] = useState<string | null>(noInicialId || nos[0]?.id || null);
   const [mostrarGavetaDetalhes, setMostrarGavetaDetalhes] = useState(false);
   const [exibirDicas, setExibirDicas] = useState<boolean>(() => StorageService.getExibirDicas());
+
+  const [bannerPerguntaRecolhido, setBannerPerguntaRecolhido] = useState(false);
+  const [modoExibicao, setModoExibicao] = useState<'canvas' | 'lista'>('canvas');
+
+  // Resolução da pergunta gatilho clínica (garante que NUNCA fique vazio ou sem pergunta)
+  const textoPerguntaResolvido = useMemo(() => {
+    if (perguntaGatilho && perguntaGatilho.trim()) return perguntaGatilho.trim();
+    if (card?.perguntaGatilho && card.perguntaGatilho.trim()) return card.perguntaGatilho.trim();
+    if ((card as any)?.pergunta && (card as any).pergunta.trim() && !(card as any).pergunta.startsWith('Navegue pelo algoritmo')) {
+      return (card as any).pergunta.trim();
+    }
+    if (fluxograma?.descricao && fluxograma.descricao.trim()) return fluxograma.descricao.trim();
+    return 'Deduza o algoritmo clínico e determine os desdobramentos e condutas a cada etapa:';
+  }, [perguntaGatilho, card, fluxograma?.descricao]);
+
+  // Lista ordenada topologicamente a partir do noInicial para o modo Trilha Cascata
+  const nosOrdenadosTrilha = useMemo(() => {
+    if (!nos || nos.length === 0) return [];
+    const resultado: NoFluxogramaComplexo[] = [];
+    const visitados = new Set<string>();
+    const fila: string[] = [];
+
+    if (noInicialId) fila.push(noInicialId);
+    else if (nos[0]) fila.push(nos[0].id);
+
+    while (fila.length > 0) {
+      const atualId = fila.shift()!;
+      if (visitados.has(atualId)) continue;
+      visitados.add(atualId);
+      const no = nos.find(n => n.id === atualId);
+      if (no) {
+        resultado.push(no);
+        if (Array.isArray(no.ramos)) {
+          for (const ramo of no.ramos) {
+            if (ramo.destinoNoId && !visitados.has(ramo.destinoNoId) && !fila.includes(ramo.destinoNoId)) {
+              fila.push(ramo.destinoNoId);
+            }
+          }
+        }
+      }
+    }
+
+    for (const no of nos) {
+      if (!visitados.has(no.id)) {
+        resultado.push(no);
+      }
+    }
+
+    return resultado;
+  }, [nos, noInicialId]);
 
   const handleToggleExibirDicas = () => {
     setExibirDicas(prev => {
@@ -848,6 +901,34 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
             )}
           </div>
 
+          {/* Alternância Trilha Linear vs Canvas */}
+          <button
+            type="button"
+            onClick={() => setModoExibicao(prev => prev === 'canvas' ? 'lista' : 'canvas')}
+            title={modoExibicao === 'canvas' ? "Ver em Trilha Sequencial (cascata limpa sem sobreposição)" : "Ver em Canvas Interativo 2D"}
+            className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg font-bold text-[10.5px] cursor-pointer active:scale-95 transition-all shrink-0 ${
+              modoExibicao === 'lista'
+                ? 'bg-emerald-600 text-white shadow-xs ring-1 ring-emerald-400'
+                : currentTheme.id === 'light'
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+            }`}
+          >
+            {modoExibicao === 'canvas' ? (
+              <>
+                <ListTree className="w-3 h-3 text-emerald-500" />
+                <span className="hidden sm:inline">Modo Trilha</span>
+                <span className="sm:hidden">Trilha</span>
+              </>
+            ) : (
+              <>
+                <GitFork className="w-3 h-3 text-blue-400" />
+                <span className="hidden sm:inline">Modo Canvas</span>
+                <span className="sm:hidden">Canvas</span>
+              </>
+            )}
+          </button>
+
           {/* Botão de Auto-Layout Hierárquico Anti-Colisão */}
           <button
             type="button"
@@ -1005,6 +1086,65 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
         </div>
       </div>
 
+      {/* =================================================================== */}
+      {/* BANNER CLÍNICO: CENÁRIO & PERGUNTA GATILHO                          */}
+      {/* =================================================================== */}
+      <div className={`w-full rounded-xl sm:rounded-2xl border transition-all shrink-0 ${
+        currentTheme.id === 'light'
+          ? 'bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 border-emerald-200/90 text-slate-900 shadow-2xs'
+          : currentTheme.id === 'blueprint'
+          ? 'bg-gradient-to-r from-sky-950/90 via-blue-950/90 to-slate-950/90 border-sky-800 text-sky-100 shadow-lg'
+          : 'bg-gradient-to-r from-slate-900/95 via-slate-900/90 to-slate-800/90 border-slate-700 text-slate-100 shadow-lg'
+      }`}>
+        <div className="p-2.5 sm:p-3 flex items-start justify-between gap-2.5">
+          <div className="flex items-start gap-2.5 min-w-0 flex-1">
+            <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+              currentTheme.id === 'light' ? 'bg-emerald-600 text-white shadow-3xs' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+            }`}>
+              <Stethoscope className="w-4 h-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className={`text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                  currentTheme.id === 'light'
+                    ? 'bg-emerald-200/80 text-emerald-950 font-black'
+                    : 'bg-emerald-900/60 text-emerald-300 border border-emerald-800/60'
+                }`}>
+                  🎯 Desafio Clínico
+                </span>
+                {(tituloContexto || fluxograma.titulo) && (
+                  <span className={`text-[11px] font-bold truncate opacity-85 ${
+                    currentTheme.id === 'light' ? 'text-slate-700' : 'text-slate-300'
+                  }`}>
+                    {tituloContexto || fluxograma.titulo}
+                  </span>
+                )}
+              </div>
+              {!bannerPerguntaRecolhido && (
+                <div className={`text-xs sm:text-[13px] font-semibold leading-relaxed break-words ${
+                  currentTheme.id === 'light' ? 'text-slate-900' : 'text-slate-100'
+                }`}>
+                  <FormattedClinicalText text={textoPerguntaResolvido} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setBannerPerguntaRecolhido(prev => !prev)}
+            title={bannerPerguntaRecolhido ? "Expandir pergunta clínica" : "Minimizar para ganhar espaço"}
+            className={`p-1 rounded-lg transition-colors cursor-pointer shrink-0 mt-0.5 ${
+              currentTheme.id === 'light'
+                ? 'hover:bg-slate-200/70 text-slate-600'
+                : 'hover:bg-slate-800 text-slate-400'
+            }`}
+          >
+            {bannerPerguntaRecolhido ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
       {/* TRILHA DECISÓRIA ATIVA (PATHFINDER BREADCRUMBS) */}
       {trilhaDecisao.length > 0 && (
         <div className={`px-3 py-1.5 rounded-xl border text-[11px] flex items-center gap-1.5 overflow-x-auto whitespace-nowrap shadow-3xs shrink-0 ${
@@ -1051,14 +1191,149 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
       )}
 
       {/* =================================================================== */}
-      {/* CANVAS GRÁFICO INTERATIVO DE RESOLUÇÃO (ULTRASSUAVE A 60/120 FPS)     */}
+      {/* VISUALIZAÇÃO CONDICIONAL: MODO TRILHA CASCATA OU CANVAS 2D          */}
       {/* =================================================================== */}
-      <div 
-        ref={canvasRef}
-        onPointerDown={handleCanvasPointerDown}
-        onPointerMove={handleCanvasPointerMove}
-        onPointerUp={handleCanvasPointerUp}
-        onPointerCancel={handleCanvasPointerUp}
+      {modoExibicao === 'lista' ? (
+        <div className={`w-full rounded-xl sm:rounded-2xl border p-3 sm:p-5 space-y-3 overflow-y-auto ${
+          isFullScreen ? 'flex-1 min-h-0' : 'max-h-[540px] sm:max-h-[640px]'
+        } ${
+          currentTheme.id === 'light'
+            ? 'bg-slate-50/70 border-slate-200 text-slate-900'
+            : currentTheme.id === 'blueprint'
+            ? 'bg-sky-950/40 border-sky-900 text-sky-100'
+            : 'bg-slate-900/60 border-slate-800 text-slate-100'
+        }`}>
+          {nosOrdenadosTrilha.map((no, idx) => {
+            const isInicial = no.id === noInicialId;
+            const isRevelado = !!nosRevelados[no.id];
+            const isSelecionado = no.id === noSelecionadoDetalheId;
+
+            // Ramos que chegam neste nó
+            const ramosEntrada = nos.flatMap(n => n.ramos).filter(r => r.destinoNoId === no.id);
+
+            return (
+              <div key={no.id} className="relative flex flex-col items-center">
+                {/* Conector e Critério vindo do passo anterior */}
+                {idx > 0 && (
+                  <div className="flex flex-col items-center my-1 w-full max-w-md">
+                    <div className="w-0.5 h-3 bg-emerald-500/40" />
+                    {ramosEntrada.length > 0 ? (
+                      <div className="flex flex-wrap gap-1 justify-center py-0.5">
+                        {ramosEntrada.map(r => (
+                          <span
+                            key={r.id}
+                            className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-3xs"
+                          >
+                            ↓ {r.rotulo}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-[10px] font-bold text-slate-400">↓ Próxima Etapa</span>
+                    )}
+                    <div className="w-0.5 h-3 bg-emerald-500/40" />
+                  </div>
+                )}
+
+                {/* Card do Passo Clínico */}
+                <div
+                  onClick={() => {
+                    if (!isRevelado) {
+                      handleRevelarNo(no.id);
+                    } else {
+                      setNoSelecionadoDetalheId(no.id);
+                    }
+                  }}
+                  className={`w-full max-w-xl p-3.5 rounded-2xl border-2 transition-all cursor-pointer ${
+                    !isRevelado
+                      ? `${currentTheme.hiddenCardBgClass} border-dashed ${currentTheme.hiddenCardBorderClass} shadow-md active:scale-98`
+                      : `${currentTheme.cardBgClass} ${
+                          isSelecionado
+                            ? 'border-emerald-500 ring-2 ring-emerald-500/30 shadow-lg'
+                            : isInicial
+                            ? 'border-amber-400 ring-1 ring-amber-400/30 shadow-md'
+                            : `${currentTheme.cardBorderClass} shadow-xs`
+                        }`
+                  }`}
+                >
+                  <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                        isInicial
+                          ? 'bg-amber-400 text-slate-950 font-black'
+                          : no.tipo === 'inicio' ? 'bg-blue-900/80 text-blue-300' :
+                            no.tipo === 'alerta' ? 'bg-rose-900/80 text-rose-300' :
+                            no.tipo === 'decisao' ? 'bg-amber-900/80 text-amber-300' :
+                            no.tipo === 'diagnostico' ? 'bg-purple-900/80 text-purple-300' :
+                            'bg-emerald-900/80 text-emerald-300'
+                      }`}>
+                        {isInicial ? '★ Bloco Originário' : `Passo ${idx + 1} • ${no.tipo}`}
+                      </span>
+                    </div>
+
+                    {!isRevelado ? (
+                      <span className="flex items-center gap-1 text-[9.5px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30 animate-pulse">
+                        <HelpCircle className="w-3 h-3" />
+                        Ocluso
+                      </span>
+                    ) : (
+                      <span className="text-[9.5px] text-emerald-500 font-bold flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Revelado
+                      </span>
+                    )}
+                  </div>
+
+                  {!isRevelado ? (
+                    <div className="pt-2 text-center space-y-1.5">
+                      <p className={`text-xs font-bold ${currentTheme.hiddenCardTitleClass}`}>
+                        {exibirDicas && no.dica ? `Dica: ${no.dica}` : 'Qual a conduta ou evento neste ponto?'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRevelarNo(no.id);
+                        }}
+                        className={`px-3 py-1 rounded-lg ${currentTheme.hiddenCardButtonClass} font-black text-xs shadow-sm cursor-pointer active:scale-95`}
+                      >
+                        Toque para Revelar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="pt-2 space-y-1.5 text-left">
+                      <h5 className={`text-xs sm:text-[13px] font-bold ${currentTheme.cardTitleClass}`}>
+                        {no.titulo || '(Etapa sem título)'}
+                      </h5>
+                      {no.descricao && (
+                        <div className={`text-[11px] sm:text-xs leading-relaxed ${currentTheme.cardDescClass}`}>
+                          <FormattedClinicalText text={no.descricao} />
+                        </div>
+                      )}
+                      {no.ramos.length > 0 && (
+                        <div className="pt-1.5 flex items-center gap-1.5 flex-wrap border-t border-slate-200/60 dark:border-slate-800/60 text-[10px]">
+                          <span className="opacity-70 font-semibold">Desdobramentos:</span>
+                          {no.ramos.map(r => (
+                            <span key={r.id} className="px-2 py-0.5 rounded-full font-bold bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                              ➔ {r.rotulo}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* CANVAS GRÁFICO INTERATIVO DE RESOLUÇÃO (ULTRASSUAVE A 60/120 FPS) */
+        <div 
+          ref={canvasRef}
+          onPointerDown={handleCanvasPointerDown}
+          onPointerMove={handleCanvasPointerMove}
+          onPointerUp={handleCanvasPointerUp}
+          onPointerCancel={handleCanvasPointerUp}
         className={`relative w-full rounded-xl sm:rounded-2xl overflow-hidden border shadow-inner select-none cursor-grab active:cursor-grabbing transition-all ${
           currentTheme.canvasBorderClass
         } ${
@@ -1452,6 +1727,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
           </div>
         )}
       </div>
+    )}
 
       {/* =================================================================== */}
       {/* BARRA DE AVALIAÇÃO FSRS: SOMENTE APÓS EXPLORAR/REVELAR TODO O FLUXO */}

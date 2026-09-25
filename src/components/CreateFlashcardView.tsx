@@ -158,7 +158,7 @@ export const CreateFlashcardView: React.FC<CreateFlashcardViewProps> = ({
       setEixoId(cardEmEdicao.eixoId);
       setTopicoId(cardEmEdicao.topicoId || '');
       setTitulo(cardEmEdicao.titulo || '');
-      setPergunta(cardEmEdicao.perguntaGatilho || '');
+      setPergunta(cardEmEdicao.perguntaGatilho || (cardEmEdicao as any).pergunta || '');
       setResposta(cardEmEdicao.resposta || '');
       setDica(cardEmEdicao.mnemonicoOuDica || '');
       setNotaExplicativa(cardEmEdicao.perolaClinica || '');
@@ -205,7 +205,7 @@ export const CreateFlashcardView: React.FC<CreateFlashcardViewProps> = ({
 
   // Campos comuns
   const [titulo, setTitulo] = useState(() => cardEmEdicao?.titulo || '');
-  const [pergunta, setPergunta] = useState(() => cardEmEdicao?.perguntaGatilho || '');
+  const [pergunta, setPergunta] = useState(() => cardEmEdicao?.perguntaGatilho || (cardEmEdicao as any)?.pergunta || '');
   const [resposta, setResposta] = useState(() => cardEmEdicao?.resposta || '');
   const [dica, setDica] = useState(() => cardEmEdicao?.mnemonicoOuDica || '');
   const [notaExplicativa, setNotaExplicativa] = useState(() => cardEmEdicao?.perolaClinica || '');
@@ -1535,6 +1535,19 @@ export const CreateFlashcardView: React.FC<CreateFlashcardViewProps> = ({
                       onChange={(e) => setTitulo(e.target.value)}
                       placeholder="Ex: Abordagem da Dor Torácica Aguda no Pronto-Socorro"
                       className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-3xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-700 block">
+                      Cenário Clínico & Pergunta Gatilho (Contexto do Algoritmo): *
+                    </label>
+                    <textarea
+                      value={pergunta}
+                      onChange={(e) => setPergunta(e.target.value)}
+                      placeholder="Ex: Paciente de 8 anos com dor óssea aguda e febre alta: determine o fluxo fisiopatológico, as etapas de isquemia cortical e as condutas imediatas."
+                      rows={2}
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-900 bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-3xs"
                     />
                   </div>
 
