@@ -405,65 +405,18 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
     }
   }, [modoExibicao]);
 
-  // Listener ativo para garantir que gestos de deslizar (swipe/scroll) no mobile funcionem sem qualquer congelamento
-  // e sem conflito entre scroll vertical e o carrossel horizontal de ramos
+  // Limpeza de estado de arraste ao alternar entre os modos Canvas e Trilha
+  // Garante que a transição seja imediata e nunca fique travada
   useEffect(() => {
-    if (modoExibicao !== 'lista') return;
-    const el = trilhaScrollRef.current;
-    if (!el) return;
-
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchStartScrollTop = 0;
-    let isTrackingTouch = false;
-    let isHorizontalGesture = false;
-
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 1) {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        touchStartScrollTop = el.scrollTop;
-        isTrackingTouch = true;
-        isHorizontalGesture = false;
-      }
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (!isTrackingTouch || e.touches.length !== 1) return;
-      const currentX = e.touches[0].clientX;
-      const currentY = e.touches[0].clientY;
-      const deltaX = Math.abs(touchStartX - currentX);
-      const deltaY = touchStartY - currentY;
-
-      // Se o usuário estiver deslizando horizontalmente (ex: carrossel de ramos no celular), não força scroll vertical
-      if (!isHorizontalGesture && deltaX > Math.abs(deltaY) && deltaX > 6) {
-        isHorizontalGesture = true;
-        return;
-      }
-
-      if (isHorizontalGesture) return;
-
-      if (Math.abs(deltaY) > 3) {
-        el.scrollTop = touchStartScrollTop + deltaY;
-      }
-    };
-
-    const onTouchEnd = () => {
-      isTrackingTouch = false;
-      isHorizontalGesture = false;
-    };
-
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchmove', onTouchMove, { passive: true });
-    el.addEventListener('touchend', onTouchEnd, { passive: true });
-    el.addEventListener('touchcancel', onTouchEnd, { passive: true });
-
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
-      el.removeEventListener('touchend', onTouchEnd);
-      el.removeEventListener('touchcancel', onTouchEnd);
-    };
+    setArrastandoCanvas(false);
+    panRef.current.ativo = false;
+    if (panRef.current.rafId) {
+      cancelAnimationFrame(panRef.current.rafId);
+      panRef.current.rafId = null;
+    }
+    if (modoExibicao === 'canvas' && contentLayerRef.current) {
+      contentLayerRef.current.style.transform = `translate3d(${panOffsetRef.current.x}px, ${panOffsetRef.current.y}px, 0) scale(${zoomRef.current})`;
+    }
   }, [modoExibicao]);
 
   // Trilha ativa de decisões médicas (Pathfinder breadcrumb)
@@ -780,7 +733,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
       canvas.removeEventListener('touchcancel', onTouchEnd);
       canvas.removeEventListener('wheel', onWheel);
     };
-  }, [isFullScreen, centralizarNoOrigem]);
+  }, [isFullScreen, centralizarNoOrigem, modoExibicao]);
 
   // Handlers de Pan Ultrassuave com Pointer Events (Mouse Desktop) & RequestAnimationFrame
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
@@ -1319,7 +1272,7 @@ export const ComplexFlowchartViewer: React.FC<ComplexFlowchartViewerProps> = ({
       {modoExibicao === 'lista' ? (
         <div 
           ref={trilhaScrollRef}
-          className={`flex-1 w-full min-h-0 overflow-y-scroll px-2 sm:px-4 pt-2.5 sm:pt-3.5 pb-36 space-y-3 sm:space-y-4 select-text ${
+          className={`flex-1 w-full min-h-0 overflow-y-auto px-2 sm:px-4 pt-2.5 sm:pt-3.5 pb-36 space-y-3 sm:space-y-4 select-text ${
             currentTheme.id === 'light'
               ? 'bg-slate-100/90 text-slate-900'
               : currentTheme.id === 'blueprint'

@@ -47,6 +47,7 @@ export default function App() {
 
   // Modais de Estudo e Revisão
   const [reviewCards, setReviewCards] = useState<CardClinico[] | null>(null);
+  const [reviewModo, setReviewModo] = useState<'estudo' | 'revisao'>('revisao');
   const [reviewInitialIndex, setReviewInitialIndex] = useState<number>(0);
   const [occlusionCard, setOcclusionCard] = useState<CardClinico | null>(null);
   const [caseCard, setCaseCard] = useState<CardClinico | null>(null);
@@ -274,12 +275,14 @@ export default function App() {
       cardsParaRevisar = cardsAtualizados.filter(c => c.eixoId === eixoId);
     }
     if (cardsParaRevisar.length > 0) {
+      setReviewModo('revisao');
       setReviewCards(cardsParaRevisar);
     }
   };
 
   // Abrir sessão de revisão de cards
   const handleIniciarRevisao = (filtroCards?: CardClinico[]) => {
+    setReviewModo('revisao');
     if (filtroCards && filtroCards.length > 0) {
       setReviewCards(filtroCards);
     } else if (cardsPendentes.length > 0) {
@@ -295,11 +298,13 @@ export default function App() {
     if (apenasPendentes) {
       const pendentesDoEixo = cardsDoEixo.filter(c => isCardPendente(c));
       if (pendentesDoEixo.length > 0) {
+        setReviewModo('revisao');
         setReviewCards(pendentesDoEixo);
         return;
       }
     }
     if (cardsDoEixo.length > 0) {
+      setReviewModo('estudo');
       setReviewCards(cardsDoEixo);
     }
   };
@@ -307,6 +312,7 @@ export default function App() {
   // Abrir card com a visualização interativa e oficial de revisão/estudo
   const handleAbrirCard = (card: CardClinico) => {
     setReviewInitialIndex(0);
+    setReviewModo('estudo');
     setReviewCards([card]);
   };
 
@@ -679,7 +685,10 @@ export default function App() {
             especialidadeFiltro={especialidadeFiltro}
             onFiltroChange={setEspecialidadeFiltro}
             onEstudarEixo={handleEstudarEixo}
-            onEstudarCards={(cardsTopico) => setReviewCards(cardsTopico)}
+            onEstudarCards={(cardsTopico, modo) => {
+              setReviewModo(modo || 'estudo');
+              setReviewCards(cardsTopico);
+            }}
             onAdicionarCardAoEixo={(eixoId, topicoId) => {
               setCreatePreselectedEixoId(eixoId);
               setCreatePreselectedTopicoId(topicoId);
@@ -872,6 +881,7 @@ export default function App() {
       {reviewCards && reviewCards.length > 0 && (
         <ReviewSessionModal
           cards={reviewCards}
+          modo={reviewModo}
           onClose={() => { setReviewCards(null); setSessaoOrigem(null); }}
           onRegistrarRevisao={handleRegistrarRevisao}
           onEditarCard={handleEditarCardReview}
@@ -935,6 +945,7 @@ export default function App() {
           }}
           onEstudarCardsImportados={(cardsParaEstudo) => {
             setIsImportExportOpen(false);
+            setReviewModo('estudo');
             setReviewCards(cardsParaEstudo);
           }}
         />

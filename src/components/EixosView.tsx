@@ -189,7 +189,7 @@ interface EixosViewProps {
   especialidadeFiltro: EspecialidadeMedica | 'Todas';
   onFiltroChange: (esp: EspecialidadeMedica | 'Todas') => void;
   onEstudarEixo: (eixoId: string, apenasPendentes?: boolean) => void;
-  onEstudarCards?: (cards: CardClinico[]) => void;
+  onEstudarCards?: (cards: CardClinico[], modo?: 'estudo' | 'revisao') => void;
   onAdicionarCardAoEixo: (eixoId: string, topicoId?: string) => void;
   onAdicionarTopicoAoEixo?: (eixoId: string, titulo: string, descricao?: string) => void;
   onEditarEixo?: (eixo: EixoClinico) => void;
@@ -315,7 +315,7 @@ export const EixosView: React.FC<EixosViewProps> = ({
     if (cardsSelecionados.size === 0 || !onEstudarCards) return;
     const cardsParaEstudo = cards.filter(c => cardsSelecionados.has(c.id));
     handleLimparSelecao();
-    onEstudarCards(cardsParaEstudo);
+    onEstudarCards(cardsParaEstudo, 'estudo');
   };
 
   const handleConfirmarMoverVarios = () => {
@@ -1080,32 +1080,32 @@ export const EixosView: React.FC<EixosViewProps> = ({
                                       <>
                                         <button
                                           type="button"
-                                          onClick={() => onEstudarCards(cardsPendentesTopico)}
+                                          onClick={() => onEstudarCards(cardsPendentesTopico, 'revisao')}
                                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-xs shadow-3xs transition-transform duration-100 ease-out active:scale-95 cursor-pointer"
-                                          title="Estudar apenas os flashcards pendentes deste tópico"
+                                          title="Revisar os flashcards pendentes deste tópico com ciclo de repetição"
                                         >
                                           <Play className="w-3 h-3 fill-current" />
-                                          <span>Estudar ({cardsPendentesTopico.length})</span>
+                                          <span>Revisar ({cardsPendentesTopico.length})</span>
                                         </button>
                                         <button
                                           type="button"
-                                          onClick={() => onEstudarCards(cardsDoTopico)}
+                                          onClick={() => onEstudarCards(cardsDoTopico, 'estudo')}
                                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs shadow-3xs transition-transform duration-100 ease-out active:scale-95 cursor-pointer"
-                                          title="Revisar todos os flashcards deste tópico"
+                                          title="Estudar todos os flashcards deste tópico (1ª vez / sem repetições)"
                                         >
                                           <BookOpen className="w-3 h-3" strokeWidth={2} />
-                                          <span>Revisar</span>
+                                          <span>Estudar Todos</span>
                                         </button>
                                       </>
                                     ) : (
                                       <button
                                         type="button"
-                                        onClick={() => onEstudarCards(cardsDoTopico)}
+                                        onClick={() => onEstudarCards(cardsDoTopico, 'estudo')}
                                         className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-extrabold text-xs shadow-3xs transition-transform duration-100 ease-out active:scale-95 cursor-pointer"
-                                        title="Revisar todos os flashcards deste tópico"
+                                        title="Estudar todos os flashcards deste tópico (1ª vez / sem repetições)"
                                       >
                                         <BookOpen className="w-3 h-3" strokeWidth={2} />
-                                        <span>Revisar</span>
+                                        <span>Estudar ({cardsDoTopico.length})</span>
                                       </button>
                                     )
                                   )}

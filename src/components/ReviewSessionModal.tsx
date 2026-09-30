@@ -41,6 +41,7 @@ interface ReviewSessionModalProps {
   onEditarCard?: (card: CardClinico, indice: number) => void;
   initialIndex?: number;
   onIndexChange?: (indice: number) => void;
+  modo?: 'estudo' | 'revisao';
 }
 
 export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
@@ -50,7 +51,9 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
   onEditarCard,
   initialIndex = 0,
   onIndexChange,
+  modo = 'revisao',
 }) => {
+  const [modoAtivo, setModoAtivo] = useState<'estudo' | 'revisao'>(modo);
   const [filaCards, setFilaCards] = useState<CardClinico[]>(cards);
   const [indiceAtual, setIndiceAtual] = useState(initialIndex);
   const [mostrarVerso, setMostrarVerso] = useState(false);
@@ -58,6 +61,13 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
   const [tempoDecorridoSegundos, setTempoDecorridoSegundos] = useState<number>(0);
   const [sessaoFinalizada, setSessaoFinalizada] = useState(false);
   const [exibirDicas, setExibirDicas] = useState<boolean>(() => StorageService.getExibirDicas());
+
+  // Sincronizar modo inicial ou atualizações externas
+  useEffect(() => {
+    if (modo) {
+      setModoAtivo(modo);
+    }
+  }, [modo]);
 
   // Sincronizar quando os cards forem atualizados externamente (ex: edição)
   useEffect(() => {
@@ -293,11 +303,11 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
       totalSegundos: prev.totalSegundos + tempoGasto,
     }));
 
-    // FIX #6: Re-enfileira o card errado no fim, com limite de 2 vezes por card
-    // Evita loop infinito quando o usuário sempre erra o mesmo card
+    // Re-enfileiramento com ciclo de repetição SOMENTE no Modo Revisão!
+    // No Modo Estudo (1ª vez fazendo o card), NÃO há repetições na sessão.
     const MAX_REENQUEUE = 2;
     let reEnqueued = false;
-    if (avaliacao === 'errei' && filaCards.length > 1) {
+    if (modoAtivo === 'revisao' && avaliacao === 'errei' && filaCards.length > 1) {
       const count = reEnqueueCountRef.current![cardAtual.id] || 0;
       if (count < MAX_REENQUEUE) {
         reEnqueueCountRef.current![cardAtual.id] = count + 1;
@@ -498,7 +508,7 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
         perolaClinica={cardAtual.perolaClinica}
         perguntaGatilho={cardAtual.perguntaGatilho || (cardAtual as any).pergunta}
         tempoDecorridoSegundos={tempoDecorridoSegundos}
-        progressoTexto={totalCards > 1 ? `Questão ${indiceAtual + 1}/${totalCards}` : 'Flashcard 1/1'}
+        progressoTexto={totalCards > 1 ? `${modoAtivo === 'estudo' ? 'Estudo' : 'Revisão'} ${indiceAtual + 1}/${totalCards}` : `${modoAtivo === 'estudo' ? 'Estudo' : 'Revisão'} 1/1`}
         badgeEspecialidade={cardAtual.especialidade}
         card={cardAtual}
         onEditarCard={onEditarCard}
@@ -556,6 +566,36 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
               {totalCards > 1 ? `${indiceAtual + 1}/${totalCards}` : '1/1'}
             </span>
             <EixoEmojiBadge card={cardAtual} size="sm" />
+
+            {/* Pill de Alternância: Modo Estudo (1ª vez / sem repetição) vs Modo Revisão (Ciclo ativo) */}
+            <button
+              type="button"
+              id="btn-toggle-modo-sessao"
+              onClick={() => setModoAtivo(prev => prev === 'estudo' ? 'revisao' : 'estudo')}
+              title={modoAtivo === 'estudo' 
+                ? "Modo Estudo: cada card aparece uma única vez (sem repetições). Clique para alternar para Revisão com ciclo." 
+                : "Modo Revisão: cards com erro voltam ao final da fila para consolidação. Clique para alternar para Estudo sem repetição."}
+              className={`flex items-center gap-1 text-[10px] sm:text-[11px] font-black px-2 py-0.5 sm:py-1 rounded-xl border transition-all cursor-pointer active:scale-95 shadow-3xs shrink-0 ${
+                modoAtivo === 'estudo'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                  : 'bg-indigo-50 text-indigo-800 border-indigo-300 hover:bg-indigo-100'
+              }`}
+            >
+              {modoAtivo === 'estudo' ? (
+                <>
+                  <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600" />
+                  <span className="hidden sm:inline">Estudo (1ª vez)</span>
+                  <span className="sm:hidden">Estudo</span>
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-indigo-600" />
+                  <span className="hidden sm:inline">Revisão (Ciclo)</span>
+                  <span className="sm:hidden">Ciclo</span>
+                </>
+              )}
+            </button>
+
             {cardAtual.topicoNome && (
               <span className="text-[10.5px] text-slate-600 font-medium truncate max-w-[90px] sm:max-w-[180px] hidden md:inline">
                 • {cardAtual.topicoNome.replace(/^tópico:\s*/i, '')}

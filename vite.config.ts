@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.4.5',
+        version: '2.4.6',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: 'MedCards v2.4.5: Fim definitivo de textos cortados por reticências no Flashcard Complexo (Modo Trilha) e renovação completa dos cartões no Modo Claro (Light Theme) — fundo branco puro em canvas contrastante, badges clínicos temáticos de alta legibilidade, botão de ação em azul cirúrgico, títulos e descrições sem truncamento e rótulos de ramos com quebra natural de linha.'
+        releaseNotes: "MedCards v2.4.6: Suporte oficial e completo para instalação como WebAPK nativo (PWA instalável com inicialização instantânea no Android e desktop), modo 'Estudo' sem repetição para a 1ª resolução de flashcards (ciclo de repetição reservado exclusivamente para o modo 'Revisão'), resolução definitiva de travamentos/congelamentos ao alternar entre os modos Canvas e Trilha nos fluxogramas, e rolagem nativa ultrafluida na Trilha."
       };
       this.emitFile({
         type: 'asset',
