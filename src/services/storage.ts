@@ -14,15 +14,20 @@ const STORAGE_KEYS = {
   EXIBIR_DICAS: 'medspaced_exibir_dicas_v1',
 };
 
-// FIX #11: factory function ao invés de objeto literal estático, evita bug de data em sessões que cruzam meia-noite
-const criarProgressoZero = (): ProgressoDiario => ({
-  data: new Date().toISOString().split('T')[0],
-  cardsRevisadosHoje: 0,
-  metaDiaria: 35,
-  sequenciaDias: 0,
-  taxaRetencaoMedia: 0,
-  tempoEstudadoMinutos: 0,
-});
+// FIX #11: factory function com data local e timestamp ISO para garantia de sincronização
+const criarProgressoZero = (): ProgressoDiario => {
+  const agora = new Date();
+  return {
+    data: agora.toLocaleDateString('en-CA'),
+    cardsRevisadosHoje: 0,
+    metaDiaria: 35,
+    sequenciaDias: 0,
+    taxaRetencaoMedia: 0,
+    tempoEstudadoMinutos: 0,
+    ultimoSalvamentoDispositivo: agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    ultimoSalvamentoIso: agora.toISOString(),
+  };
+};
 
 // FIX #10: debounce de writes no IndexedDB para evitar cascata de escritas
 let _idbSaveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -220,38 +225,38 @@ export const StorageService = {
     this.safeLocalStorageSet(STORAGE_KEYS.TIMERS_CONFIG, JSON.stringify(config));
   },
 
-  // Reset Diário Automático (à meia-noite todos os cards resetam para Rodada 1)
+  // Reset Diário Automático (à meia-noite zera métricas diárias e calcula streak sem apagar progresso dos cards)
   verificarResetDiarioAutomatico(): { resetou: boolean; cards: CardClinico[]; progresso: ProgressoDiario } {
-    const hoje = new Date().toISOString().split('T')[0];
+    const agora = new Date();
+    const hoje = agora.toLocaleDateString('en-CA'); // Data local YYYY-MM-DD
     const ultimoReset = localStorage.getItem(STORAGE_KEYS.DATA_ULTIMO_RESET);
 
-    if (ultimoReset !== hoje) {
+    if (ultimoReset && ultimoReset !== hoje) {
       this.safeLocalStorageSet(STORAGE_KEYS.DATA_ULTIMO_RESET, hoje);
       const cards = this.getCards();
       const progresso = this.getProgresso();
 
-      // FIX #7: Calcular streak corretamente
-      // Incrementa se ontem havia estudo (streak contínuo), zera se pulou um dia
-      const ontem = new Date();
+      // Calcular streak corretamente
+      const ontem = new Date(agora);
       ontem.setDate(ontem.getDate() - 1);
-      const ontemStr = ontem.toISOString().split('T')[0];
+      const ontemStr = ontem.toLocaleDateString('en-CA');
       const ultimaData = progresso.data;
       const estudouOntem = ultimaData === ontemStr;
-      const estudouHojeAntes = progresso.cardsRevisadosHoje > 0;
-      // Incrementa se estudou ontem (ou hoje antes do reset, evita zerar streak intradiário)
+      const estudouHojeAntes = (progresso.cardsRevisadosHoje || 0) > 0;
       const novoStreak = (estudouOntem || estudouHojeAntes)
-        ? progresso.sequenciaDias + 1
+        ? (progresso.sequenciaDias || 0) + 1
         : 0;
 
-      // FIX #14: Marca cards vencidos com status 'atrasado' para feedback visual
-      // (cards que tinham proximaRevisao no passado e nunca foram revisados hoje)
-      const agora = new Date();
-      const cardsResetados = cards.map(c => ({
-        ...c,
-        rodadaAtual: 1,
-        proximaRevisao: agora.toISOString(),
-        status: 'pendente' as const,
-      }));
+      // Preservamos o histórico, rodadas e status dos cards! Apenas identificamos se algum card venceu
+      const cardsAtualizados = cards.map(c => {
+        if ((c.status === 'em_revisao' || c.status === 'dominado') && c.proximaRevisao) {
+          const prox = new Date(c.proximaRevisao);
+          if (!isNaN(prox.getTime()) && prox.getTime() < agora.getTime()) {
+            return { ...c, status: 'atrasado' as const };
+          }
+        }
+        return c;
+      });
 
       const progressoNovoDia: ProgressoDiario = {
         ...progresso,
@@ -261,11 +266,14 @@ export const StorageService = {
         sequenciaDias: novoStreak,
       };
 
-      this.saveCards(cardsResetados);
+      this.saveCards(cardsAtualizados);
       this.saveProgresso(progressoNovoDia);
-      this.sincronizarEixos(cardsResetados);
+      this.sincronizarEixos(cardsAtualizados);
 
-      return { resetou: true, cards: cardsResetados, progresso: progressoNovoDia };
+      return { resetou: true, cards: cardsAtualizados, progresso: progressoNovoDia };
+    } else if (!ultimoReset) {
+      // Primeira execução: apenas registra hoje sem resetar dados
+      this.safeLocalStorageSet(STORAGE_KEYS.DATA_ULTIMO_RESET, hoje);
     }
 
     return { resetou: false, cards: this.getCards(), progresso: this.getProgresso() };
@@ -452,8 +460,15 @@ export const StorageService = {
 
   saveCards(cards: CardClinico[]): void {
     this.safeLocalStorageSet(STORAGE_KEYS.CARDS, JSON.stringify(cards));
-    // FIX #10: debounce writes to avoid cascade (each save was triggering getCards+getEixos+getProgresso+IDB write)
-    scheduleIdbSave(cards, this.getEixos(), this.getProgresso());
+    const progresso = this.getProgresso();
+    const agora = new Date();
+    const comHorario = {
+      ...progresso,
+      ultimoSalvamentoDispositivo: agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      ultimoSalvamentoIso: agora.toISOString(),
+    };
+    this.safeLocalStorageSet(STORAGE_KEYS.PROGRESSO, JSON.stringify(comHorario));
+    scheduleIdbSave(cards, this.getEixos(), comHorario);
   },
 
   getEixos(): EixoClinico[] {
@@ -489,11 +504,12 @@ export const StorageService = {
     scheduleIdbSave(this.getCards(), this.getEixos(), comHorario);
   },
 
-  // Algoritmo de Revisão Intradiária Médica (Minutos e Horas dinâmicos, sem dias)
+  // Algoritmo de Revisão Intradiária Médica (Minutos e Horas dinâmicos, com suporte a Modo Estudo)
   processarRevisao(
     cardId: string,
     avaliacao: 'errei' | 'dificil' | 'bom' | 'facil',
-    tempoGastoSegundos: number = 20
+    tempoGastoSegundos: number = 20,
+    modo: 'estudo' | 'revisao' = 'revisao'
   ): { cardsAtualizados: CardClinico[]; progressoAtualizado: ProgressoDiario } {
     const cards = this.getCards();
     const progresso = this.getProgresso();
@@ -520,26 +536,45 @@ export const StorageService = {
     let novaRodada = rodadaAtual;
     let novoStatus: 'pendente' | 'em_revisao' | 'dominado' = 'em_revisao';
 
-    if (avaliacao === 'errei') {
-      // Erro: reinicia para a Rodada 1 para fixação imediata
-      minutosAdicionais = timers.erreiMinutos;
-      novaRodada = 1;
-      novoStatus = 'pendente';
-    } else if (avaliacao === 'dificil') {
-      // Difícil: mantém na rodada atual
-      minutosAdicionais = timers.dificilMinutos;
-      novaRodada = rodadaAtual;
-      novoStatus = 'em_revisao';
-    } else if (avaliacao === 'bom') {
-      // Bom: avança para a próxima rodada (máximo 3)
-      minutosAdicionais = timers.bomMinutos;
-      novaRodada = Math.min(3, rodadaAtual + 1);
-      novoStatus = novaRodada >= 3 ? 'dominado' : 'em_revisao';
-    } else if (avaliacao === 'facil') {
-      // Fácil: avança de rodada (ou salta direto para 3 se estava em 1)
-      minutosAdicionais = timers.facilMinutos;
-      novaRodada = Math.min(3, rodadaAtual + (rodadaAtual === 1 ? 2 : 1));
-      novoStatus = 'dominado';
+    if (modo === 'estudo') {
+      // Modo Estudo (1ª vez estudando o card): o card foi estudado com sucesso hoje!
+      // Não reaparece como pendente imediatamente.
+      if (avaliacao === 'errei') {
+        minutosAdicionais = 12 * 60; // 12 horas
+        novaRodada = 1;
+        novoStatus = 'em_revisao';
+      } else if (avaliacao === 'dificil') {
+        minutosAdicionais = 24 * 60; // 24 horas (amanhã)
+        novaRodada = 1;
+        novoStatus = 'em_revisao';
+      } else if (avaliacao === 'bom') {
+        minutosAdicionais = 24 * 60; // 24 horas (amanhã)
+        novaRodada = Math.min(3, rodadaAtual + 1);
+        novoStatus = 'em_revisao';
+      } else {
+        minutosAdicionais = 48 * 60; // 48 horas (2 dias)
+        novaRodada = 3;
+        novoStatus = 'dominado';
+      }
+    } else {
+      // Modo Revisão (com repetições de ciclo ativo)
+      if (avaliacao === 'errei') {
+        minutosAdicionais = timers.erreiMinutos;
+        novaRodada = 1;
+        novoStatus = 'em_revisao';
+      } else if (avaliacao === 'dificil') {
+        minutosAdicionais = timers.dificilMinutos;
+        novaRodada = rodadaAtual;
+        novoStatus = 'em_revisao';
+      } else if (avaliacao === 'bom') {
+        minutosAdicionais = timers.bomMinutos;
+        novaRodada = Math.min(3, rodadaAtual + 1);
+        novoStatus = novaRodada >= 3 ? 'dominado' : 'em_revisao';
+      } else if (avaliacao === 'facil') {
+        minutosAdicionais = timers.facilMinutos;
+        novaRodada = Math.min(3, rodadaAtual + (rodadaAtual === 1 ? 2 : 1));
+        novoStatus = 'dominado';
+      }
     }
 
     const proximaData = new Date(now.getTime() + minutosAdicionais * 60 * 1000);

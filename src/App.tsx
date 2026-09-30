@@ -250,12 +250,14 @@ export default function App() {
   const handleRegistrarRevisao = (
     cardId: string, 
     avaliacao: 'errei' | 'dificil' | 'bom' | 'facil', 
-    tempoSegundos: number
+    tempoSegundos: number,
+    modo?: 'estudo' | 'revisao'
   ) => {
     const { cardsAtualizados, progressoAtualizado } = StorageService.processarRevisao(
       cardId,
       avaliacao,
-      tempoSegundos
+      tempoSegundos,
+      modo
     );
     setCards(cardsAtualizados);
     setProgresso(progressoAtualizado);

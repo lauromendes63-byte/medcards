@@ -85,7 +85,7 @@ export function obterInfoRodadaCard(
  * 3. A data de próxima revisão for menor ou igual ao momento atual (agora).
  */
 export function isCardPendente(card: CardClinico, agora: Date = new Date()): boolean {
-  if (card.status === 'pendente' || card.status === 'atrasado') {
+  if (card.status === 'atrasado') {
     return true;
   }
   if (!card.proximaRevisao) {
@@ -96,5 +96,14 @@ export function isCardPendente(card: CardClinico, agora: Date = new Date()): boo
   if (isNaN(time)) {
     return true;
   }
-  return time <= agora.getTime();
+  // Se a data/hora agendada para revisão já chegou ou passou
+  if (time <= agora.getTime()) {
+    return true;
+  }
+  // Se nunca foi revisado e está pendente inicial
+  if (!card.ultimaRevisao && (!card.repeticoes || card.repeticoes === 0) && card.status === 'pendente') {
+    return true;
+  }
+  // Próxima revisão está no futuro: o card foi estudado e não está pendente agora!
+  return false;
 }

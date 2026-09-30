@@ -1368,6 +1368,25 @@ export const EixosView: React.FC<EixosViewProps> = ({
                                               </button>
                                             )}
 
+                                            {/* Marcar como Estudado / Alternar Pendente (CheckCheck) */}
+                                            {onToggleCardEstudado && (
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  onToggleCardEstudado(card.id, isCardPendente(card));
+                                                }}
+                                                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center border transition-all cursor-pointer active:scale-95 shadow-3xs ${
+                                                  isCardPendente(card)
+                                                    ? 'bg-slate-100 hover:bg-emerald-50 text-slate-400 hover:text-emerald-700 border-slate-200 hover:border-emerald-300'
+                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                                                }`}
+                                                title={isCardPendente(card) ? "Marcar como estudado hoje" : "Já estudado hoje! Clique para marcar como pendente"}
+                                              >
+                                                <CheckCheck className="w-3.5 h-3.5" />
+                                              </button>
+                                            )}
+
                                             {/* Revisar (Botão de ação principal, apenas ícone minimalista) */}
                                             <button
                                               type="button"

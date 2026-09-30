@@ -24,7 +24,8 @@ import {
   FilePenLine,
   Activity,
   XCircle,
-  Trash2
+  Trash2,
+  CheckCheck
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CardClinico, MascaraImagem, BlocoOclusao, FluxogramaComplexoDados } from '../types';
@@ -38,7 +39,7 @@ import { EixoEmojiBadge } from './EixoEmojiBadge';
 interface ReviewSessionModalProps {
   cards: CardClinico[];
   onClose: () => void;
-  onRegistrarRevisao: (cardId: string, avaliacao: 'errei' | 'dificil' | 'bom' | 'facil', tempoSegundos: number) => void;
+  onRegistrarRevisao: (cardId: string, avaliacao: 'errei' | 'dificil' | 'bom' | 'facil', tempoSegundos: number, modo?: 'estudo' | 'revisao') => void;
   onEditarCard?: (card: CardClinico, indice: number) => void;
   onExcluirCard?: (cardId: string) => void;
   initialIndex?: number;
@@ -327,7 +328,7 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
     if (!cardAtual) return;
 
     const tempoGasto = Math.max(1, Math.round((Date.now() - tempoInicioCard) / 1000));
-    onRegistrarRevisao(cardAtual.id, avaliacao, tempoGasto);
+    onRegistrarRevisao(cardAtual.id, avaliacao, tempoGasto, modoAtivo);
 
     setEstatisticasSessao(prev => ({
       ...prev,
@@ -372,6 +373,12 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
   };
 
   const handlePularCard = () => {
+    // Se a resposta já foi visualizada no Modo Estudo, registra como estudado para não perder o progresso
+    if (mostrarVerso && cardAtual && modoAtivo === 'estudo') {
+      const tempoGasto = Math.max(1, Math.round((Date.now() - tempoInicioCard) / 1000));
+      onRegistrarRevisao(cardAtual.id, 'bom', tempoGasto, 'estudo');
+    }
+
     if (indiceAtual + 1 < filaCards.length) {
       setIndiceAtual(prev => prev + 1);
     } else {
@@ -1391,7 +1398,7 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
           {(mostrarVerso || respostaSelecionada !== null) && (
             <div className="pt-3 border-t border-slate-100 space-y-2">
               <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold px-0.5">
-                <span>Avaliação de Retenção (SRS):</span>
+                <span>{modoAtivo === 'estudo' ? 'Concluir Estudo deste Card:' : 'Avaliação de Retenção (SRS):'}</span>
                 <span className="hidden sm:inline">Atalhos: 1, 2, 3, 4</span>
               </div>
               <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
@@ -1403,7 +1410,7 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                   <RotateCcw className="w-3.5 h-3.5 text-rose-500 mb-0.5" strokeWidth={1.75} />
                   <span className="text-[11px] sm:text-xs">Errei</span>
                   <span className="text-[9.5px] text-rose-500 font-semibold">
-                    {infoRodada ? formatarTempoMinutos(infoRodada.timers.erreiMinutos) : '2m'}
+                    {modoAtivo === 'estudo' ? 'Rever 12h' : (infoRodada ? formatarTempoMinutos(infoRodada.timers.erreiMinutos) : '2m')}
                   </span>
                 </button>
 
@@ -1415,7 +1422,7 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                   <AlertCircle className="w-3.5 h-3.5 text-amber-500 mb-0.5" strokeWidth={1.75} />
                   <span className="text-[11px] sm:text-xs">Difícil</span>
                   <span className="text-[9.5px] text-amber-500 font-semibold">
-                    {infoRodada ? formatarTempoMinutos(infoRodada.timers.dificilMinutos) : '5m'}
+                    {modoAtivo === 'estudo' ? 'Amanhã' : (infoRodada ? formatarTempoMinutos(infoRodada.timers.dificilMinutos) : '5m')}
                   </span>
                 </button>
 
@@ -1427,7 +1434,7 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                   <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 mb-0.5" strokeWidth={1.75} />
                   <span className="text-[11px] sm:text-xs">Bom</span>
                   <span className="text-[9.5px] text-blue-600 font-semibold">
-                    {infoRodada ? formatarTempoMinutos(infoRodada.timers.bomMinutos) : '15m'}
+                    {modoAtivo === 'estudo' ? 'Estudado ✓' : (infoRodada ? formatarTempoMinutos(infoRodada.timers.bomMinutos) : '15m')}
                   </span>
                 </button>
 
@@ -1439,7 +1446,7 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                   <Zap className="w-3.5 h-3.5 text-emerald-500 mb-0.5" strokeWidth={1.75} />
                   <span className="text-[11px] sm:text-xs">Fácil</span>
                   <span className="text-[9.5px] text-emerald-600 font-semibold">
-                    {infoRodada ? formatarTempoMinutos(infoRodada.timers.facilMinutos) : '30m'}
+                    {modoAtivo === 'estudo' ? 'Dominado ✓✓' : (infoRodada ? formatarTempoMinutos(infoRodada.timers.facilMinutos) : '30m')}
                   </span>
                 </button>
               </div>
