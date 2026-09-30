@@ -1,6 +1,6 @@
 {
   "version": "2.4.6",
-  "buildTime": "2026-09-30T21:26:09.453Z",
-  "buildDateFormatted": "30/09/2026, 18:26:09",
+  "buildTime": "2026-09-30T22:15:00.569Z",
+  "buildDateFormatted": "30/09/2026, 19:15:00",
   "releaseNotes": "MedCards v2.4.6: Suporte oficial e completo para instalação como WebAPK nativo (PWA instalável com inicialização instantânea no Android e desktop), modo 'Estudo' sem repetição para a 1ª resolução de flashcards (ciclo de repetição reservado exclusivamente para o modo 'Revisão'), resolução definitiva de travamentos/congelamentos ao alternar entre os modos Canvas e Trilha nos fluxogramas, e rolagem nativa ultrafluida na Trilha."
 }

@@ -11,9 +11,11 @@ import {
   Activity,
   Sparkles,
   Clock,
-  Lightbulb
+  Lightbulb,
+  Trash2
 } from 'lucide-react';
 import { CardClinico } from '../types';
+import { StorageService } from '../services/storage';
 import { FormattedClinicalText } from './FormattedClinicalText';
 import { extrairPerguntaObjetiva } from '../utils/clinicalTextUtils';
 import { EixoEmojiBadge } from './EixoEmojiBadge';
@@ -23,6 +25,7 @@ interface ClinicalCaseModalProps {
   onClose: () => void;
   onRegistrarRevisao: (cardId: string, avaliacao: 'errei' | 'dificil' | 'bom' | 'facil', tempoSegundos: number) => void;
   onEditarCard?: (card: CardClinico) => void;
+  onExcluirCard?: (cardId: string) => void;
 }
 
 export const ClinicalCaseModal: React.FC<ClinicalCaseModalProps> = ({
@@ -30,6 +33,7 @@ export const ClinicalCaseModal: React.FC<ClinicalCaseModalProps> = ({
   onClose,
   onRegistrarRevisao,
   onEditarCard,
+  onExcluirCard,
 }) => {
   const [opcaoSelecionada, setOpcaoSelecionada] = useState<number | null>(null);
   const [tempoInicio] = useState<number>(Date.now());
@@ -44,6 +48,18 @@ export const ClinicalCaseModal: React.FC<ClinicalCaseModalProps> = ({
     }, 1000);
     return () => clearInterval(interval);
   }, [opcaoSelecionada, tempoInicio]);
+
+  const [modalConfirmarExclusao, setModalConfirmarExclusao] = useState(false);
+
+  const handleConfirmarExclusaoCard = () => {
+    setModalConfirmarExclusao(false);
+    if (onExcluirCard) {
+      onExcluirCard(card.id);
+    } else {
+      StorageService.excluirCard(card.id);
+    }
+    onClose();
+  };
 
   if (!caso) return null;
 
@@ -110,15 +126,26 @@ export const ClinicalCaseModal: React.FC<ClinicalCaseModalProps> = ({
             )}
           </div>
 
-          {/* Lado Direito: Botão X para Encerrar */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-3xs active:scale-95"
-            title="Encerrar visualização"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          {/* Lado Direito: Botão Lixeira + Botão X para Encerrar */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setModalConfirmarExclusao(true)}
+              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-3xs active:scale-95"
+              title="Excluir este caso clínico permanentemente"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-3xs active:scale-95"
+              title="Encerrar visualização"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* ================================================================= */}
@@ -304,6 +331,44 @@ export const ClinicalCaseModal: React.FC<ClinicalCaseModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Modal de Confirmação de Exclusão do Caso Clínico */}
+      {modalConfirmarExclusao && (
+        <div className="fixed inset-0 z-70 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-100">
+          <div className="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">Excluir Caso Clínico?</h4>
+                <p className="text-xs text-slate-500">Tem certeza que deseja excluir permanentemente este caso clínico?</p>
+              </div>
+            </div>
+
+            <p className="text-xs font-semibold text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-200/70 line-clamp-2">
+              "{card.titulo}"
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setModalConfirmarExclusao(false)}
+                className="px-3 py-1.5 rounded-xl text-slate-600 hover:bg-slate-100 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarExclusaoCard}
+                className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs active:scale-95"
+              >
+                Sim, Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

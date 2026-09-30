@@ -947,6 +947,7 @@ export default function App() {
           onClose={() => { setReviewCards(null); setSessaoOrigem(null); }}
           onRegistrarRevisao={handleRegistrarRevisao}
           onEditarCard={handleEditarCardReview}
+          onExcluirCard={handleCardExcluido}
           initialIndex={reviewInitialIndex}
           onIndexChange={(novoIdx) => setReviewInitialIndex(novoIdx)}
         />
@@ -959,6 +960,7 @@ export default function App() {
           onClose={() => { setOcclusionCard(null); setSessaoOrigem(null); }}
           onRegistrarRevisao={handleRegistrarRevisao}
           onEditarCard={handleEditarCardOcclusion}
+          onExcluirCard={handleCardExcluido}
         />
       )}
 
@@ -969,6 +971,7 @@ export default function App() {
           onClose={() => { setCaseCard(null); setSessaoOrigem(null); }}
           onRegistrarRevisao={handleRegistrarRevisao}
           onEditarCard={handleEditarCardCase}
+          onExcluirCard={handleCardExcluido}
         />
       )}
 

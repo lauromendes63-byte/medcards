@@ -23,7 +23,8 @@ import {
   Pencil,
   FilePenLine,
   Activity,
-  XCircle
+  XCircle,
+  Trash2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CardClinico, MascaraImagem, BlocoOclusao, FluxogramaComplexoDados } from '../types';
@@ -39,6 +40,7 @@ interface ReviewSessionModalProps {
   onClose: () => void;
   onRegistrarRevisao: (cardId: string, avaliacao: 'errei' | 'dificil' | 'bom' | 'facil', tempoSegundos: number) => void;
   onEditarCard?: (card: CardClinico, indice: number) => void;
+  onExcluirCard?: (cardId: string) => void;
   initialIndex?: number;
   onIndexChange?: (indice: number) => void;
   modo?: 'estudo' | 'revisao';
@@ -49,6 +51,7 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
   onClose,
   onRegistrarRevisao,
   onEditarCard,
+  onExcluirCard,
   initialIndex = 0,
   onIndexChange,
   modo = 'revisao',
@@ -159,6 +162,35 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
     setQuickToast('Card atualizado com sucesso!');
     setTimeout(() => setQuickToast(null), 2200);
     setIsQuickEditOpen(false);
+  };
+
+  const [modalConfirmarExclusao, setModalConfirmarExclusao] = useState(false);
+
+  const handleConfirmarExclusaoCard = () => {
+    if (!cardAtual) return;
+    const cardIdParaExcluir = cardAtual.id;
+    setModalConfirmarExclusao(false);
+
+    if (onExcluirCard) {
+      onExcluirCard(cardIdParaExcluir);
+    } else {
+      StorageService.excluirCard(cardIdParaExcluir);
+    }
+
+    if (filaCards.length <= 1) {
+      onClose();
+      return;
+    }
+
+    const novaFila = filaCards.filter((_, i) => i !== indiceAtual);
+    setFilaCards(novaFila);
+    if (indiceAtual >= novaFila.length) {
+      setIndiceAtual(novaFila.length - 1);
+    }
+    setMostrarVerso(false);
+    setRespostaSelecionada(null);
+    setQuickToast('Flashcard excluído com sucesso!');
+    setTimeout(() => setQuickToast(null), 2200);
   };
 
   // Resetar estados interativos e cronômetro a cada novo card
@@ -641,8 +673,18 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
             </button>
           </div>
 
-          {/* Direita: Botão X para Encerrar */}
-          <div className="flex items-center justify-end shrink-0">
+          {/* Direita: Botão Lixeira (Minimalista) + Botão X para Encerrar */}
+          <div className="flex items-center justify-end gap-1 shrink-0">
+            <button
+              type="button"
+              id="btn-excluir-card-sessao"
+              onClick={() => setModalConfirmarExclusao(true)}
+              title="Excluir este flashcard permanentemente"
+              className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all cursor-pointer active:scale-95 shadow-3xs"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+
             <button
               type="button"
               onClick={onClose}
@@ -1518,6 +1560,44 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                   <span>Salvar</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão do Card */}
+      {modalConfirmarExclusao && cardAtual && (
+        <div className="fixed inset-0 z-70 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-100">
+          <div className="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">Excluir Flashcard?</h4>
+                <p className="text-xs text-slate-500">Tem certeza que deseja excluir permanentemente este card?</p>
+              </div>
+            </div>
+
+            <p className="text-xs font-semibold text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-200/70 line-clamp-2">
+              "{cardAtual.titulo}"
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setModalConfirmarExclusao(false)}
+                className="px-3 py-1.5 rounded-xl text-slate-600 hover:bg-slate-100 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarExclusaoCard}
+                className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs active:scale-95"
+              >
+                Sim, Excluir
+              </button>
             </div>
           </div>
         </div>
