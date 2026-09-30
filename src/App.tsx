@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { CheckCircle2, FilePenLine, BookOpen } from 'lucide-react';
+import { CheckCircle2, CheckCheck, FilePenLine, BookOpen } from 'lucide-react';
 import { StorageService } from './services/storage';
 import { CardClinico, EixoClinico, ProgressoDiario, TabNavegacao, EspecialidadeMedica, ModoVisualizacaoEixos } from './types';
 import { Header } from './components/Header';
@@ -314,6 +314,46 @@ export default function App() {
     setReviewInitialIndex(0);
     setReviewModo('estudo');
     setReviewCards([card]);
+  };
+
+  // Alternar status de estudo de um card individual (marca como estudado ou volta para pendente)
+  const handleToggleCardEstudado = (cardId: string, estudado?: boolean) => {
+    const card = cards.find(c => c.id === cardId);
+    const novoEstado = estudado !== undefined ? estudado : (card ? isCardPendente(card) : true);
+    const { cardsAtualizados, progressoAtualizado } = StorageService.marcarCardComoEstudado(cardId, novoEstado);
+    setCards(cardsAtualizados);
+    setProgresso(progressoAtualizado);
+    setEixos(StorageService.getEixos());
+  };
+
+  // Alternar status de estudo de todos os cards de um tópico
+  const handleToggleTopicoEstudado = (eixoId: string, topicoId: string, estudado?: boolean) => {
+    const cardsTopico = cards.filter(c => c.eixoId === eixoId && (c.topicoId === topicoId || (c.topicoNome && c.topicoNome.toLowerCase() === topicoId.toLowerCase())));
+    const temPendentes = cardsTopico.some(c => isCardPendente(c));
+    const novoEstado = estudado !== undefined ? estudado : temPendentes;
+    const { cardsAtualizados, progressoAtualizado } = StorageService.marcarTopicoComoEstudado(eixoId, topicoId, novoEstado);
+    setCards(cardsAtualizados);
+    setProgresso(progressoAtualizado);
+    setEixos(StorageService.getEixos());
+  };
+
+  // Alternar status de estudo de todos os cards de um eixo
+  const handleToggleEixoEstudado = (eixoId: string, estudado?: boolean) => {
+    const cardsEixo = cards.filter(c => c.eixoId === eixoId);
+    const temPendentes = cardsEixo.some(c => isCardPendente(c));
+    const novoEstado = estudado !== undefined ? estudado : temPendentes;
+    const { cardsAtualizados, progressoAtualizado } = StorageService.marcarEixoComoEstudado(eixoId, novoEstado);
+    setCards(cardsAtualizados);
+    setProgresso(progressoAtualizado);
+    setEixos(StorageService.getEixos());
+  };
+
+  // Marcar múltiplos cards selecionados como estudados ou pendentes
+  const handleMarcarVariosEstudados = (cardIds: string[], estudado: boolean = true) => {
+    const { cardsAtualizados, progressoAtualizado } = StorageService.marcarVariosCardsComoEstudados(cardIds, estudado);
+    setCards(cardsAtualizados);
+    setProgresso(progressoAtualizado);
+    setEixos(StorageService.getEixos());
   };
 
   // Abrir editor para alterar um card existente dentro da Revisão Espaçada
@@ -722,6 +762,10 @@ export default function App() {
             onExcluirVariosCards={handleExcluirVariosCards}
             modoVisualizacao={modoVisualizacaoEixos}
             onModoVisualizacaoChange={setModoVisualizacaoEixos}
+            onToggleCardEstudado={handleToggleCardEstudado}
+            onToggleTopicoEstudado={handleToggleTopicoEstudado}
+            onToggleEixoEstudado={handleToggleEixoEstudado}
+            onMarcarVariosEstudados={handleMarcarVariosEstudados}
           />
         )}
 
@@ -741,14 +785,32 @@ export default function App() {
                   </h3>
                 </div>
 
-                <button
-                  id="btn-iniciar-fila-completa"
-                  onClick={() => handleIniciarRevisao()}
-                  disabled={cardsPendentes.length === 0}
-                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:bg-slate-200 text-white font-bold text-[11px] shadow-2xs transition-all cursor-pointer"
-                >
-                  Estudar Fila
-                </button>
+                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                  {cardsPendentes.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ids = cardsPendentes.map(c => c.id);
+                        handleMarcarVariosEstudados(ids, true);
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-[11px] shadow-3xs transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+                      title="Marcar todas as revisões pendentes de hoje como já estudadas"
+                    >
+                      <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="hidden sm:inline">Marcar Todas como Estudadas</span>
+                      <span className="sm:hidden">Já Estudei Todas</span>
+                    </button>
+                  )}
+
+                  <button
+                    id="btn-iniciar-fila-completa"
+                    onClick={() => handleIniciarRevisao()}
+                    disabled={cardsPendentes.length === 0}
+                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:bg-slate-200 text-white font-bold text-[11px] shadow-2xs transition-all cursor-pointer"
+                  >
+                    Estudar Fila
+                  </button>
+                </div>
               </div>
 
               {cardsPendentes.length === 0 ? (

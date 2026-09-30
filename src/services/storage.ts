@@ -1,4 +1,4 @@
-import { CardClinico, EixoClinico, ProgressoDiario, ConfiguracaoTimers, TopicoClinico } from '../types';
+import { CardClinico, EixoClinico, ProgressoDiario, ConfiguracaoTimers, TopicoClinico, StatusRevisao } from '../types';
 import { INITIAL_CARDS, INITIAL_EIXOS, INITIAL_PROGRESS } from '../data/mockData';
 import { IndexedDbService } from './indexedDbStorage';
 import { DEFAULT_CONFIG_TIMERS, obterInfoRodadaCard, isCardPendente } from '../utils/timerUtils';
@@ -613,6 +613,92 @@ export const StorageService = {
     this.saveCards(cardsAtualizados);
     this.sincronizarEixos(cardsAtualizados);
     return cardsAtualizados;
+  },
+
+  // Marcar um card individual como estudado ou pendente
+  marcarCardComoEstudado(
+    cardId: string, 
+    estudado: boolean = true
+  ): { cardsAtualizados: CardClinico[]; progressoAtualizado: ProgressoDiario } {
+    return this.marcarVariosCardsComoEstudados([cardId], estudado);
+  },
+
+  // Marcar múltiplos cards como estudados ou pendentes
+  marcarVariosCardsComoEstudados(
+    cardIds: string[], 
+    estudado: boolean = true
+  ): { cardsAtualizados: CardClinico[]; progressoAtualizado: ProgressoDiario } {
+    const idSet = new Set(cardIds);
+    const cards = this.getCards();
+    const progresso = this.getProgresso();
+    const now = new Date();
+    // Se estudado: próxima revisão em 24h (para sumir da fila de pendentes)
+    const proximaAmanha = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+    // Se pendente: data no passado recente
+    const dataImediata = new Date(now.getTime() - 60 * 1000).toISOString();
+
+    let alteradosHoje = 0;
+
+    const cardsAtualizados = cards.map(c => {
+      if (!idSet.has(c.id)) return c;
+
+      if (estudado) {
+        alteradosHoje++;
+        const novoHistorico = c.historicoRespostas && c.historicoRespostas.length > 0 
+          ? [...c.historicoRespostas, 'bom' as const] 
+          : ['bom' as const];
+        return {
+          ...c,
+          status: (c.repeticoes >= 2 ? 'dominado' : 'em_revisao') as StatusRevisao,
+          proximaRevisao: proximaAmanha,
+          ultimaRevisao: now.toISOString(),
+          repeticoes: Math.max(1, (c.repeticoes || 0) + 1),
+          rodadaAtual: Math.max(2, c.rodadaAtual || 1),
+          historicoRespostas: novoHistorico,
+        };
+      } else {
+        return {
+          ...c,
+          status: 'pendente' as StatusRevisao,
+          proximaRevisao: dataImediata,
+          rodadaAtual: 1,
+        };
+      }
+    });
+
+    this.saveCards(cardsAtualizados);
+    this.sincronizarEixos(cardsAtualizados);
+
+    const progressoAtualizado: ProgressoDiario = {
+      ...progresso,
+      cardsRevisadosHoje: estudado ? progresso.cardsRevisadosHoje + alteradosHoje : progresso.cardsRevisadosHoje,
+    };
+    this.saveProgresso(progressoAtualizado);
+
+    return { cardsAtualizados, progressoAtualizado };
+  },
+
+  // Marcar todos os cards de um tópico como estudados ou pendentes
+  marcarTopicoComoEstudado(
+    eixoId: string, 
+    topicoId: string, 
+    estudado: boolean = true
+  ): { cardsAtualizados: CardClinico[]; progressoAtualizado: ProgressoDiario } {
+    const cards = this.getCards();
+    const ids = cards
+      .filter(c => c.eixoId === eixoId && (c.topicoId === topicoId || (c.topicoNome && c.topicoNome.toLowerCase() === topicoId.toLowerCase())))
+      .map(c => c.id);
+    return this.marcarVariosCardsComoEstudados(ids, estudado);
+  },
+
+  // Marcar todos os cards de um eixo como estudados ou pendentes
+  marcarEixoComoEstudado(
+    eixoId: string, 
+    estudado: boolean = true
+  ): { cardsAtualizados: CardClinico[]; progressoAtualizado: ProgressoDiario } {
+    const cards = this.getCards();
+    const ids = cards.filter(c => c.eixoId === eixoId).map(c => c.id);
+    return this.marcarVariosCardsComoEstudados(ids, estudado);
   },
 
   sincronizarEixos(cards: CardClinico[]): void {
