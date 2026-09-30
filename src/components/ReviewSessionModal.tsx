@@ -559,9 +559,9 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
       <div className="w-full max-w-2xl mx-auto px-1.5 sm:px-4 py-2 sm:py-3 space-y-2 flex-1 flex flex-col pb-[max(2.5rem,env(safe-area-inset-bottom))] animate-in fade-in duration-150">
         
         {/* Barra Superior da Questão / Flashcard (Compacta, elegante e centralizada) */}
-        <div className="bg-white rounded-2xl px-2.5 sm:px-4 py-2 sm:py-2.5 border border-slate-200/90 shadow-2xs flex items-center justify-between gap-1.5 sm:gap-2 shrink-0">
-          {/* Esquerda: 2 Setinhas de Navegação (Voltar / Pular) + Número da Questão + Especialidade + Tópico */}
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+        <div className="bg-white rounded-2xl px-2.5 sm:px-4 py-2 border border-slate-200/90 shadow-2xs flex items-center justify-between gap-2 shrink-0">
+          {/* Esquerda: 2 Setinhas de Navegação (Voltar / Pular) + Número da Questão + Eixo */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Bloco com as 2 Setinhas: Voltar (←) e Pular (→) */}
             <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200/90 shadow-3xs shrink-0">
               <button
@@ -570,14 +570,13 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                 onClick={handleVoltarCard}
                 disabled={indiceAtual === 0}
                 title={indiceAtual === 0 ? "Primeiro flashcard da sessão" : "Voltar ao flashcard anterior (←)"}
-                className={`p-1.5 sm:px-2 sm:py-1 rounded-lg flex items-center gap-1 text-xs font-bold transition-all ${
+                className={`p-1.5 rounded-lg flex items-center justify-center transition-all ${
                   indiceAtual === 0
                     ? 'text-slate-300 cursor-not-allowed opacity-40'
                     : 'text-slate-700 hover:text-blue-700 hover:bg-white active:scale-95 cursor-pointer shadow-3xs'
                 }`}
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline text-[11px]">Voltar</span>
               </button>
 
               <div className="h-3.5 w-px bg-slate-200 mx-0.5" />
@@ -587,9 +586,8 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                 id="btn-nav-pular-card"
                 onClick={handlePularCard}
                 title={indiceAtual + 1 >= totalCards ? "Concluir sessão (→)" : "Pular este flashcard e ir ao próximo (→)"}
-                className="p-1.5 sm:px-2 sm:py-1 rounded-lg flex items-center gap-1 text-xs font-bold text-slate-700 hover:text-blue-700 hover:bg-white active:scale-95 cursor-pointer transition-all shadow-3xs"
+                className="p-1.5 rounded-lg flex items-center justify-center text-slate-700 hover:text-blue-700 hover:bg-white active:scale-95 cursor-pointer transition-all shadow-3xs"
               >
-                <span className="hidden sm:inline text-[11px]">Pular</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -598,52 +596,21 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
               {totalCards > 1 ? `${indiceAtual + 1}/${totalCards}` : '1/1'}
             </span>
             <EixoEmojiBadge card={cardAtual} size="sm" />
-
-            {/* Pill de Alternância: Modo Estudo (1ª vez / sem repetição) vs Modo Revisão (Ciclo ativo) */}
-            <button
-              type="button"
-              id="btn-toggle-modo-sessao"
-              onClick={() => setModoAtivo(prev => prev === 'estudo' ? 'revisao' : 'estudo')}
-              title={modoAtivo === 'estudo' 
-                ? "Modo Estudo: cada card aparece uma única vez (sem repetições). Clique para alternar para Revisão com ciclo." 
-                : "Modo Revisão: cards com erro voltam ao final da fila para consolidação. Clique para alternar para Estudo sem repetição."}
-              className={`flex items-center gap-1 text-[10px] sm:text-[11px] font-black px-2 py-0.5 sm:py-1 rounded-xl border transition-all cursor-pointer active:scale-95 shadow-3xs shrink-0 ${
-                modoAtivo === 'estudo'
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                  : 'bg-indigo-50 text-indigo-800 border-indigo-300 hover:bg-indigo-100'
-              }`}
-            >
-              {modoAtivo === 'estudo' ? (
-                <>
-                  <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600" />
-                  <span className="hidden sm:inline">Estudo (1ª vez)</span>
-                  <span className="sm:hidden">Estudo</span>
-                </>
-              ) : (
-                <>
-                  <RotateCcw className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-indigo-600" />
-                  <span className="hidden sm:inline">Revisão (Ciclo)</span>
-                  <span className="sm:hidden">Ciclo</span>
-                </>
-              )}
-            </button>
-
-            {cardAtual.topicoNome && (
-              <span className="text-[10.5px] text-slate-600 font-medium truncate max-w-[90px] sm:max-w-[180px] hidden md:inline">
-                • {cardAtual.topicoNome.replace(/^tópico:\s*/i, '')}
-              </span>
-            )}
           </div>
 
-          {/* Centro: Cronômetro + Botão Editar + Botão Dica */}
-          <div className="flex items-center justify-center gap-1 sm:gap-1.5 shrink-0">
-            <div className="flex items-center gap-1 text-[11px] font-mono font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200">
+          {/* Direita: Cronômetro + Botão Editar (Ícone) + Botão Dica + Lixeira + X */}
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 text-[11px] font-mono font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 shadow-3xs">
               <Clock className="w-3 h-3 text-slate-500" />
               <span>{formatarTempo(tempoDecorridoSegundos)}</span>
             </div>
 
+            <div className="h-3.5 w-px bg-slate-200 mx-0.5" />
+
+            {/* Editar (Apenas Ícone) */}
             <button
               type="button"
+              id="btn-editar-card-sessao"
               onClick={() => {
                 if (isImageOcclusion && onEditarCard) {
                   onEditarCard(cardAtual, indiceAtual);
@@ -652,44 +619,42 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
                 }
               }}
               title="Editar este flashcard"
-              className="flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg border border-slate-200 hover:border-blue-400 bg-white hover:bg-blue-50/50 text-slate-700 hover:text-blue-700 transition-all cursor-pointer shadow-3xs active:scale-95"
+              className="p-1.5 rounded-lg border border-slate-200 hover:border-blue-400 bg-white hover:bg-blue-50/60 text-slate-700 hover:text-blue-700 transition-all cursor-pointer shadow-3xs active:scale-95 flex items-center justify-center"
             >
               <FilePenLine className="w-3.5 h-3.5 text-blue-600" />
-              <span>Editar</span>
             </button>
 
+            {/* Dica (Ícone com status) */}
             <button
               type="button"
               onClick={handleToggleExibirDicas}
-              title={exibirDicas ? "Dicas ativadas" : "Dicas ocultas"}
-              className={`flex items-center gap-1 text-[10.5px] sm:text-[11px] font-bold px-2 py-1 rounded-lg border transition-all cursor-pointer ${
+              title={exibirDicas ? "Dicas ativadas (clique para ocultar)" : "Dicas ocultas (clique para exibir)"}
+              className={`p-1.5 rounded-lg border transition-all cursor-pointer shadow-3xs active:scale-95 flex items-center justify-center ${
                 exibirDicas
-                  ? 'bg-amber-50 text-amber-900 border-amber-300'
-                  : 'bg-slate-100 text-slate-500 border-slate-300 line-through'
+                  ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
+                  : 'bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200'
               }`}
             >
-              <Lightbulb className={`w-3.5 h-3.5 ${exibirDicas ? 'text-amber-600 fill-amber-400' : 'text-slate-400'}`} />
-              <span className="hidden sm:inline">{exibirDicas ? 'Dica' : 'S/ Dica'}</span>
+              <Lightbulb className={`w-3.5 h-3.5 ${exibirDicas ? 'text-amber-500 fill-amber-400' : 'text-slate-400'}`} />
             </button>
-          </div>
 
-          {/* Direita: Botão Lixeira (Minimalista) + Botão X para Encerrar */}
-          <div className="flex items-center justify-end gap-1 shrink-0">
+            {/* Lixeira (Excluir Card) */}
             <button
               type="button"
               id="btn-excluir-card-sessao"
               onClick={() => setModalConfirmarExclusao(true)}
               title="Excluir este flashcard permanentemente"
-              className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all cursor-pointer active:scale-95 shadow-3xs"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition-all cursor-pointer active:scale-95 shadow-3xs flex items-center justify-center bg-white"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
 
+            {/* Fechar Sessão */}
             <button
               type="button"
               onClick={onClose}
               title="Encerrar sessão"
-              className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all cursor-pointer active:scale-95 flex items-center justify-center"
             >
               <X className="w-4 h-4" strokeWidth={2.5} />
             </button>
@@ -700,17 +665,46 @@ export const ReviewSessionModal: React.FC<ReviewSessionModalProps> = ({
         <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 border border-slate-200/80 shadow-2xs space-y-3.5 text-left flex-1 flex flex-col justify-between">
           <div className="space-y-3.5">
             {/* Título da Questão / Caso e Tópico com Tipografia Aprimorada e Alto Contraste */}
-            <div className="text-center space-y-1.5 pb-2 border-b border-slate-100">
+            <div className="text-center space-y-2 pb-2.5 border-b border-slate-100">
               <div className="flex items-center justify-center gap-2">
                 <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
                   {cardAtual.titulo}
                 </h3>
               </div>
-              {cardAtual.topicoNome && (
-                <div className="inline-block px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-300/80 text-xs font-bold shadow-3xs">
-                  {cardAtual.topicoNome.replace(/^tópico:\s*/i, '')}
-                </div>
-              )}
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                {cardAtual.topicoNome && (
+                  <div className="inline-block px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-300/80 text-xs font-bold shadow-3xs">
+                    {cardAtual.topicoNome.replace(/^tópico:\s*/i, '')}
+                  </div>
+                )}
+
+                {/* Pill de Alternância: Modo Estudo (1ª vez / sem repetição) vs Modo Revisão (Ciclo ativo) */}
+                <button
+                  type="button"
+                  id="btn-toggle-modo-sessao"
+                  onClick={() => setModoAtivo(prev => prev === 'estudo' ? 'revisao' : 'estudo')}
+                  title={modoAtivo === 'estudo' 
+                    ? "Modo Estudo: cada card aparece uma única vez (sem repetições). Clique para alternar para Revisão com ciclo." 
+                    : "Modo Revisão: cards com erro voltam ao final da fila para consolidação. Clique para alternar para Estudo sem repetição."}
+                  className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border transition-all cursor-pointer active:scale-95 shadow-3xs ${
+                    modoAtivo === 'estudo'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                      : 'bg-indigo-50 text-indigo-800 border-indigo-300 hover:bg-indigo-100'
+                  }`}
+                >
+                  {modoAtivo === 'estudo' ? (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Modo Estudo (1ª vez)</span>
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Modo Revisão (Ciclo)</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
           {/* =============================================================== */}

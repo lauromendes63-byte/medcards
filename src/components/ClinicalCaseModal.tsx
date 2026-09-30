@@ -118,10 +118,9 @@ export const ClinicalCaseModal: React.FC<ClinicalCaseModalProps> = ({
                 type="button"
                 onClick={() => onEditarCard(card)}
                 title="Editar este caso clínico"
-                className="flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-xl border border-emerald-200 hover:border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 transition-all cursor-pointer shadow-3xs active:scale-95"
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 flex items-center justify-center transition-all cursor-pointer shadow-3xs active:scale-95"
               >
-                <FilePenLine className="w-3 h-3 text-emerald-600" />
-                <span className="hidden xs:inline">Editar</span>
+                <FilePenLine className="w-4 h-4 text-emerald-600" />
               </button>
             )}
           </div>

@@ -226,10 +226,9 @@ export const VisualOcclusionModal: React.FC<VisualOcclusionModalProps> = ({
                 type="button"
                 onClick={() => onEditarCard(card)}
                 title="Editar este flashcard"
-                className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-emerald-200 hover:border-emerald-400 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-900 transition-all cursor-pointer shadow-3xs active:scale-95"
+                className="p-1.5 rounded-lg border border-emerald-200 hover:border-emerald-400 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-900 transition-all cursor-pointer shadow-3xs active:scale-95 flex items-center justify-center"
               >
-                <FilePenLine className="w-3 h-3 text-emerald-600" />
-                <span>Editar</span>
+                <FilePenLine className="w-3.5 h-3.5 text-emerald-600" />
               </button>
             )}
 
