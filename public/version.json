@@ -1,6 +1,6 @@
 {
-  "version": "2.6.0",
-  "buildTime": "2026-10-13T21:31:01.114Z",
-  "buildDateFormatted": "13/10/2026, 18:31:01",
-  "releaseNotes": "MedCards v2.6.0: Personalização completa da tela inicial (nome, objetivo com chips rápidos e temas visuais do card no dashboard e configurações), correção definitiva do bug de duplicidade de eixos e cards ao importar via IA no iOS/iPhone, e redesign mobile-first da Central de Integração com foco prioritário em Colar JSON do Gemini."
+  "version": "2.6.1",
+  "buildTime": "2026-10-13T21:43:30.877Z",
+  "buildDateFormatted": "13/10/2026, 18:43:30",
+  "releaseNotes": "MedCards v2.6.1: Botão de personalizar minimizado (apenas ícone sem texto), títulos das abas da Central de Integração concisos e sem cortes (...), remoção de banners redundantes e redesign ergonômico ultra-compacto da aba de Prompt IA."
 }

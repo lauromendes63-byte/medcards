@@ -23,7 +23,8 @@ import {
   HardDrive,
   ChevronDown,
   ChevronUp,
-  Trash2
+  Trash2,
+  Sliders
 } from 'lucide-react';
 import { CardClinico, EixoClinico, ProgressoDiario, EspecialidadeMedica, TODAS_ESPECIALIDADES_MEDICAS } from '../types';
 import { AnkiService, ResultadoImportacao } from '../services/ankiService';
@@ -1149,9 +1150,11 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
           <button
             type="button"
             onClick={() => setExpandirDestino(true)}
-            className="px-2 py-1 rounded-lg text-[10.5px] font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200/70 cursor-pointer shrink-0 transition-colors touch-instant"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-blue-700 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 cursor-pointer shrink-0 transition-colors touch-instant shadow-3xs"
+            title="Ajustar eixo e tópico manualmente"
+            aria-label="Personalizar destino"
           >
-            Personalizar
+            <Sliders className="w-3.5 h-3.5" />
           </button>
         </div>
       );
@@ -1467,45 +1470,45 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
           {tabAtiva === 'importar' ? (
             <div className="space-y-3 sm:space-y-3.5">
               {/* Alternador de Modo: Prompt Gemini & IA vs Arquivo */}
-              {/* Navegação Rápida de Importação: 1. Colar JSON (Foco) | 2. Gerar Prompt | 3. Arquivo */}
-              <div className="grid grid-cols-3 gap-1 p-1 bg-zinc-100 rounded-2xl border border-zinc-200/70">
+              {/* Navegação de Importação: Colar JSON | Prompt IA | Arquivo */}
+              <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-2xl border border-slate-200/80">
                 <button
                   type="button"
                   onClick={() => setSubAbaImportacao('colar_ia')}
-                  className={`py-2 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer touch-instant transition-all truncate ${
+                  className={`py-2 px-1 rounded-xl text-[11.5px] sm:text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer touch-instant transition-all ${
                     subAbaImportacao === 'colar_ia'
-                      ? 'bg-white text-zinc-900 shadow-2xs ring-1 ring-black/5 font-extrabold'
-                      : 'text-zinc-500 hover:text-zinc-800'
+                      ? 'bg-white text-slate-900 shadow-2xs ring-1 ring-black/5 font-extrabold'
+                      : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span className="truncate">1. Colar JSON IA</span>
+                  <span className="whitespace-nowrap">Colar JSON</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setSubAbaImportacao('prompt_gemini')}
-                  className={`py-2 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer touch-instant transition-all truncate ${
+                  className={`py-2 px-1 rounded-xl text-[11.5px] sm:text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer touch-instant transition-all ${
                     subAbaImportacao === 'prompt_gemini'
-                      ? 'bg-white text-zinc-900 shadow-2xs ring-1 ring-black/5 font-extrabold'
-                      : 'text-zinc-500 hover:text-zinc-800'
+                      ? 'bg-white text-slate-900 shadow-2xs ring-1 ring-black/5 font-extrabold'
+                      : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
                   <Copy className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  <span className="truncate">2. Obter Prompt</span>
+                  <span className="whitespace-nowrap">Prompt IA</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setSubAbaImportacao('arquivo')}
-                  className={`py-2 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer touch-instant transition-all truncate ${
+                  className={`py-2 px-1 rounded-xl text-[11.5px] sm:text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer touch-instant transition-all ${
                     subAbaImportacao === 'arquivo'
-                      ? 'bg-white text-zinc-900 shadow-2xs ring-1 ring-black/5 font-extrabold'
-                      : 'text-zinc-500 hover:text-zinc-800'
+                      ? 'bg-white text-slate-900 shadow-2xs ring-1 ring-black/5 font-extrabold'
+                      : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
                   <Package className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                  <span className="truncate">3. Arquivo</span>
+                  <span className="whitespace-nowrap">Arquivo</span>
                 </button>
               </div>
 
@@ -1514,24 +1517,6 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                * ========================================================================= */}
               {subAbaImportacao === 'colar_ia' && (
                 <div className="space-y-3 sm:space-y-3.5">
-                  {/* Banner de atalho caso o aluno ainda não tenha o prompt */}
-                  {!textoColado.trim() && (
-                    <div className="p-2.5 rounded-xl bg-blue-50/70 border border-blue-200/70 flex items-center justify-between gap-2 text-xs">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-xs">💡</span>
-                        <span className="text-[11px] text-blue-900 font-medium truncate">
-                          Ainda não gerou os cards no Gemini?
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setSubAbaImportacao('prompt_gemini')}
-                        className="text-[10.5px] sm:text-[11px] font-bold text-blue-700 hover:text-blue-900 bg-white px-2.5 py-1 rounded-lg border border-blue-200/80 shrink-0 cursor-pointer touch-instant shadow-3xs"
-                      >
-                        ⚡ Obter Prompt Formatado
-                      </button>
-                    </div>
-                  )}
 
                   {/* Cabeçalho da Textarea: Ações Rápidas (Colar do Clipboard + Limpar) */}
                   <div className="space-y-1 sm:space-y-1.5">
@@ -1582,6 +1567,19 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                         </div>
                       )}
                     </div>
+
+                    {!textoColado.trim() && (
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 px-0.5 pt-0.5">
+                        <span>💡 Suporta casos clínicos, fluxogramas e cloze</span>
+                        <button
+                          type="button"
+                          onClick={() => setSubAbaImportacao('prompt_gemini')}
+                          className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                        >
+                          Precisa do prompt? Toque aqui →
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Seletor de Destino dos Flashcards (Compacto por padrão) */}
@@ -1798,24 +1796,25 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
               )}
 
               {/* =========================================================================
-               * SUB-ABA 2: GERAR PROMPT GEMINI & IA (BANCA, QUANTIDADE E COPIAR PROMPT)
+               * SUB-ABA 2: GERAR PROMPT GEMINI & IA (COMPACTO E ERGONÔMICO)
                * ========================================================================= */}
               {subAbaImportacao === 'prompt_gemini' && (
-                <div className="space-y-3 sm:space-y-3.5">
-                  <div className="p-3.5 sm:p-5 bg-[#F7F7F5] border border-zinc-200/90 rounded-2xl sm:rounded-3xl space-y-3.5">
-                    {/* 1. Linha de Seleção do Foco: UFPA | ENAMED | USP */}
+                <div className="space-y-3">
+                  {/* Card de Configuração do Prompt (Ultra Compacto) */}
+                  <div className="p-3 sm:p-4 bg-slate-50/80 border border-slate-200/90 rounded-2xl space-y-3">
+                    {/* Linha 1: Seleção de Banca */}
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-zinc-800 tracking-tight flex items-center gap-1.5 text-xs sm:text-[13px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
                           <span>🎯</span>
-                          <span>1. Perfil da Banca no Prompt ao Gemini:</span>
+                          <span>Banca / Perfil de Questão:</span>
                         </span>
-                        <span className="text-[10.5px] font-medium text-zinc-500 shrink-0">
+                        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60">
                           {FOCOS_INSTITUCIONAIS[focoInstitucional].sigla}
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-1 p-1 bg-zinc-200/75 rounded-xl">
+                      <div className="grid grid-cols-3 gap-1 p-1 bg-slate-200/70 rounded-xl">
                         {(['ufpa', 'enamed', 'usp'] as FocoInstitucional[]).map(focoId => {
                           const info = FOCOS_INSTITUCIONAIS[focoId];
                           const ativo = focoInstitucional === focoId;
@@ -1824,241 +1823,162 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                               key={focoId}
                               type="button"
                               onClick={() => setFocoInstitucional(focoId)}
-                              className={`py-1.5 sm:py-2 px-1.5 sm:px-2.5 rounded-lg text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer touch-instant ${
+                              className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer touch-instant transition-all ${
                                 ativo
-                                  ? `${info.corBadge} shadow-xs ring-1 ring-black/5`
-                                  : 'text-zinc-600 hover:text-zinc-950 hover:bg-white/60'
+                                  ? `${info.corBadge} shadow-xs ring-1 ring-black/5 font-extrabold`
+                                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                               }`}
                             >
-                              <span className="text-[11px] sm:text-xs shrink-0">{info.iconeEmoji}</span>
-                              <span className="tracking-tight">{info.sigla}</span>
+                              <span className="text-xs shrink-0">{info.iconeEmoji}</span>
+                              <span>{info.sigla}</span>
                             </button>
                           );
                         })}
                       </div>
                     </div>
 
-                    {/* 2. Seletor Rápido de Quantidade de Flashcards */}
-                    <div className="space-y-2 pt-1 border-t border-zinc-200/70">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-zinc-800 tracking-tight flex items-center gap-1.5 text-xs sm:text-[13px]">
+                    {/* Linha 2: Quantidade de Flashcards (Segmented Compact) */}
+                    <div className="space-y-1.5 pt-2 border-t border-slate-200/70">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
                           <span>⚡</span>
-                          <span>2. Quantidade de Flashcards (Abordando 100% de Tudo):</span>
+                          <span>Quantidade de Flashcards:</span>
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          {modoQuantidadePrompt === 'ideal' ? 'Nº Ideal pela IA' : `${quantidadePrompt} cards`}
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        {/* OPÇÃO A: 20 Flashcards */}
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {/* Opção 1: 20 Cards */}
                         <button
                           type="button"
                           onClick={() => {
                             setModoQuantidadePrompt('fixo_20');
                             setQuantidadePrompt(20);
                           }}
-                          className={`p-2.5 sm:p-3 rounded-xl border text-left flex flex-col justify-between gap-1 cursor-pointer touch-instant ${
+                          className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer touch-instant flex flex-col items-center justify-center ${
                             modoQuantidadePrompt === 'fixo_20'
-                              ? 'bg-white border-zinc-900 ring-1 ring-zinc-900 shadow-2xs'
-                              : 'bg-white/75 hover:bg-white border-zinc-200/90 text-zinc-700'
+                              ? 'bg-white border-blue-600 text-blue-900 shadow-2xs ring-1 ring-blue-600 font-black'
+                              : 'bg-white/70 border-slate-200 text-slate-700 hover:bg-white'
                           }`}
                         >
-                          <div className="flex items-center justify-between gap-1.5">
-                            <span className="text-xs sm:text-[13px] font-bold text-zinc-900">
-                              20 Flashcards
-                            </span>
-                            <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-full uppercase ${
-                              modoQuantidadePrompt === 'fixo_20'
-                                ? 'bg-zinc-900 text-white'
-                                : 'bg-zinc-100 text-zinc-600'
-                            }`}>
-                              Abordar Tudo
-                            </span>
-                          </div>
-                          <p className="text-[10.5px] text-zinc-500 leading-snug">
-                            Sintetiza e cobre 100% da matéria em 20 cards de alto rendimento.
-                          </p>
+                          <span className="text-xs font-extrabold">20 Cards</span>
+                          <span className="text-[9.5px] text-slate-500 font-medium">Padrão Ouro</span>
                         </button>
 
-                        {/* OPÇÃO B: Número Personalizado */}
-                        <div
-                          onClick={() => {
-                            if (modoQuantidadePrompt !== 'personalizado') {
-                              setModoQuantidadePrompt('personalizado');
-                            }
-                          }}
-                          className={`p-2.5 sm:p-3 rounded-xl border text-left flex flex-col justify-between gap-1.5 cursor-pointer transition-colors ${
-                            modoQuantidadePrompt === 'personalizado'
-                              ? 'bg-white border-blue-600 ring-1 ring-blue-600 shadow-2xs'
-                              : 'bg-white/75 hover:bg-white border-zinc-200/90 text-zinc-700'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="text-xs sm:text-[13px] font-bold text-zinc-900">
-                              Nº Personalizado
-                            </span>
-                            <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-full uppercase ${
-                              modoQuantidadePrompt === 'personalizado'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-zinc-100 text-zinc-600'
-                            }`}>
-                              -5 / +5
-                            </span>
-                          </div>
-
-                          <div
-                            className="flex items-center justify-between gap-1.5 pt-0.5"
-                            onClick={e => e.stopPropagation()}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => ajustarQuantidadePersonalizada(-5)}
-                              title="Diminuir 5 flashcards"
-                              className="px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs flex items-center gap-0.5 cursor-pointer touch-instant border border-zinc-200/80"
-                            >
-                              <Minus className="w-3 h-3" />
-                              <span>5</span>
-                            </button>
-
-                            <div className="flex items-center gap-1 flex-1 justify-center">
-                              <input
-                                id="input-qtd-prompt"
-                                type="number"
-                                min={1}
-                                max={150}
-                                value={quantidadePrompt}
-                                onFocus={() => setModoQuantidadePrompt('personalizado')}
-                                onChange={e => {
-                                  setModoQuantidadePrompt('personalizado');
-                                  const val = parseInt(e.target.value, 10);
-                                  if (isNaN(val)) {
-                                    setQuantidadePrompt(20);
-                                  } else {
-                                    setQuantidadePrompt(Math.max(1, Math.min(150, val)));
-                                  }
-                                }}
-                                className="w-14 text-center text-xs sm:text-[13px] font-bold text-zinc-900 bg-zinc-50 border border-zinc-300 rounded-lg py-1 px-1 focus:bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 outline-none"
-                              />
-                              <span className="text-[10.5px] text-zinc-500 font-medium">cards</span>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => ajustarQuantidadePersonalizada(5)}
-                              title="Aumentar 5 flashcards"
-                              className="px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs flex items-center gap-0.5 cursor-pointer touch-instant border border-zinc-200/80"
-                            >
-                              <Plus className="w-3 h-3" />
-                              <span>5</span>
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* OPÇÃO C: Número Ideal */}
+                        {/* Opção 2: Nº Ideal */}
                         <button
                           type="button"
                           onClick={() => setModoQuantidadePrompt('ideal')}
-                          className={`p-2.5 sm:p-3 rounded-xl border text-left flex flex-col justify-between gap-1 cursor-pointer touch-instant ${
+                          className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer touch-instant flex flex-col items-center justify-center ${
                             modoQuantidadePrompt === 'ideal'
-                              ? 'bg-white border-emerald-600 ring-1 ring-emerald-600 shadow-2xs'
-                              : 'bg-white/75 hover:bg-white border-zinc-200/90 text-zinc-700'
+                              ? 'bg-white border-emerald-600 text-emerald-950 shadow-2xs ring-1 ring-emerald-600 font-black'
+                              : 'bg-white/70 border-slate-200 text-slate-700 hover:bg-white'
                           }`}
                         >
-                          <div className="flex items-center justify-between gap-1.5">
-                            <span className="text-xs sm:text-[13px] font-bold text-zinc-900 flex items-center gap-1">
-                              <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                              <span>Nº Ideal (Gemini)</span>
-                            </span>
-                            <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-full uppercase ${
-                              modoQuantidadePrompt === 'ideal'
-                                ? 'bg-emerald-600 text-white'
-                                : 'bg-emerald-50 text-emerald-800'
-                            }`}>
-                              100% Exaustivo
-                            </span>
-                          </div>
-                          <p className="text-[10.5px] text-zinc-500 leading-snug">
-                            O Gemini avalia a aula e cria a quantidade ideal para abordar tudo.
-                          </p>
+                          <span className="text-xs font-extrabold flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-emerald-600 shrink-0" />
+                            Nº Ideal
+                          </span>
+                          <span className="text-[9.5px] text-emerald-700 font-medium">Exaustivo</span>
+                        </button>
+
+                        {/* Opção 3: Custom */}
+                        <button
+                          type="button"
+                          onClick={() => setModoQuantidadePrompt('personalizado')}
+                          className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer touch-instant flex flex-col items-center justify-center ${
+                            modoQuantidadePrompt === 'personalizado'
+                              ? 'bg-white border-blue-600 text-blue-900 shadow-2xs ring-1 ring-blue-600 font-black'
+                              : 'bg-white/70 border-slate-200 text-slate-700 hover:bg-white'
+                          }`}
+                        >
+                          <span className="text-xs font-extrabold">Custom</span>
+                          <span className="text-[9.5px] text-slate-500 font-medium">{quantidadePrompt} cards</span>
                         </button>
                       </div>
-                    </div>
 
-                    {/* 3. Barra de Ação Principal: Resumo do Perfil + Botão de Copiar Prompt */}
-                    <div className="p-3 bg-white rounded-2xl border border-zinc-200/85 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className={`w-10 h-10 rounded-xl ${FOCOS_INSTITUCIONAIS[focoInstitucional].corBadge} flex flex-col items-center justify-center font-black tracking-tight shrink-0`}>
-                          <span className="text-[8px] opacity-80 uppercase leading-none font-bold">Foco</span>
-                          <span className="text-[11px] font-black leading-tight">{FOCOS_INSTITUCIONAIS[focoInstitucional].sigla}</span>
+                      {/* Ajuste fino se for Custom */}
+                      {modoQuantidadePrompt === 'personalizado' && (
+                        <div className="flex items-center justify-center gap-2 p-1.5 rounded-xl bg-white border border-blue-200 animate-in fade-in">
+                          <button
+                            type="button"
+                            onClick={() => ajustarQuantidadePersonalizada(-5)}
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center cursor-pointer active:scale-95"
+                            title="Menos 5"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min={1}
+                              max={150}
+                              value={quantidadePrompt}
+                              onChange={e => {
+                                const val = parseInt(e.target.value, 10);
+                                setQuantidadePrompt(isNaN(val) ? 20 : Math.max(1, Math.min(150, val)));
+                              }}
+                              className="w-14 text-center text-xs font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-lg py-1 outline-hidden"
+                            />
+                            <span className="text-[11px] text-slate-500 font-medium">cards</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => ajustarQuantidadePersonalizada(5)}
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center cursor-pointer active:scale-95"
+                            title="Mais 5"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs sm:text-[13px] font-bold text-zinc-900 leading-snug truncate">
-                            {FOCOS_INSTITUCIONAIS[focoInstitucional].nomeCompleto}
-                          </h4>
-                          <p className="text-[10.5px] text-zinc-500 font-medium leading-snug mt-0.5 truncate">
-                            {modoQuantidadePrompt === 'ideal'
-                              ? 'Modo Ideal: o Gemini define quantos cards criar para cobrir 100% de tudo'
-                              : modoQuantidadePrompt === 'fixo_20'
-                                ? 'Modo 20 Cards: aborda 100% de todo o conteúdo em 20 flashcards'
-                                : `Modo Personalizado: gera exatos ${quantidadePrompt} flashcards abordando 100% de tudo`}
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={handleCopiarPrompt}
-                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-xs sm:text-[13px] font-semibold px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white cursor-pointer touch-instant shrink-0 shadow-xs active:scale-95 transition-all"
-                        title="Copiar prompt formatado e avançar para colar o JSON"
-                      >
-                        {promptCopiado ? (
-                          <>
-                            <ClipboardCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                            <span>Copiado! Indo para Colar...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4 text-white shrink-0" />
-                            <span>
-                              {modoQuantidadePrompt === 'ideal'
-                                ? 'Copiar Prompt (Nº Ideal)'
-                                : modoQuantidadePrompt === 'fixo_20'
-                                  ? 'Copiar Prompt (20 Cards)'
-                                  : `Copiar Prompt (${quantidadePrompt} Cards)`}
-                            </span>
-                          </>
-                        )}
-                      </button>
+                      )}
                     </div>
+                  </div>
 
-                    {/* Acordeão de Prévia do Prompt */}
-                    <div className="pt-0.5 flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => setVerPromptDetalhado(!verPromptDetalhado)}
-                        className="text-[11px] font-semibold text-zinc-600 hover:text-zinc-900 flex items-center gap-1.5 cursor-pointer touch-instant"
-                      >
-                        <span className="truncate">
-                          {verPromptDetalhado ? 'Ocultar texto do prompt' : 'Inspecionar prompt completo'}
-                        </span>
-                        {verPromptDetalhado ? <ChevronUp className="w-3.5 h-3.5 shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 shrink-0" />}
-                      </button>
+                  {/* Botão de Ação Principal: Copiar Prompt */}
+                  <div className="space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={handleCopiarPrompt}
+                      className="w-full py-3 px-4 rounded-xl sm:rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-blue-600/25 transition-all cursor-pointer flex items-center justify-center gap-2 touch-instant"
+                    >
+                      {promptCopiado ? (
+                        <>
+                          <ClipboardCheck className="w-4 h-4 text-emerald-300" />
+                          <span>Prompt Copiado! Abrindo Colar JSON...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 text-white" />
+                          <span>
+                            Copiar Prompt ({FOCOS_INSTITUCIONAIS[focoInstitucional].sigla} • {modoQuantidadePrompt === 'ideal' ? 'Nº Ideal' : `${quantidadePrompt} Cards`})
+                          </span>
+                        </>
+                      )}
+                    </button>
+                    <p className="text-[10.5px] text-slate-500 text-center font-medium">
+                      Ao copiar, você já será levado diretamente para a aba <strong>Colar JSON</strong>.
+                    </p>
+                  </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setSubAbaImportacao('colar_ia')}
-                        className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer touch-instant"
-                      >
-                        <span>Ir para Colar JSON</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </button>
-                    </div>
+                  {/* Acordeão de Inspeção do Prompt (Opcional) */}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setVerPromptDetalhado(!verPromptDetalhado)}
+                      className="w-full py-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <span>{verPromptDetalhado ? 'Ocultar instruções do prompt' : 'Inspecionar texto completo do prompt'}</span>
+                      {verPromptDetalhado ? <ChevronUp className="w-3.5 h-3.5 shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 shrink-0" />}
+                    </button>
 
                     {verPromptDetalhado && (
-                      <div className="p-3 sm:p-3.5 bg-zinc-950 text-zinc-200 rounded-xl border border-zinc-800 text-[10.5px] sm:text-[11px] font-mono max-h-56 overflow-y-auto whitespace-pre-wrap leading-relaxed">
-                        {gerarPromptCompleto(
-                          focoInstitucional,
-                          modoQuantidadePrompt === 'fixo_20' ? 20 : quantidadePrompt,
-                          modoQuantidadePrompt
-                        )}
+                      <div className="mt-2 p-3 rounded-xl bg-slate-900 text-slate-200 text-[10.5px] font-mono max-h-48 overflow-y-auto leading-relaxed border border-slate-800 shadow-inner">
+                        <pre className="whitespace-pre-wrap font-mono">
+                          {gerarPromptCompleto(focoInstitucional, modoQuantidadePrompt === 'fixo_20' ? 20 : quantidadePrompt, modoQuantidadePrompt)}
+                        </pre>
                       </div>
                     )}
                   </div>

@@ -362,21 +362,21 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               </span>
             </div>
 
-            {/* Botão de Personalização do Cartão Inicial */}
+            {/* Botão de Personalização do Cartão Inicial (Minimizado, Apenas Ícone) */}
             <button
               type="button"
+              id="btn-personalizar-card"
               onClick={() => {
                 setTemaTemp(temaId);
                 setNomeTemp(nomeUsuario);
                 setFocoTemp(focoClinico);
                 setModalAberto(true);
               }}
-              className={`px-2 sm:px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer active:scale-95 shadow-3xs flex items-center gap-1.5 touch-instant ${temaAtual.chipFundo} ${temaAtual.chipBorda} ${temaAtual.chipIconeCor}`}
+              className={`p-1.5 sm:p-2 rounded-xl border transition-all cursor-pointer active:scale-95 shadow-3xs flex items-center justify-center touch-instant ${temaAtual.chipFundo} ${temaAtual.chipBorda} ${temaAtual.chipIconeCor}`}
               title="Personalizar seu nome, objetivo e visual da tela inicial"
               aria-label="Personalizar perfil e tela inicial"
             >
-              <Palette className="w-3.5 h-3.5" />
-              <span className="text-[10px] font-bold">Personalizar</span>
+              <Palette className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>
