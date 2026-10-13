@@ -12,10 +12,10 @@ function versionGeneratorPlugin(): Plugin {
     name: 'version-generator-plugin',
     generateBundle() {
       const versionData = {
-        version: '2.5.0',
+        version: '2.6.0',
         buildTime: buildIsoTime,
         buildDateFormatted: buildFormattedTime,
-        releaseNotes: "MedCards v2.5.0: Estética minimalista de leitura confortável, resposta instantânea no celular, seletor rápido de quantidade no prompt do Gemini (20, personalizado +/-5 ou Número Ideal), e novos formatos simplificados de Passo a Passo (Passo 1 sempre oculto inicialmente) e Fluxograma Clínico em árvore visual."
+        releaseNotes: "MedCards v2.6.0: Personalização completa da tela inicial (nome, objetivo com chips rápidos e temas visuais do card no dashboard e configurações), correção definitiva do bug de duplicidade de eixos e cards ao importar via IA no iOS/iPhone, e redesign mobile-first da Central de Integração com foco prioritário em Colar JSON do Gemini."
       };
       this.emitFile({
         type: 'asset',

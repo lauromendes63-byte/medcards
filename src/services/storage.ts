@@ -474,17 +474,36 @@ export const StorageService = {
   getEixos(): EixoClinico[] {
     const raw = localStorage.getItem(STORAGE_KEYS.EIXOS);
     const lista: EixoClinico[] = raw ? JSON.parse(raw) : INITIAL_EIXOS;
-    return lista.map(e => ({
-      ...e,
-      corTema: normalizarCorTemaVibrante(e.corTema),
-    }));
+    // Deduplica eixos por ID para proteção contra entradas duplicadas no banco
+    const vistos = new Set<string>();
+    const unicos: EixoClinico[] = [];
+    for (const e of lista) {
+      if (e && e.id && !vistos.has(e.id)) {
+        vistos.add(e.id);
+        unicos.push({
+          ...e,
+          corTema: normalizarCorTemaVibrante(e.corTema),
+        });
+      }
+    }
+    return unicos;
   },
 
   saveEixos(eixos: EixoClinico[]): void {
-    this.safeLocalStorageSet(STORAGE_KEYS.EIXOS, JSON.stringify(eixos));
+    // Garante que nunca sejam salvos eixos duplicados com o mesmo ID
+    const vistos = new Set<string>();
+    const unicos: EixoClinico[] = [];
+    for (const e of eixos) {
+      if (e && e.id && !vistos.has(e.id)) {
+        vistos.add(e.id);
+        unicos.push(e);
+      }
+    }
+    this.safeLocalStorageSet(STORAGE_KEYS.EIXOS, JSON.stringify(unicos));
     // FIX #10: debounce
-    scheduleIdbSave(this.getCards(), eixos, this.getProgresso());
+    scheduleIdbSave(this.getCards(), unicos, this.getProgresso());
   },
+
 
   getProgresso(): ProgressoDiario {
     const raw = localStorage.getItem(STORAGE_KEYS.PROGRESSO);
@@ -889,6 +908,14 @@ export const StorageService = {
 
   adicionarEixo(novoEixo: EixoClinico): EixoClinico[] {
     const eixos = this.getEixos();
+    const tituloNorm = (novoEixo.titulo || '').toLowerCase().trim();
+    const existente = eixos.find(
+      e => e.id === novoEixo.id || (e.titulo || '').toLowerCase().trim() === tituloNorm
+    );
+    if (existente) {
+      // Se já existe, não duplica — apenas retorna a lista atualizada
+      return eixos;
+    }
     const atualizados = [...eixos, novoEixo];
     this.saveEixos(atualizados);
     return atualizados;
@@ -1351,5 +1378,30 @@ export const StorageService = {
 
   setExibirDicas(habilitado: boolean): void {
     this.safeLocalStorageSet(STORAGE_KEYS.EXIBIR_DICAS, habilitado ? 'true' : 'false');
+  },
+
+  getPerfilUsuario(): { nome: string; foco: string; tema: string } {
+    const salvoNome = localStorage.getItem('card_usuario_nome');
+    const nome = (!salvoNome || salvoNome.toLowerCase() === 'laurêncio' || salvoNome.toLowerCase() === 'laurencio') ? 'Lauro' : salvoNome;
+    const foco = localStorage.getItem('card_foco_clinico') || 'R1 • CLÍNICA MÉDICA';
+    const tema = localStorage.getItem('card_estilo_tema') || 'navy_cirurgico';
+    return { nome, foco, tema };
+  },
+
+  salvarPerfilUsuario(perfil: { nome?: string; foco?: string; tema?: string }): void {
+    if (perfil.nome !== undefined) {
+      const n = perfil.nome.trim() || 'Lauro';
+      this.safeLocalStorageSet('card_usuario_nome', n);
+    }
+    if (perfil.foco !== undefined) {
+      const f = perfil.foco.trim() || 'R1 • CLÍNICA MÉDICA';
+      this.safeLocalStorageSet('card_foco_clinico', f);
+    }
+    if (perfil.tema !== undefined) {
+      this.safeLocalStorageSet('card_estilo_tema', perfil.tema);
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('medcards_profile_updated'));
+    }
   },
 };

@@ -19,12 +19,15 @@ import {
   LayoutGrid,
   RefreshCw,
   GitBranch,
-  CloudCheck
+  CloudCheck,
+  User,
+  Palette
 } from 'lucide-react';
 import { EixoClinico, CardClinico, ProgressoDiario, ConfiguracaoTimers, ModoVisualizacaoEixos } from '../types';
 import { DEFAULT_CONFIG_TIMERS, formatarTempoMinutos } from '../utils/timerUtils';
 import { StorageService } from '../services/storage';
 import { CURRENT_APP_VERSION, CURRENT_BUILD_LABEL, checkServerVersion, forceAppUpdate } from '../utils/versionManager';
+import { TEMAS_CARD, EstiloCardBoasVindas, SUGESTOES_FOCO } from './DashboardOverview';
 
 interface SettingsViewProps {
   cards: CardClinico[];
@@ -58,6 +61,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [statusVerificacao, setStatusVerificacao] = useState<string | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [isForcingUpdate, setIsForcingUpdate] = useState(false);
+
+  // Estado do Perfil e Personalização da Tela Inicial
+  const [perfilNome, setPerfilNome] = useState(() => StorageService.getPerfilUsuario().nome);
+  const [perfilFoco, setPerfilFoco] = useState(() => StorageService.getPerfilUsuario().foco);
+  const [perfilTema, setPerfilTema] = useState<EstiloCardBoasVindas>(() => (StorageService.getPerfilUsuario().tema as EstiloCardBoasVindas) || 'navy_cirurgico');
+
+  const handleSalvarPerfil = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    StorageService.salvarPerfilUsuario({
+      nome: perfilNome.trim(),
+      foco: perfilFoco.trim(),
+      tema: perfilTema,
+    });
+    setMensagemSucesso('Perfil e personalização da tela inicial salvos com sucesso!');
+    setTimeout(() => setMensagemSucesso(null), 3000);
+  };
 
   const handleChecarAtualizacao = async () => {
     setIsCheckingUpdate(true);
@@ -150,6 +169,117 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <span>{mensagemSucesso}</span>
         </div>
       )}
+
+      {/* Bloco: Perfil & Personalização da Tela Inicial */}
+      <div className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-2xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+              <User className="w-3.5 h-3.5" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-slate-900">
+                Perfil & Tela Inicial
+              </h3>
+              <p className="text-[10px] text-slate-500">
+                Personalize sua saudação, objetivo de estudos e tema do card
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {/* Nome */}
+          <div>
+            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+              Como você gostaria de ser chamado?
+            </label>
+            <input
+              type="text"
+              id="input-settings-perfil-nome"
+              value={perfilNome}
+              onChange={(e) => setPerfilNome(e.target.value)}
+              placeholder="Ex: Dr. Lauro, Dra. Camila, Lauro..."
+              className="w-full text-xs font-semibold px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-hidden transition-all"
+            />
+          </div>
+
+          {/* Foco dos Estudos */}
+          <div>
+            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+              Qual é o seu objetivo / foco principal atual?
+            </label>
+            <input
+              type="text"
+              id="input-settings-perfil-foco"
+              value={perfilFoco}
+              onChange={(e) => setPerfilFoco(e.target.value)}
+              placeholder="Ex: Provas UFPA, ENAMED / ENARE, Residência USP..."
+              className="w-full text-xs font-semibold px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-hidden transition-all mb-1.5"
+            />
+            {/* Chips rápidos de objetivo */}
+            <div className="flex flex-wrap gap-1">
+              {SUGESTOES_FOCO.map((sug) => (
+                <button
+                  key={sug}
+                  type="button"
+                  onClick={() => setPerfilFoco(sug)}
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                    perfilFoco === sug
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'bg-slate-100/80 border-slate-200 text-slate-600 hover:bg-slate-200/80'
+                  }`}
+                >
+                  {sug}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tema do Card de Boas-Vindas */}
+          <div>
+            <label className="block text-[11px] font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+              <Palette className="w-3.5 h-3.5 text-slate-500" />
+              <span>Tema visual do card principal</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {TEMAS_CARD.map((t) => {
+                const ativo = perfilTema === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setPerfilTema(t.id)}
+                    className={`p-2 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2 ${
+                      ativo
+                        ? 'border-blue-500 bg-blue-50/50 ring-2 ring-blue-500/20'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${t.previewGradient} border border-slate-300/40 shrink-0 shadow-2xs`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] font-bold text-slate-800 truncate">{t.nome}</div>
+                    </div>
+                    {ativo && <div className="w-3.5 h-3.5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px] shrink-0 font-bold">✓</div>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="pt-1 flex justify-end">
+            <button
+              type="button"
+              id="btn-salvar-perfil-settings"
+              onClick={handleSalvarPerfil}
+              className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>Salvar Perfil & Tela Inicial</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Bloco: Modos de Visualização dos Eixos & Interface */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-2xs space-y-2.5">

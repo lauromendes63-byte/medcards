@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { CardClinico, ProgressoDiario, EixoClinico, EspecialidadeMedica } from '../types';
 import { EixoEmojiBadge } from './EixoEmojiBadge';
+import { StorageService } from '../services/storage';
 
 interface DashboardOverviewProps {
   progresso: ProgressoDiario;
@@ -203,14 +204,16 @@ export const TEMAS_CARD: TemaConfig[] = [
   },
 ];
 
-const SUGESTOES_FOCO = [
+export const SUGESTOES_FOCO = [
+  'Provas UFPA',
+  'ENAMED / ENARE',
+  'Residência USP',
   'R1 • Clínica Médica',
   'Residência Médica',
   'Plantão de Emergência',
   'Cirurgia Geral',
-  'Cardiologia',
-  'Terapia Intensiva (UTI)',
-  'Pediatria & GO'
+  'Pediatria & GO',
+  'Internato Médico'
 ];
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
@@ -222,21 +225,17 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   onIniciarRevisao,
   onAbrirCard,
 }) => {
-  // Estado de personalização com persistência no localStorage
+  // Estado de personalização sincronizado com StorageService
   const [temaId, setTemaId] = useState<EstiloCardBoasVindas>(() => {
-    return (localStorage.getItem('card_estilo_tema') as EstiloCardBoasVindas) || 'navy_cirurgico';
+    return (StorageService.getPerfilUsuario().tema as EstiloCardBoasVindas) || 'navy_cirurgico';
   });
 
   const [nomeUsuario, setNomeUsuario] = useState<string>(() => {
-    const salvo = localStorage.getItem('card_usuario_nome');
-    if (!salvo || salvo.toLowerCase() === 'laurêncio' || salvo.toLowerCase() === 'laurencio') {
-      return 'Lauro';
-    }
-    return salvo;
+    return StorageService.getPerfilUsuario().nome;
   });
 
   const [focoClinico, setFocoClinico] = useState<string>(() => {
-    return localStorage.getItem('card_foco_clinico') || 'R1 • CLÍNICA MÉDICA';
+    return StorageService.getPerfilUsuario().foco;
   });
 
   const [modalAberto, setModalAberto] = useState(false);
@@ -244,9 +243,17 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const [nomeTemp, setNomeTemp] = useState(nomeUsuario);
   const [focoTemp, setFocoTemp] = useState(focoClinico);
 
+  // Escuta evento customizado caso o perfil seja alterado via Configurações
   useEffect(() => {
-    localStorage.setItem('card_estilo_tema', temaId);
-  }, [temaId]);
+    const handleProfileUpdate = () => {
+      const p = StorageService.getPerfilUsuario();
+      setNomeUsuario(p.nome);
+      setFocoClinico(p.foco);
+      setTemaId(p.tema as EstiloCardBoasVindas);
+    };
+    window.addEventListener('medcards_profile_updated', handleProfileUpdate);
+    return () => window.removeEventListener('medcards_profile_updated', handleProfileUpdate);
+  }, []);
 
   const temaAtual = TEMAS_CARD.find(t => t.id === temaId) || TEMAS_CARD[0];
   const temaPreview = TEMAS_CARD.find(t => t.id === temaTemp) || temaAtual;
@@ -279,9 +286,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     setTemaId(temaTemp);
     setNomeUsuario(novoNome);
     setFocoClinico(novoFoco);
-    localStorage.setItem('card_estilo_tema', temaTemp);
-    localStorage.setItem('card_usuario_nome', novoNome);
-    localStorage.setItem('card_foco_clinico', novoFoco);
+    StorageService.salvarPerfilUsuario({
+      nome: novoNome,
+      foco: novoFoco,
+      tema: temaTemp,
+    });
     setModalAberto(false);
   };
 
@@ -353,7 +362,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               </span>
             </div>
 
-            {/* Botão de Personalização do Fundo */}
+            {/* Botão de Personalização do Cartão Inicial */}
             <button
               type="button"
               onClick={() => {
@@ -362,11 +371,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 setFocoTemp(focoClinico);
                 setModalAberto(true);
               }}
-              className={`p-2 rounded-xl border transition-all cursor-pointer active:scale-95 shadow-3xs ${temaAtual.chipFundo} ${temaAtual.chipBorda} ${temaAtual.chipIconeCor}`}
-              title="Personalizar visual e fundo do cartão"
-              aria-label="Personalizar cartão"
+              className={`px-2 sm:px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer active:scale-95 shadow-3xs flex items-center gap-1.5 touch-instant ${temaAtual.chipFundo} ${temaAtual.chipBorda} ${temaAtual.chipIconeCor}`}
+              title="Personalizar seu nome, objetivo e visual da tela inicial"
+              aria-label="Personalizar perfil e tela inicial"
             >
               <Palette className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-bold">Personalizar</span>
             </button>
           </div>
         </div>
@@ -422,18 +432,66 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               </button>
             </div>
 
-            {/* Live Preview do Cartão em Tempo Real */}
+            {/* 1. Campo: Nome do Usuário */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                <span>1. Qual é o seu nome?</span>
+                <span className="text-[10px] text-slate-400 font-normal">Saudação diária</span>
+              </label>
+              <input
+                type="text"
+                value={nomeTemp}
+                onChange={e => setNomeTemp(e.target.value)}
+                placeholder="Ex: Lauro, Dr. Lauro, Maria..."
+                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 font-medium"
+              />
+            </div>
+
+            {/* 2. Campo: Foco Clínico / Objetivo de Estudo */}
             <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                <span>2. Qual é o seu objetivo / foco médico?</span>
+                <span className="text-[10px] text-slate-400 font-normal">Tag no cartão</span>
+              </label>
+              <input
+                type="text"
+                value={focoTemp}
+                onChange={e => setFocoTemp(e.target.value)}
+                placeholder="Ex: PROVAS UFPA, ENAMED 2026, R1 CLÍNICA MÉDICA..."
+                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 uppercase font-semibold"
+              />
+
+              {/* Sugestões rápidas de foco com 1 toque */}
+              <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                {SUGESTOES_FOCO.map((sugestao) => (
+                  <button
+                    key={sugestao}
+                    type="button"
+                    onClick={() => setFocoTemp(sugestao.toUpperCase())}
+                    className={`text-[9.5px] font-bold px-2 py-0.5 rounded-md border cursor-pointer transition-colors touch-instant ${
+                      focoTemp.trim().toUpperCase() === sugestao.toUpperCase()
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-3xs'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200/80'
+                    }`}
+                  >
+                    {sugestao}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Seletor de Temas de Cor com Prévia ao Vivo */}
+            <div className="space-y-2 pt-2 border-t border-slate-100">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Eye className="w-3 h-3 text-blue-600" />
-                  <span>Prévia em Tempo Real</span>
-                </span>
+                <label className="text-xs font-bold text-slate-800 block">
+                  3. Tema de Cor do Cartão Inicial
+                </label>
                 <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60">
                   {temaPreview.nome}
                 </span>
               </div>
 
+              {/* Live Preview do Cartão em Tempo Real */}
               <div className={`rounded-2xl p-3 sm:p-3.5 transition-all duration-300 relative overflow-hidden space-y-2.5 ${temaPreview.cardClasses}`}>
                 <div className="relative z-10 flex items-start justify-between gap-2.5">
                   <div className="space-y-0.5 min-w-0 flex-1">
@@ -463,15 +521,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Seletor de Temas de Fundo */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-800 block">
-                Escolha o Tema de Cor
-              </label>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                 {TEMAS_CARD.map((tema) => {
                   const isSelecionado = temaTemp === tema.id;
                   return (
@@ -479,7 +530,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                       key={tema.id}
                       type="button"
                       onClick={() => setTemaTemp(tema.id)}
-                      className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-2.5 ${
+                      className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-2.5 touch-instant ${
                         isSelecionado
                           ? 'border-blue-600 bg-blue-50/70 ring-2 ring-blue-500/30 shadow-xs'
                           : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/60'
@@ -502,48 +553,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                     </button>
                   );
                 })}
-              </div>
-            </div>
-
-            {/* Campo: Nome do Usuário */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 block">
-                Seu Nome na Saudação
-              </label>
-              <input
-                type="text"
-                value={nomeTemp}
-                onChange={e => setNomeTemp(e.target.value)}
-                placeholder="Ex: Lauro, Dr. Lauro"
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-              />
-            </div>
-
-            {/* Campo: Foco Clínico / Etiqueta Superior */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 block">
-                Tag de Foco Clínico (Topo Direito)
-              </label>
-              <input
-                type="text"
-                value={focoTemp}
-                onChange={e => setFocoTemp(e.target.value)}
-                placeholder="Ex: R1 • CLÍNICA MÉDICA, PLANTÃO, RESIDÊNCIA"
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 uppercase font-semibold"
-              />
-
-              {/* Sugestões rápidas de foco */}
-              <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                {SUGESTOES_FOCO.map((sugestao) => (
-                  <button
-                    key={sugestao}
-                    type="button"
-                    onClick={() => setFocoTemp(sugestao.toUpperCase())}
-                    className="text-[9.5px] font-bold px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 cursor-pointer transition-colors"
-                  >
-                    {sugestao}
-                  </button>
-                ))}
               </div>
             </div>
 
